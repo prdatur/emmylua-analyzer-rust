@@ -1,5 +1,8 @@
-use emmylua_parser::{LuaNonStdSymbol, LuaVersionNumber};
+use std::collections::HashMap;
+
+use emmylua_parser::{LuaNonStdSymbol, LuaVersionNumber, SpecialFunction};
 use schemars::JsonSchema;
+use serde::de::Deserializer;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, JsonSchema, Clone)]
@@ -26,6 +29,9 @@ pub struct EmmyrcRuntime {
     /// Non-standard symbols.
     #[serde(default)]
     pub nonstandard_symbol: Vec<EmmyrcNonStdSymbol>,
+    /// Special symbols.
+    #[serde(default)]
+    pub special: HashMap<String, EmmyrcSpecialSymbol>,
 }
 
 impl Default for EmmyrcRuntime {
@@ -38,6 +44,7 @@ impl Default for EmmyrcRuntime {
             require_pattern: Default::default(),
             class_default_call: Default::default(),
             nonstandard_symbol: Default::default(),
+            special: Default::default(),
         }
     }
 }
@@ -169,6 +176,63 @@ impl From<EmmyrcNonStdSymbol> for LuaNonStdSymbol {
             EmmyrcNonStdSymbol::Exclamation => LuaNonStdSymbol::Exclamation,
             EmmyrcNonStdSymbol::NotEqual => LuaNonStdSymbol::NotEqual,
             EmmyrcNonStdSymbol::Continue => LuaNonStdSymbol::Continue,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, JsonSchema)]
+pub enum EmmyrcSpecialSymbol {
+    None,
+    Require,
+    Error,
+    Assert,
+    Type,
+    Setmetatable,
+}
+
+impl<'de> Deserialize<'de> for EmmyrcSpecialSymbol {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        match s.as_str() {
+            "require" => Ok(EmmyrcSpecialSymbol::Require),
+            "error" => Ok(EmmyrcSpecialSymbol::Error),
+            "assert" => Ok(EmmyrcSpecialSymbol::Assert),
+            "type" => Ok(EmmyrcSpecialSymbol::Type),
+            "setmetatable" => Ok(EmmyrcSpecialSymbol::Setmetatable),
+            _ => Ok(EmmyrcSpecialSymbol::None),
+        }
+    }
+}
+
+impl<'serialize> Serialize for EmmyrcSpecialSymbol {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let s = match self {
+            EmmyrcSpecialSymbol::None => "none",
+            EmmyrcSpecialSymbol::Require => "require",
+            EmmyrcSpecialSymbol::Error => "error",
+            EmmyrcSpecialSymbol::Assert => "assert",
+            EmmyrcSpecialSymbol::Type => "type",
+            EmmyrcSpecialSymbol::Setmetatable => "setmetatable",
+        };
+        serializer.serialize_str(s)
+    }
+}
+
+impl From<EmmyrcSpecialSymbol> for Option<SpecialFunction> {
+    fn from(symbol: EmmyrcSpecialSymbol) -> Self {
+        match symbol {
+            EmmyrcSpecialSymbol::None => None,
+            EmmyrcSpecialSymbol::Require => Some(SpecialFunction::Require),
+            EmmyrcSpecialSymbol::Error => Some(SpecialFunction::Error),
+            EmmyrcSpecialSymbol::Assert => Some(SpecialFunction::Assert),
+            EmmyrcSpecialSymbol::Type => Some(SpecialFunction::Type),
+            EmmyrcSpecialSymbol::Setmetatable => Some(SpecialFunction::Setmetaatable),
         }
     }
 }

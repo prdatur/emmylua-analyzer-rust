@@ -71,6 +71,11 @@ impl Emmyrc {
     ) -> ParserConfig<'cache> {
         let lua_language_level = self.get_language_level();
         let mut special_like = HashMap::new();
+        for (name, func) in self.runtime.special.iter() {
+            if let Some(func) = func.clone().into() {
+                special_like.insert(name.clone(), func);
+            }
+        }
         for name in self.runtime.require_like_function.iter() {
             special_like.insert(name.clone(), SpecialFunction::Require);
         }

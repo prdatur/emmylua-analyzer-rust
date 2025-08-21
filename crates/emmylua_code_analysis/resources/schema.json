@@ -118,6 +118,7 @@
         "nonstandardSymbol": [],
         "requireLikeFunction": [],
         "requirePattern": [],
+        "special": {},
         "version": "LuaLatest"
       }
     },
@@ -954,6 +955,14 @@
             "type": "string"
           }
         },
+        "special": {
+          "description": "Special symbols.",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/EmmyrcSpecialSymbol"
+          },
+          "default": {}
+        },
         "version": {
           "description": "Lua version.",
           "$ref": "#/$defs/EmmyrcLuaVersion",
@@ -987,6 +996,17 @@
           "default": true
         }
       }
+    },
+    "EmmyrcSpecialSymbol": {
+      "type": "string",
+      "enum": [
+        "None",
+        "Require",
+        "Error",
+        "Assert",
+        "Type",
+        "Setmetatable"
+      ]
     },
     "EmmyrcStrict": {
       "type": "object",
