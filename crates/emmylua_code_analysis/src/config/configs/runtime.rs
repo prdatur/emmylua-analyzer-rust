@@ -180,8 +180,10 @@ impl From<EmmyrcNonStdSymbol> for LuaNonStdSymbol {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, JsonSchema)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, JsonSchema, Serialize)]
+#[serde(rename_all = "lowercase")]
 pub enum EmmyrcSpecialSymbol {
+    #[serde(rename = "none")]
     None,
     Require,
     Error,
@@ -195,32 +197,18 @@ impl<'de> Deserialize<'de> for EmmyrcSpecialSymbol {
     where
         D: Deserializer<'de>,
     {
+        // 首先尝试使用默认的 derive 实现
         let s = String::deserialize(deserializer)?;
         match s.as_str() {
+            "none" => Ok(EmmyrcSpecialSymbol::None),
             "require" => Ok(EmmyrcSpecialSymbol::Require),
             "error" => Ok(EmmyrcSpecialSymbol::Error),
             "assert" => Ok(EmmyrcSpecialSymbol::Assert),
             "type" => Ok(EmmyrcSpecialSymbol::Type),
             "setmetatable" => Ok(EmmyrcSpecialSymbol::Setmetatable),
+            // 对于任何不匹配的值，返回 None
             _ => Ok(EmmyrcSpecialSymbol::None),
         }
-    }
-}
-
-impl<'serialize> Serialize for EmmyrcSpecialSymbol {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let s = match self {
-            EmmyrcSpecialSymbol::None => "none",
-            EmmyrcSpecialSymbol::Require => "require",
-            EmmyrcSpecialSymbol::Error => "error",
-            EmmyrcSpecialSymbol::Assert => "assert",
-            EmmyrcSpecialSymbol::Type => "type",
-            EmmyrcSpecialSymbol::Setmetatable => "setmetatable",
-        };
-        serializer.serialize_str(s)
     }
 }
 

@@ -1000,12 +1000,12 @@
     "EmmyrcSpecialSymbol": {
       "type": "string",
       "enum": [
-        "None",
-        "Require",
-        "Error",
-        "Assert",
-        "Type",
-        "Setmetatable"
+        "none",
+        "require",
+        "error",
+        "assert",
+        "type",
+        "setmetatable"
       ]
     },
     "EmmyrcStrict": {
