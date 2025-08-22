@@ -167,7 +167,7 @@ mod tests {
             fn $name() {
                 let token = &get_token($code, LuaTokenKind::TkInt);
                 let result = int_token_value(token);
-                assert_eq!(result.unwrap(), $expected);
+                assert_eq!(result.unwrap().as_integer().unwrap(), $expected);
             }
         };
     }
