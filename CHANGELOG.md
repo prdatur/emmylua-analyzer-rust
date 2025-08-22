@@ -4,6 +4,8 @@
 
 ---
 
+## [0.12.0] - 2025-8-22
+
 ### 🐛 Fixed
 - **Crash issue fixed**: Fixed a crash caused by parsing Unicode characters in comments.
 - **Large table performance issue fixed**: Fixed a performance issue where parsing large array tables in projects caused severe slowdowns.
