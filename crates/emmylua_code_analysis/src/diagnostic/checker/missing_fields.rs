@@ -57,11 +57,28 @@ fn check_table_expr(
                 }
             }
         }
+        LuaType::TableConst(in_file_range) => {
+            let file_id = in_file_range.file_id;
+            if file_id == semantic_model.get_file_id() {
+                let range = in_file_range.value;
+                if expr.get_range() == range {
+                    return Some(());
+                }
+            }
+
+            LuaType::TableConst(in_file_range)
+        }
+
         table_type => table_type,
     };
 
-    let current_fields = expr
-        .get_fields()
+    let fields = expr.get_fields().collect::<Vec<_>>();
+    if fields.len() > 50 {
+        return Some(());
+    }
+
+    let current_fields = fields
+        .iter()
         .filter_map(|field| field.get_field_key().map(|key| key.get_path_part()))
         .collect();
 

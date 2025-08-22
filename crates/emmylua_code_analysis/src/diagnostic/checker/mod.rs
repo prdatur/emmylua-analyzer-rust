@@ -41,8 +41,10 @@ use lsp_types::{Diagnostic, DiagnosticSeverity, DiagnosticTag, NumberOrString};
 use rowan::TextRange;
 use std::sync::Arc;
 
+#[allow(unused)]
 use crate::{
-    FileId, LuaType, RenderLevel, db_index::DbIndex, humanize_type, semantic::SemanticModel,
+    FileId, LuaType, Profile, RenderLevel, db_index::DbIndex, humanize_type,
+    semantic::SemanticModel,
 };
 
 use super::{
@@ -62,6 +64,9 @@ fn run_check<T: Checker>(context: &mut DiagnosticContext, semantic_model: &Seman
         .iter()
         .any(|code| context.is_checker_enable_by_code(code))
     {
+        // let name = T::CODES.iter().map(|c| c.get_name()).collect::<Vec<_>>().join(",");
+        // let show_name = format!("{}({})", std::any::type_name::<T>(), name);
+        // let _p = Profile::new(&show_name);
         T::check(context, semantic_model);
     }
 }

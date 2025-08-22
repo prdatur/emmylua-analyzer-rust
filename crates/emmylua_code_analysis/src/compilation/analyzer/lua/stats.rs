@@ -441,35 +441,35 @@ pub fn analyze_local_func_stat(
 }
 
 pub fn analyze_table_field(analyzer: &mut LuaAnalyzer, field: LuaTableField) -> Option<()> {
-    let _ = field.get_field_key()?;
-    let value_expr = field.get_value_expr()?;
-    let member_id = LuaMemberId::new(field.get_syntax_id(), analyzer.file_id);
-    let value_type = match analyzer.infer_expr(&value_expr.clone().into()) {
-        Ok(value_type) => match value_type {
-            LuaType::Def(ref_id) => LuaType::Ref(ref_id),
-            _ => value_type,
-        },
-        Err(InferFailReason::None) => LuaType::Unknown,
-        Err(reason) => {
-            let unresolve = UnResolveMember {
-                file_id: analyzer.file_id,
-                member_id,
-                expr: Some(value_expr.clone()),
-                prefix: None,
-                ret_idx: 0,
-            };
+    if field.is_assign_field() {
+        let value_expr = field.get_value_expr()?;
+        let member_id = LuaMemberId::new(field.get_syntax_id(), analyzer.file_id);
+        let value_type = match analyzer.infer_expr(&value_expr.clone().into()) {
+            Ok(value_type) => match value_type {
+                LuaType::Def(ref_id) => LuaType::Ref(ref_id),
+                _ => value_type,
+            },
+            Err(InferFailReason::None) => LuaType::Unknown,
+            Err(reason) => {
+                let unresolve = UnResolveMember {
+                    file_id: analyzer.file_id,
+                    member_id,
+                    expr: Some(value_expr.clone()),
+                    prefix: None,
+                    ret_idx: 0,
+                };
 
-            analyzer.context.add_unresolve(unresolve.into(), reason);
-            return None;
-        }
-    };
+                analyzer.context.add_unresolve(unresolve.into(), reason);
+                return None;
+            }
+        };
 
-    bind_type(
-        analyzer.db,
-        member_id.into(),
-        LuaTypeCache::InferType(value_type),
-    );
-
+        bind_type(
+            analyzer.db,
+            member_id.into(),
+            LuaTypeCache::InferType(value_type),
+        );
+    }
     Some(())
 }
 
