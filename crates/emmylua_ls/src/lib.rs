@@ -6,7 +6,7 @@ mod meta_text;
 mod util;
 
 use crate::handlers::{
-    initialized_handler, on_notification_handler, on_req_handler, on_response_handler,
+    initialized_handler, on_notification_handler, on_request_handler, on_response_handler,
 };
 pub use clap::Parser;
 pub use cmd_args::*;
@@ -81,7 +81,7 @@ async fn main_loop(
                     return Ok(());
                 }
 
-                on_req_handler(req, &mut server_context).await?;
+                on_request_handler(req, &mut server_context).await?;
             }
             Message::Notification(notify) => {
                 on_notification_handler(notify, &mut server_context).await?;

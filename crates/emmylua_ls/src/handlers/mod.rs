@@ -38,7 +38,7 @@ mod test_lib;
 pub use initialized::{ClientConfig, init_analysis, initialized_handler};
 use lsp_types::{ClientCapabilities, ServerCapabilities};
 pub use notification_handler::on_notification_handler;
-pub use request_handler::on_req_handler;
+pub use request_handler::on_request_handler;
 pub use response_handler::on_response_handler;
 
 pub trait RegisterCapabilities {
@@ -48,94 +48,48 @@ pub trait RegisterCapabilities {
     );
 }
 
-fn register<T: RegisterCapabilities>(
-    server_capabilities: &mut ServerCapabilities,
-    client_capabilities: &ClientCapabilities,
-) {
-    T::register_capabilities(server_capabilities, client_capabilities);
+macro_rules! capabilities {
+    // module name => capability type mapping
+    (modules: {
+        $($module:ident => $capability:ident),* $(,)?
+    }) => {
+        pub fn server_capabilities(client_capabilities: &ClientCapabilities) -> ServerCapabilities {
+            let mut server_capabilities = ServerCapabilities::default();
+
+            $(
+                $module::$capability::register_capabilities(&mut server_capabilities, client_capabilities);
+            )*
+
+            server_capabilities
+        }
+    };
 }
 
-pub fn server_capabilities(client_capabilities: &ClientCapabilities) -> ServerCapabilities {
-    let mut server_capabilities = ServerCapabilities::default();
-
-    register::<text_document::TextDocumentCapabilities>(
-        &mut server_capabilities,
-        client_capabilities,
-    );
-    register::<document_symbol::DocumentSymbolCapabilities>(
-        &mut server_capabilities,
-        client_capabilities,
-    );
-    register::<document_color::DocumentColorCapabilities>(
-        &mut server_capabilities,
-        client_capabilities,
-    );
-    register::<document_link::DocumentLinkCapabilities>(
-        &mut server_capabilities,
-        client_capabilities,
-    );
-    register::<document_selection_range::DocumentSelectionRangeCapabilities>(
-        &mut server_capabilities,
-        client_capabilities,
-    );
-    register::<document_highlight::DocumentHighlightCapabilities>(
-        &mut server_capabilities,
-        client_capabilities,
-    );
-    register::<document_formatting::DocumentFormattingCapabilities>(
-        &mut server_capabilities,
-        client_capabilities,
-    );
-    register::<document_range_formatting::DocumentRangeFormatting>(
-        &mut server_capabilities,
-        client_capabilities,
-    );
-    register::<completion::CompletionCapabilities>(&mut server_capabilities, client_capabilities);
-    register::<inlay_hint::InlayHintCapabilities>(&mut server_capabilities, client_capabilities);
-    register::<definition::DefinitionCapabilities>(&mut server_capabilities, client_capabilities);
-    register::<implementation::ImplementationCapabilities>(
-        &mut server_capabilities,
-        client_capabilities,
-    );
-    register::<references::ReferencesCapabilities>(&mut server_capabilities, client_capabilities);
-    register::<rename::RenameCapabilities>(&mut server_capabilities, client_capabilities);
-    register::<code_lens::CodeLensCapabilities>(&mut server_capabilities, client_capabilities);
-    register::<signature_helper::SignatureHelperCapabilities>(
-        &mut server_capabilities,
-        client_capabilities,
-    );
-    register::<hover::HoverCapabilities>(&mut server_capabilities, client_capabilities);
-    register::<fold_range::FoldRangeCapabilities>(&mut server_capabilities, client_capabilities);
-    register::<semantic_token::SemanticTokenCapabilities>(
-        &mut server_capabilities,
-        client_capabilities,
-    );
-    register::<command::CommandCapabilities>(&mut server_capabilities, client_capabilities);
-    register::<code_actions::CodeActionsCapabilities>(
-        &mut server_capabilities,
-        client_capabilities,
-    );
-    register::<inline_values::InlineValuesCapabilities>(
-        &mut server_capabilities,
-        client_capabilities,
-    );
-    register::<workspace_symbol::WorkspaceSymbolCapabilities>(
-        &mut server_capabilities,
-        client_capabilities,
-    );
-    register::<configuration::ConfigurationCapabilities>(
-        &mut server_capabilities,
-        client_capabilities,
-    );
-    register::<call_hierarchy::CallHierarchyCapabilities>(
-        &mut server_capabilities,
-        client_capabilities,
-    );
-    register::<workspace::WorkspaceCapabilities>(&mut server_capabilities, client_capabilities);
-    // register::<document_type_formatting::DocumentTypeFormatting>(
-    //     &mut server_capabilities,
-    //     client_capabilities,
-    // );
-
-    server_capabilities
-}
+capabilities!(modules: {
+    text_document => TextDocumentCapabilities,
+    document_symbol => DocumentSymbolCapabilities,
+    document_color => DocumentColorCapabilities,
+    document_link => DocumentLinkCapabilities,
+    document_selection_range => DocumentSelectionRangeCapabilities,
+    document_highlight => DocumentHighlightCapabilities,
+    document_formatting => DocumentFormattingCapabilities,
+    document_range_formatting => DocumentRangeFormatting,
+    completion => CompletionCapabilities,
+    inlay_hint => InlayHintCapabilities,
+    definition => DefinitionCapabilities,
+    implementation => ImplementationCapabilities,
+    references => ReferencesCapabilities,
+    rename => RenameCapabilities,
+    code_lens => CodeLensCapabilities,
+    signature_helper => SignatureHelperCapabilities,
+    hover => HoverCapabilities,
+    fold_range => FoldRangeCapabilities,
+    semantic_token => SemanticTokenCapabilities,
+    command => CommandCapabilities,
+    code_actions => CodeActionsCapabilities,
+    inline_values => InlineValuesCapabilities,
+    workspace_symbol => WorkspaceSymbolCapabilities,
+    configuration => ConfigurationCapabilities,
+    call_hierarchy => CallHierarchyCapabilities,
+    workspace => WorkspaceCapabilities,
+});
