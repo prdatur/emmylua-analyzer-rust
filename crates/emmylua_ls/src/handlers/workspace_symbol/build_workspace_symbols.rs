@@ -117,7 +117,7 @@ fn get_symbol_kind(typ: &LuaType) -> SymbolKind {
 fn is_deprecated(db: &DbIndex, id: LuaSemanticDeclId) -> bool {
     let property = db.get_property_index().get_property(&id);
     if let Some(property) = property {
-        if property.deprecated.is_some() {
+        if property.deprecated().is_some() {
             return true;
         }
     }

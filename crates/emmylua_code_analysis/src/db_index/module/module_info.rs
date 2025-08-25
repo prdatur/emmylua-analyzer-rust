@@ -44,7 +44,7 @@ impl ModuleInfo {
 
         db.get_property_index()
             .get_property(property_owner_id)
-            .and_then(|property| property.export.as_ref())
+            .and_then(|property| property.export())
             .is_some()
     }
 
@@ -53,8 +53,7 @@ impl ModuleInfo {
         let export = db
             .get_property_index()
             .get_property(property_owner_id)?
-            .export
-            .as_ref()?;
+            .export()?;
 
         Some(export)
     }

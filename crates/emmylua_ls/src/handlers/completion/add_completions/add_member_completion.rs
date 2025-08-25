@@ -366,7 +366,7 @@ pub fn extract_index_member_alias(
         }
     };
 
-    let description = common_property.description.as_ref()?;
+    let description = common_property.description()?;
 
     // 只去掉左侧空白字符，保留右侧内容以支持后续文本
     let left_trimmed = description.trim_start();

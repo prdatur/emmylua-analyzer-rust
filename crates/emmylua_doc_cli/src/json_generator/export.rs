@@ -5,6 +5,7 @@ use emmylua_code_analysis::{
     LuaSemanticDeclId, LuaSignature, LuaType, LuaTypeCache, LuaTypeDecl, LuaTypeDeclId,
     RenderLevel, Vfs,
 };
+use emmylua_parser::VisibilityKind;
 use rowan::TextRange;
 
 pub fn export(db: &DbIndex) -> Index {
@@ -331,18 +332,18 @@ fn export_field(
 fn export_property(db: &DbIndex, semantic_decl: &LuaSemanticDeclId) -> Property {
     match db.get_property_index().get_property(semantic_decl) {
         Some(property) => Property {
-            description: property.description.as_ref().map(|s| s.to_string()),
-            visibility: property
-                .visibility
-                .as_ref()
-                .and_then(|s| s.to_str())
-                .map(|s| s.to_string()),
-            deprecated: property.deprecated.is_some(),
-            deprecation_reason: property.deprecated.as_ref().and_then(|s| match s {
+            description: property.description().map(|s| s.to_string()),
+            visibility: if property.visibility == VisibilityKind::Public {
+                None
+            } else {
+                Some(property.visibility.to_str().unwrap_or_default().to_string())
+            },
+            deprecated: property.deprecated().is_some(),
+            deprecation_reason: property.deprecated().as_ref().and_then(|s| match s {
                 LuaDeprecated::Deprecated => None,
                 LuaDeprecated::DeprecatedWithMessage(msg) => Some(msg.to_string()),
             }),
-            tag_content: property.tag_content.as_ref().map(|tag_content| {
+            tag_content: property.tag_content().map(|tag_content| {
                 tag_content
                     .get_all_tags()
                     .iter()

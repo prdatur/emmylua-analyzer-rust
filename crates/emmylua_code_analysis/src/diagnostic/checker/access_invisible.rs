@@ -90,7 +90,7 @@ fn report_reason(
         .get_property_index()
         .get_property(&property_owner_id)?;
 
-    if let Some(version_conds) = &property.version_conds {
+    if let Some(version_conds) = &property.version_conds() {
         let version_number = emmyrc.runtime.version.to_lua_version_number();
         let visible = version_conds.iter().any(|cond| cond.check(&version_number));
         if !visible {
@@ -114,32 +114,30 @@ fn report_reason(
         }
     }
 
-    if let Some(visibility) = property.visibility {
-        let message = match visibility {
-            VisibilityKind::Protected => {
-                t!("The property is protected and cannot be accessed outside its subclasses.")
-            }
-            VisibilityKind::Private => {
-                t!("The property is private and cannot be accessed outside the class.")
-            }
-            VisibilityKind::Package => {
-                t!("The property is package-private and cannot be accessed outside the package.")
-            }
-            VisibilityKind::Internal => {
-                t!("The property is internal and cannot be accessed outside the module.")
-            }
-            _ => {
-                return None;
-            }
-        };
+    let message = match property.visibility {
+        VisibilityKind::Protected => {
+            t!("The property is protected and cannot be accessed outside its subclasses.")
+        }
+        VisibilityKind::Private => {
+            t!("The property is private and cannot be accessed outside the class.")
+        }
+        VisibilityKind::Package => {
+            t!("The property is package-private and cannot be accessed outside the package.")
+        }
+        VisibilityKind::Internal => {
+            t!("The property is internal and cannot be accessed outside the module.")
+        }
+        _ => {
+            return None;
+        }
+    };
 
-        context.add_diagnostic(
-            DiagnosticCode::AccessInvisible,
-            range,
-            message.to_string(),
-            None,
-        );
-    }
+    context.add_diagnostic(
+        DiagnosticCode::AccessInvisible,
+        range,
+        message.to_string(),
+        None,
+    );
 
     Some(())
 }

@@ -49,7 +49,7 @@ fn check_name_expr(
         .get_db()
         .get_property_index()
         .get_property(&semantic_decl)?;
-    if let Some(deprecated) = &property.deprecated {
+    if let Some(deprecated) = property.deprecated() {
         let depreacated_message = match deprecated {
             LuaDeprecated::Deprecated => "deprecated".to_string(),
             LuaDeprecated::DeprecatedWithMessage(message) => message.to_string(),
@@ -84,7 +84,7 @@ fn check_index_expr(
         .get_db()
         .get_property_index()
         .get_property(&semantic_decl)?;
-    if let Some(deprecated) = &property.deprecated {
+    if let Some(deprecated) = property.deprecated() {
         let depreacated_message = match deprecated {
             LuaDeprecated::Deprecated => "deprecated".to_string(),
             LuaDeprecated::DeprecatedWithMessage(message) => message.to_string(),

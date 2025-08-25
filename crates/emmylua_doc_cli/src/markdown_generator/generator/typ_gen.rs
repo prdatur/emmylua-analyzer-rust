@@ -93,9 +93,7 @@ fn generate_class_type_markdown(
             let member_property_id = LuaSemanticDeclId::Member(member_id);
             let member_property = db.get_property_index().get_property(&member_property_id);
             if let Some(member_property) = member_property {
-                if member_property.visibility.unwrap_or(VisibilityKind::Public)
-                    != VisibilityKind::Public
-                {
+                if member_property.visibility != VisibilityKind::Public {
                     continue;
                 }
             }
@@ -204,9 +202,7 @@ fn generate_enum_type_markdown(
             let member_property_id = LuaSemanticDeclId::Member(member_id);
             let member_property = db.get_property_index().get_property(&member_property_id);
             if let Some(member_property) = member_property {
-                if member_property.visibility.unwrap_or(VisibilityKind::Public)
-                    != VisibilityKind::Public
-                {
+                if member_property.visibility != VisibilityKind::Public {
                     continue;
                 }
             }

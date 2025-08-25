@@ -170,7 +170,7 @@ pub fn extract_description_from_property_owner(
 
     let mut result = DescriptionInfo::new();
 
-    if let Some(detail) = &property.description {
+    if let Some(detail) = property.description() {
         let mut description = detail.to_string();
 
         match property_owner {
@@ -207,7 +207,7 @@ pub fn extract_description_from_property_owner(
         result.description = Some(description);
     }
 
-    if let Some(tag_content) = &property.tag_content {
+    if let Some(tag_content) = property.tag_content() {
         for (tag_name, description) in tag_content.get_all_tags() {
             if result.tag_content.is_none() {
                 result.tag_content = Some(Vec::new());

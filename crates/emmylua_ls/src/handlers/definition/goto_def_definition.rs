@@ -28,7 +28,7 @@ pub fn goto_def_definition(
         .get_property_index()
         .get_property(&semantic_id)
     {
-        if let Some(source) = &property.source {
+        if let Some(source) = property.source() {
             if let Some(location) = goto_source_location(source) {
                 return Some(GotoDefinitionResponse::Scalar(location));
             }

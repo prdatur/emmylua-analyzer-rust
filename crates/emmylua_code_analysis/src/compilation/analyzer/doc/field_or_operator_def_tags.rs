@@ -35,7 +35,7 @@ pub fn analyze_field(analyzer: &mut DocAnalyzer, tag: LuaDocTagField) -> Option<
 
     let owner_id = LuaMemberOwner::Type(current_type_id.clone());
     let visibility_kind = if let Some(visibility_token) = tag.get_visibility_token() {
-        Some(visibility_token.get_visibility())
+        visibility_token.get_visibility()
     } else if let Some(visibility) = get_visibility_from_field_attrib(&tag) {
         Some(visibility)
     } else {
@@ -204,8 +204,8 @@ fn get_visibility_from_field_attrib(tag: &LuaDocTagField) -> Option<VisibilityKi
     if let Some(attrib) = tag.get_attrib() {
         for token in attrib.get_attrib_tokens() {
             let visibility = VisibilityKind::to_visibility_kind(token.get_name_text());
-            if visibility != VisibilityKind::None {
-                return Some(visibility);
+            if visibility.is_some() {
+                return visibility;
             }
         }
     }

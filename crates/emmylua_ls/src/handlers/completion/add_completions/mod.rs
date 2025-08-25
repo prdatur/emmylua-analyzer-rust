@@ -52,7 +52,7 @@ pub fn is_deprecated(builder: &CompletionBuilder, id: LuaSemanticDeclId) -> bool
         .get_property(&id);
 
     if let Some(property) = property {
-        if property.deprecated.is_some() {
+        if property.deprecated().is_some() {
             return true;
         }
     }

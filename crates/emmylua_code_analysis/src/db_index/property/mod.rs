@@ -6,9 +6,7 @@ use emmylua_parser::{LuaAstNode, LuaDocTagField, LuaDocType, LuaVersionCondition
 pub use property::LuaCommonProperty;
 pub use property::{LuaDeprecated, LuaExport, LuaExportScope, LuaPropertyId};
 
-use crate::{
-    DbIndex, FileId, LuaMember, LuaSignatureId, db_index::property::property::LuaTagContent,
-};
+use crate::{DbIndex, FileId, LuaMember, LuaSignatureId};
 
 use super::{LuaSemanticDeclId, traits::LuaIndex};
 
@@ -41,8 +39,7 @@ impl LuaPropertyIndex {
             let id = LuaPropertyId::new(self.id_count);
             self.id_count += 1;
             self.property_owners_map.insert(owner_id.clone(), id);
-            self.properties
-                .insert(id, LuaCommonProperty::new(id.clone()));
+            self.properties.insert(id, LuaCommonProperty::new());
             self.properties.get_mut(&id)
         }
     }
@@ -53,12 +50,9 @@ impl LuaPropertyIndex {
         same_property_owner_id: LuaSemanticDeclId,
         file_id: FileId,
     ) -> Option<()> {
-        let property_id = self
-            .get_or_create_property(source_owner_id.clone())?
-            .id
-            .clone();
+        let property_id = self.property_owners_map.get(&source_owner_id)?;
         self.property_owners_map
-            .insert(same_property_owner_id, property_id);
+            .insert(same_property_owner_id, property_id.clone());
 
         self.in_filed_owner
             .entry(file_id)
@@ -75,7 +69,7 @@ impl LuaPropertyIndex {
         description: String,
     ) -> Option<()> {
         let property = self.get_or_create_property(owner_id.clone())?;
-        property.description = Some(Box::new(description));
+        property.add_extra_description(description);
 
         self.in_filed_owner
             .entry(file_id)
@@ -92,7 +86,7 @@ impl LuaPropertyIndex {
         visibility: VisibilityKind,
     ) -> Option<()> {
         let property = self.get_or_create_property(owner_id.clone())?;
-        property.visibility = Some(visibility);
+        property.visibility = visibility;
 
         self.in_filed_owner
             .entry(file_id)
@@ -109,7 +103,7 @@ impl LuaPropertyIndex {
         source: String,
     ) -> Option<()> {
         let property = self.get_or_create_property(owner_id.clone())?;
-        property.source = Some(Box::new(source));
+        property.add_extra_source(source);
 
         self.in_filed_owner
             .entry(file_id)
@@ -126,10 +120,7 @@ impl LuaPropertyIndex {
         message: Option<String>,
     ) -> Option<()> {
         let property = self.get_or_create_property(owner_id.clone())?;
-        property.deprecated = match message {
-            Some(msg) => Some(LuaDeprecated::DeprecatedWithMessage(Box::new(msg))),
-            None => Some(LuaDeprecated::Deprecated),
-        };
+        property.add_extra_deprecated(message);
 
         self.in_filed_owner
             .entry(file_id)
@@ -146,7 +137,8 @@ impl LuaPropertyIndex {
         version_conds: Vec<LuaVersionCondition>,
     ) -> Option<()> {
         let property = self.get_or_create_property(owner_id.clone())?;
-        property.version_conds = Some(Box::new(version_conds));
+
+        property.add_extra_version_cond(version_conds);
 
         self.in_filed_owner
             .entry(file_id)
@@ -164,16 +156,13 @@ impl LuaPropertyIndex {
         see_description: Option<String>,
     ) -> Option<()> {
         let property = self.get_or_create_property(owner_id.clone())?;
-        let tag_content = property
-            .tag_content
-            .get_or_insert_with(|| Box::new(LuaTagContent::new()));
 
         if let Some(see_description) = see_description {
             see_content += " ";
             see_content += &see_description;
         }
 
-        tag_content.add_tag("see".into(), see_content);
+        property.add_extra_tag("see".into(), see_content);
 
         self.in_filed_owner
             .entry(file_id)
@@ -191,10 +180,7 @@ impl LuaPropertyIndex {
         other_content: String,
     ) -> Option<()> {
         let property = self.get_or_create_property(owner_id.clone())?;
-        let tag_content = property
-            .tag_content
-            .get_or_insert_with(|| Box::new(LuaTagContent::new()));
-        tag_content.add_tag(tag_name, other_content);
+        property.add_extra_tag(tag_name, other_content);
 
         self.in_filed_owner
             .entry(file_id)
@@ -211,9 +197,7 @@ impl LuaPropertyIndex {
         export: property::LuaExport,
     ) -> Option<()> {
         let property = self.get_or_create_property(owner_id.clone())?;
-        property.export = Some(LuaExport {
-            scope: export.scope,
-        });
+        property.add_extra_export(export);
 
         self.in_filed_owner
             .entry(file_id)

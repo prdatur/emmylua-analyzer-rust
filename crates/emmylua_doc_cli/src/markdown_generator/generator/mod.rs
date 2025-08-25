@@ -15,11 +15,11 @@ fn collect_property(db: &DbIndex, semantic_decl: LuaSemanticDeclId) -> Property 
     let mut doc_property = Property::default();
     let property = db.get_property_index().get_property(&semantic_decl);
     if let Some(property) = property {
-        if let Some(description) = property.description.clone() {
-            doc_property.description = Some(description.to_string());
+        if let Some(description) = property.description() {
+            doc_property.description = Some(description.clone());
         }
 
-        if let Some(deprecated) = &property.deprecated {
+        if let Some(deprecated) = property.deprecated() {
             match deprecated {
                 LuaDeprecated::Deprecated => {
                     doc_property.deprecated = Some("Deprecated".to_string())
@@ -30,7 +30,7 @@ fn collect_property(db: &DbIndex, semantic_decl: LuaSemanticDeclId) -> Property 
             }
         }
 
-        if let Some(tag_content) = &property.tag_content {
+        if let Some(tag_content) = property.tag_content() {
             for (tag_name, content) in tag_content.get_all_tags() {
                 match tag_name.as_str() {
                     "see" => {

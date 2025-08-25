@@ -29,7 +29,7 @@ pub fn check_visibility(
         }
     };
 
-    if let Some(version_conds) = &property.version_conds {
+    if let Some(version_conds) = property.version_conds() {
         let version_number = emmyrc.runtime.version.to_lua_version_number();
         let visible = version_conds.iter().any(|cond| cond.check(&version_number));
         if !visible {
@@ -37,33 +37,30 @@ pub fn check_visibility(
         }
     }
 
-    if let Some(visibility) = property.visibility {
-        match visibility {
-            VisibilityKind::None | VisibilityKind::Public => return Some(true),
-            VisibilityKind::Protected | VisibilityKind::Private => {
-                return Some(
-                    check_visibility_by_visibility(
-                        db,
-                        infer_config,
-                        file_id,
-                        property_owner,
-                        token,
-                        visibility,
-                    )
-                    .unwrap_or(false),
-                );
-            }
-            VisibilityKind::Package => {
-                return Some(file_id == property_owner.get_file_id()?);
-            }
-            VisibilityKind::Internal => {
-                let property_file_id = property_owner.get_file_id()?;
-                let property_workspace_id =
-                    db.get_module_index().get_workspace_id(property_file_id)?;
-                let current_workspace_id = db.get_module_index().get_workspace_id(file_id)?;
-                if current_workspace_id != property_workspace_id {
-                    return Some(false);
-                }
+    match property.visibility {
+        VisibilityKind::Public => return Some(true),
+        VisibilityKind::Protected | VisibilityKind::Private => {
+            return Some(
+                check_visibility_by_visibility(
+                    db,
+                    infer_config,
+                    file_id,
+                    property_owner.clone(),
+                    token,
+                    property.visibility,
+                )
+                .unwrap_or(false),
+            );
+        }
+        VisibilityKind::Package => {
+            return Some(file_id == property_owner.get_file_id()?);
+        }
+        VisibilityKind::Internal => {
+            let property_file_id = property_owner.get_file_id()?;
+            let property_workspace_id = db.get_module_index().get_workspace_id(property_file_id)?;
+            let current_workspace_id = db.get_module_index().get_workspace_id(file_id)?;
+            if current_workspace_id != property_workspace_id {
+                return Some(false);
             }
         }
     }

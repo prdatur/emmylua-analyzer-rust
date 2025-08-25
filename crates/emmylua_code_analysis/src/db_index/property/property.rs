@@ -2,20 +2,86 @@ use emmylua_parser::{LuaVersionCondition, VisibilityKind};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LuaCommonProperty {
-    pub id: LuaPropertyId,
+    pub visibility: VisibilityKind,
     pub description: Option<Box<String>>,
-    pub visibility: Option<VisibilityKind>,
     pub source: Option<Box<String>>,
-    pub deprecated: Option<LuaDeprecated>,
+    pub deprecated: Option<Box<LuaDeprecated>>,
     pub version_conds: Option<Box<Vec<LuaVersionCondition>>>,
     pub tag_content: Option<Box<LuaTagContent>>,
     pub export: Option<LuaExport>,
 }
 
+impl LuaCommonProperty {
+    pub fn new() -> Self {
+        Self {
+            visibility: VisibilityKind::Public,
+            description: None,
+            source: None,
+            deprecated: None,
+            version_conds: None,
+            tag_content: None,
+            export: None,
+        }
+    }
+
+    pub fn description(&self) -> Option<&String> {
+        self.description.as_deref()
+    }
+
+    pub fn version_conds(&self) -> Option<&Vec<LuaVersionCondition>> {
+        self.version_conds.as_deref()
+    }
+
+    pub fn export(&self) -> Option<&LuaExport> {
+        self.export.as_ref()
+    }
+
+    pub fn tag_content(&self) -> Option<&LuaTagContent> {
+        self.tag_content.as_deref()
+    }
+
+    pub fn deprecated(&self) -> Option<&LuaDeprecated> {
+        self.deprecated.as_deref()
+    }
+
+    pub fn source(&self) -> Option<&String> {
+        self.source.as_deref()
+    }
+
+    pub fn add_extra_description(&mut self, description: String) {
+        self.description = Some(Box::new(description));
+    }
+
+    pub fn add_extra_source(&mut self, source: String) {
+        self.source = Some(Box::new(source));
+    }
+
+    pub fn add_extra_deprecated(&mut self, message: Option<String>) {
+        self.deprecated = match message {
+            Some(msg) => Some(Box::new(LuaDeprecated::DeprecatedWithMessage(msg))),
+            None => Some(Box::new(LuaDeprecated::Deprecated)),
+        };
+    }
+
+    pub fn add_extra_version_cond(&mut self, conds: Vec<LuaVersionCondition>) {
+        self.version_conds = Some(Box::new(conds));
+    }
+
+    pub fn add_extra_tag(&mut self, tag: String, content: String) {
+        self.tag_content
+            .get_or_insert_with(|| Box::new(LuaTagContent::new()))
+            .add_tag(tag, content);
+    }
+
+    pub fn add_extra_export(&mut self, export: LuaExport) {
+        self.export = Some(export);
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LuaDeprecated {
     Deprecated,
-    DeprecatedWithMessage(Box<String>),
+    DeprecatedWithMessage(String),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -46,21 +112,6 @@ impl LuaTagContent {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LuaExport {
     pub scope: LuaExportScope,
-}
-
-impl LuaCommonProperty {
-    pub fn new(id: LuaPropertyId) -> Self {
-        Self {
-            id,
-            description: None,
-            visibility: None,
-            source: None,
-            deprecated: None,
-            version_conds: None,
-            tag_content: None,
-            export: None,
-        }
-    }
 }
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Copy)]

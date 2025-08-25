@@ -268,7 +268,7 @@ fn check_member_version(db: &DbIndex, semantic_id: LuaSemanticDeclId) -> bool {
         return true;
     };
 
-    if let Some(version) = &property.version_conds {
+    if let Some(version) = property.version_conds() {
         let version_number = db.get_emmyrc().runtime.version.to_lua_version_number();
         return version.iter().any(|cond| cond.check(&version_number));
     }

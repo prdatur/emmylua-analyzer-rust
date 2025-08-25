@@ -18,7 +18,7 @@ pub fn analyze_visibility(
     analyzer: &mut DocAnalyzer,
     visibility: LuaDocTagVisibility,
 ) -> Option<()> {
-    let visibility_kind = visibility.get_visibility_token()?.get_visibility();
+    let visibility_kind = visibility.get_visibility_token()?.get_visibility()?;
     let owner_id = get_owner_id_or_report(analyzer, &visibility)?;
 
     analyzer.db.get_property_index_mut().add_visibility(

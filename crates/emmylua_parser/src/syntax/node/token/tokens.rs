@@ -558,7 +558,7 @@ impl LuaAstToken for LuaDocVisibilityToken {
 }
 
 impl LuaDocVisibilityToken {
-    pub fn get_visibility(&self) -> VisibilityKind {
+    pub fn get_visibility(&self) -> Option<VisibilityKind> {
         VisibilityKind::to_visibility_kind(self.token.text())
     }
 }

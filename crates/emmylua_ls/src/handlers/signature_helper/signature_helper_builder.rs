@@ -94,7 +94,7 @@ impl<'a> SignatureHelperBuilder<'a> {
             .get_property_index()
             .get_property(&semantic_decl);
         if let Some(property) = property {
-            if let Some(description) = &property.description {
+            if let Some(description) = property.description() {
                 self.set_description(description.to_string());
             }
         }
