@@ -200,6 +200,7 @@ impl ProviderVirtualWorkspace {
         let HoverContents::Markup(MarkupContent { kind, value }) = contents else {
             return fail!("expected HoverContents::Markup, got {contents:?}");
         };
+
         verify_eq!(value, expected.value)
     }
 
