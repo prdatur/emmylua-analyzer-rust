@@ -11,7 +11,7 @@ pub async fn on_did_change_configuration(
     let pretty_json = serde_json::to_string_pretty(&params).ok()?;
     log::info!("on_did_change_configuration: {}", pretty_json);
 
-    let workspace_manager = context.workspace_manager.read().await;
+    let workspace_manager = context.workspace_manager().read().await;
     if !workspace_manager.is_workspace_initialized() {
         return Some(());
     }
@@ -24,7 +24,7 @@ pub async fn on_did_change_configuration(
     drop(workspace_manager);
 
     let supports_config_request = context
-        .client_capabilities
+        .client_capabilities()
         .workspace
         .as_ref()?
         .configuration
@@ -32,7 +32,7 @@ pub async fn on_did_change_configuration(
 
     log::info!("change config client_id: {:?}", client_id);
     let new_client_config = get_client_config(&context, client_id, supports_config_request).await;
-    let mut workspace_manager = context.workspace_manager.write().await;
+    let mut workspace_manager = context.workspace_manager().write().await;
     workspace_manager.client_config = new_client_config;
 
     log::info!("reloading workspace folders");

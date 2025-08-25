@@ -23,7 +23,7 @@ impl CommandSpec for AutoRequireCommand {
         let position: Position = serde_json::from_value(args.get(2)?.clone()).ok()?;
         let member_name: String = serde_json::from_value(args.get(3)?.clone()).ok()?;
 
-        let analysis = context.analysis.read().await;
+        let analysis = context.analysis().read().await;
         let semantic_model = analysis.compilation.get_semantic_model(add_to)?;
         let module_info = semantic_model
             .get_db()
@@ -96,7 +96,6 @@ impl CommandSpec for AutoRequireCommand {
         let mut changes = HashMap::new();
         changes.insert(uri.clone(), vec![text_edit.clone()]);
 
-        let client = context.client;
         let cancel_token = time_cancel_token(Duration::from_secs(5));
         let apply_edit_params = ApplyWorkspaceEditParams {
             label: None,
@@ -107,8 +106,12 @@ impl CommandSpec for AutoRequireCommand {
             },
         };
 
+        let context_clone = context.clone();
         tokio::spawn(async move {
-            let res = client.apply_edit(apply_edit_params, cancel_token).await;
+            let res = context_clone
+                .client()
+                .apply_edit(apply_edit_params, cancel_token)
+                .await;
             if let Some(res) = res {
                 if !res.applied {
                     log::error!("Failed to apply edit: {:?}", res.failure_reason);

@@ -20,7 +20,7 @@ pub async fn on_code_lens_handler(
     _: CancellationToken,
 ) -> Option<Vec<CodeLens>> {
     let uri = params.text_document.uri;
-    let analysis = context.analysis.read().await;
+    let analysis = context.analysis().read().await;
     let file_id = analysis.get_file_id(&uri)?;
     let mut semantic_model = analysis.compilation.get_semantic_model(file_id)?;
 
@@ -36,10 +36,10 @@ pub async fn on_resolve_code_lens_handler(
     code_lens: CodeLens,
     _: CancellationToken,
 ) -> CodeLens {
-    let analysis = context.analysis.read().await;
+    let analysis = context.analysis().read().await;
     let compilation = &analysis.compilation;
     let client_id = context
-        .workspace_manager
+        .workspace_manager()
         .read()
         .await
         .client_config

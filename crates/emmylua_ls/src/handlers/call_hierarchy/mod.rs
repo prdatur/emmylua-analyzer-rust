@@ -23,7 +23,7 @@ pub async fn on_prepare_call_hierarchy_handler(
     _: CancellationToken,
 ) -> Option<Vec<CallHierarchyItem>> {
     let uri = params.text_document_position_params.text_document.uri;
-    let analysis = context.analysis.read().await;
+    let analysis = context.analysis().read().await;
     let file_id = analysis.get_file_id(&uri)?;
     let position = params.text_document_position_params.position;
     let semantic_model = analysis.compilation.get_semantic_model(file_id)?;
@@ -68,7 +68,7 @@ pub async fn on_incoming_calls_handler(
     let item = params.item;
     let data = item.data.as_ref()?;
     let data = serde_json::from_value::<CallHierarchyItemData>(data.clone()).ok()?;
-    let analysis = context.analysis.read().await;
+    let analysis = context.analysis().read().await;
     let semantic_model = analysis.compilation.get_semantic_model(data.file_id)?;
     let semantic_decl_id = data.semantic_decl;
 

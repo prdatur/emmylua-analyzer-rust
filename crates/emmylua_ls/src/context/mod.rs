@@ -21,16 +21,13 @@ pub use workspace_manager::WorkspaceFileMatcher;
 pub use workspace_manager::WorkspaceManager;
 pub use workspace_manager::load_emmy_config;
 
+use crate::context::snapshot::ServerContextInner;
+
 pub struct ServerContext {
     #[allow(unused)]
     conn: Connection,
-    analysis: Arc<RwLock<EmmyLuaAnalysis>>,
-    client: Arc<ClientProxy>,
-    cancllations: Arc<Mutex<HashMap<RequestId, CancellationToken>>>,
-    file_diagnostic: Arc<FileDiagnostic>,
-    workspace_manager: Arc<RwLock<WorkspaceManager>>,
-    status_bar: Arc<StatusBar>,
-    client_capabilities: Arc<ClientCapabilities>,
+    cancellations: Arc<Mutex<HashMap<RequestId, CancellationToken>>>,
+    inner: Arc<ServerContextInner>,
 }
 
 impl ServerContext {
@@ -56,25 +53,20 @@ impl ServerContext {
 
         ServerContext {
             conn,
-            analysis,
-            client,
-            file_diagnostic,
-            cancllations: Arc::new(Mutex::new(HashMap::new())),
-            workspace_manager,
-            status_bar,
-            client_capabilities,
+            cancellations: Arc::new(Mutex::new(HashMap::new())),
+            inner: Arc::new(ServerContextInner {
+                analysis,
+                client,
+                file_diagnostic,
+                workspace_manager,
+                status_bar,
+                client_capabilities,
+            }),
         }
     }
 
     pub fn snapshot(&self) -> ServerContextSnapshot {
-        ServerContextSnapshot {
-            analysis: self.analysis.clone(),
-            client: self.client.clone(),
-            file_diagnostic: self.file_diagnostic.clone(),
-            workspace_manager: self.workspace_manager.clone(),
-            status_bar: self.status_bar.clone(),
-            client_capabilities: self.client_capabilities.clone(),
-        }
+        ServerContextSnapshot::new(self.inner.clone())
     }
 
     pub fn send(&self, response: Response) {
@@ -89,12 +81,12 @@ impl ServerContext {
         let cancel_token = CancellationToken::new();
 
         {
-            let mut cancellations = self.cancllations.lock().await;
+            let mut cancellations = self.cancellations.lock().await;
             cancellations.insert(req_id.clone(), cancel_token.clone());
         }
 
         let sender = self.conn.sender.clone();
-        let cancellations = self.cancllations.clone();
+        let cancellations = self.cancellations.clone();
 
         tokio::spawn(async move {
             let res = exec(cancel_token.clone()).await;
@@ -122,18 +114,18 @@ impl ServerContext {
     }
 
     pub async fn cancel(&self, req_id: RequestId) {
-        let cancellations = self.cancllations.lock().await;
+        let cancellations = self.cancellations.lock().await;
         if let Some(cancel_token) = cancellations.get(&req_id) {
             cancel_token.cancel();
         }
     }
 
     pub async fn close(&self) {
-        let mut config_manager = self.workspace_manager.write().await;
-        config_manager.watcher = None;
+        let mut workspace_manager = self.inner.workspace_manager.write().await;
+        workspace_manager.watcher = None;
     }
 
     pub async fn send_response(&self, response: Response) {
-        self.client.on_response(response).await;
+        self.inner.client.on_response(response).await;
     }
 }

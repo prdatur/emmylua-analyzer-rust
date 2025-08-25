@@ -1,4 +1,4 @@
-use std::{fs::OpenOptions, io::Write, sync::Arc};
+use std::{fs::OpenOptions, io::Write};
 
 use emmylua_code_analysis::{DiagnosticCode, FileId, load_configs_raw};
 use lsp_types::{Command, Range};
@@ -29,7 +29,7 @@ impl CommandSpec for DisableCodeCommand {
 
         match action {
             DisableAction::DisableProject => {
-                add_disable_project(context.workspace_manager, code).await;
+                add_disable_project(context.workspace_manager(), code).await;
             }
             _ => {}
         }
@@ -60,10 +60,10 @@ pub fn make_disable_code_command(
 }
 
 async fn add_disable_project(
-    config_manager: Arc<RwLock<WorkspaceManager>>,
+    workspace_manager: &RwLock<WorkspaceManager>,
     code: DiagnosticCode,
 ) -> Option<()> {
-    let config_manager = config_manager.read().await;
+    let config_manager = workspace_manager.read().await;
     let main_workspace = config_manager.workspace_folders.get(0)?;
     let emmyrc_path = main_workspace.join(".emmyrc.json");
     let mut emmyrc = load_configs_raw(vec![emmyrc_path.clone()], None);

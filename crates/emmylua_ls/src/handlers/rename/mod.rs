@@ -29,7 +29,7 @@ pub async fn on_rename_handler(
     _: CancellationToken,
 ) -> Option<WorkspaceEdit> {
     let uri = params.text_document_position.text_document.uri;
-    let analysis = context.analysis.read().await;
+    let analysis = context.analysis().read().await;
     let file_id = analysis.get_file_id(&uri)?;
     let position = params.text_document_position.position;
     rename(&analysis, file_id, position, params.new_name)
@@ -41,7 +41,7 @@ pub async fn on_prepare_rename_handler(
     _: CancellationToken,
 ) -> Option<PrepareRenameResponse> {
     let uri = params.text_document.uri;
-    let analysis = context.analysis.read().await;
+    let analysis = context.analysis().read().await;
     let file_id = analysis.get_file_id(&uri)?;
     let position = params.position;
     let semantic_model = analysis.compilation.get_semantic_model(file_id)?;

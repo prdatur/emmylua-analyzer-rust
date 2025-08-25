@@ -19,7 +19,7 @@ pub async fn on_references_handler(
     _: CancellationToken,
 ) -> Option<Vec<Location>> {
     let uri = params.text_document_position.text_document.uri;
-    let analysis = context.analysis.read().await;
+    let analysis = context.analysis().read().await;
     let file_id = analysis.get_file_id(&uri)?;
     let position = params.text_document_position.position;
 

@@ -7,8 +7,8 @@ pub async fn on_did_change_watched_files(
     context: ServerContextSnapshot,
     params: DidChangeWatchedFilesParams,
 ) -> Option<()> {
-    let workspace = context.workspace_manager.read().await;
-    let mut analysis = context.analysis.write().await;
+    let workspace = context.workspace_manager().read().await;
+    let mut analysis = context.analysis().write().await;
     let emmyrc = analysis.get_emmyrc();
     let encoding = &emmyrc.workspace.encoding;
     let interval = emmyrc.diagnostics.diagnostic_interval.unwrap_or(500);
@@ -22,7 +22,7 @@ pub async fn on_did_change_watched_files(
                     analysis.remove_file_by_uri(&file_event.uri);
                     // 发送空诊断消息以清除客户端显示的诊断
                     context
-                        .file_diagnostic
+                        .file_diagnostic()
                         .clear_file_diagnostics(file_event.uri)
                         .await;
                     continue;
@@ -47,7 +47,7 @@ pub async fn on_did_change_watched_files(
                 }
                 let editorconfig_path = uri_to_file_path(&file_event.uri).unwrap();
                 context
-                    .workspace_manager
+                    .workspace_manager()
                     .read()
                     .await
                     .update_editorconfig(editorconfig_path);
@@ -59,7 +59,7 @@ pub async fn on_did_change_watched_files(
                 let emmyrc_path = uri_to_file_path(&file_event.uri).unwrap();
                 let file_dir = emmyrc_path.parent().unwrap().to_path_buf();
                 context
-                    .workspace_manager
+                    .workspace_manager()
                     .read()
                     .await
                     .add_update_emmyrc_task(file_dir)
@@ -71,7 +71,7 @@ pub async fn on_did_change_watched_files(
 
     let file_ids = analysis.update_files_by_uri(watched_lua_files);
     context
-        .file_diagnostic
+        .file_diagnostic()
         .add_files_diagnostic_task(file_ids, interval)
         .await;
 

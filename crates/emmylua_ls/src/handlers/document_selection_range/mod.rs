@@ -18,7 +18,7 @@ pub async fn on_document_selection_range_handle(
     let uri = params.text_document.uri;
     let position = params.positions;
 
-    let analysis = context.analysis.read().await;
+    let analysis = context.analysis().read().await;
     let file_id = analysis.get_file_id(&uri)?;
     let semantic_model = analysis.compilation.get_semantic_model(file_id)?;
     let document = semantic_model.get_document();

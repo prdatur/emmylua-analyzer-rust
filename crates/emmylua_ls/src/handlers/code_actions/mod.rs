@@ -21,7 +21,7 @@ pub async fn on_code_action_handler(
 ) -> Option<CodeActionResponse> {
     let uri = params.text_document.uri;
     let diagnostics = params.context.diagnostics;
-    let analysis = context.analysis.read().await;
+    let analysis = context.analysis().read().await;
     let file_id = analysis.get_file_id(&uri)?;
     code_action(&analysis, file_id, diagnostics)
 }

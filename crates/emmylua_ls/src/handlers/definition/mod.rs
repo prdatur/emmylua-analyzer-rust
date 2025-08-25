@@ -33,7 +33,7 @@ pub async fn on_goto_definition_handler(
     _: CancellationToken,
 ) -> Option<GotoDefinitionResponse> {
     let uri = params.text_document_position_params.text_document.uri;
-    let analysis = context.analysis.read().await;
+    let analysis = context.analysis().read().await;
     let file_id = analysis.get_file_id(&uri)?;
     let position = params.text_document_position_params.position;
 

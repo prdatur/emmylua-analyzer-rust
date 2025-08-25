@@ -31,7 +31,7 @@ pub async fn on_folding_range_handler(
     _: CancellationToken,
 ) -> Option<Vec<FoldingRange>> {
     let uri = params.text_document.uri;
-    let analysis = context.analysis.read().await;
+    let analysis = context.analysis().read().await;
     let file_id = analysis.get_file_id(&uri)?;
     let semantic_model = analysis.compilation.get_semantic_model(file_id)?;
     let document = semantic_model.get_document();

@@ -22,14 +22,19 @@ pub async fn on_semantic_token_handler(
     _: CancellationToken,
 ) -> Option<SemanticTokensResult> {
     let uri = params.text_document.uri;
-    let analysis = context.analysis.read().await;
+    let analysis = context.analysis().read().await;
     let file_id = analysis.get_file_id(&uri)?;
 
-    let workspace_manager = context.workspace_manager.read().await;
+    let workspace_manager = context.workspace_manager().read().await;
     let client_id = workspace_manager.client_config.client_id;
     let _ = workspace_manager;
 
-    semantic_token(&analysis, file_id, &context.client_capabilities, client_id)
+    semantic_token(
+        &analysis,
+        file_id,
+        &context.client_capabilities(),
+        client_id,
+    )
 }
 
 pub fn semantic_token(

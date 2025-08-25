@@ -16,6 +16,7 @@ use wax::Pattern;
 
 pub struct WorkspaceManager {
     analysis: Arc<RwLock<EmmyLuaAnalysis>>,
+    #[allow(unused)]
     client: Arc<ClientProxy>,
     status_bar: Arc<StatusBar>,
     update_token: Arc<Mutex<Option<Arc<ReindexToken>>>>,
@@ -73,7 +74,6 @@ impl WorkspaceManager {
         drop(update_token);
 
         let analysis = self.analysis.clone();
-        let client = self.client.clone();
         let workspace_folders = self.workspace_folders.clone();
         let config_update_token = self.update_token.clone();
         let client_config = self.client_config.clone();
@@ -88,13 +88,12 @@ impl WorkspaceManager {
 
             let emmyrc = load_emmy_config(Some(file_dir.clone()), client_config);
             init_analysis(
-                analysis,
-                client,
+                &analysis,
                 &status_bar,
+                &file_diagnostic,
                 workspace_folders,
                 emmyrc,
                 client_id,
-                file_diagnostic,
             )
             .await;
             // After completion, remove from HashMap
@@ -124,19 +123,17 @@ impl WorkspaceManager {
 
         let emmyrc = load_emmy_config(config_root, self.client_config.clone());
         let analysis = self.analysis.clone();
-        let client = self.client.clone();
         let workspace_folders = self.workspace_folders.clone();
         let status_bar = self.status_bar.clone();
         let client_id = self.client_config.client_id;
         let file_diagnostic = self.file_diagnostic.clone();
         init_analysis(
-            analysis,
-            client,
+            &analysis,
             &status_bar,
+            &file_diagnostic,
             workspace_folders,
             emmyrc,
             client_id,
-            file_diagnostic,
         )
         .await;
 

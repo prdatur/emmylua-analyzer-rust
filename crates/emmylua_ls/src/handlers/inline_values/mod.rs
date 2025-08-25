@@ -16,7 +16,7 @@ pub async fn on_inline_values_handler(
     let uri = params.text_document.uri;
     let stop_location = params.context.stopped_location;
     let stop_position = stop_location.start;
-    let analysis = context.analysis.read().await;
+    let analysis = context.analysis().read().await;
     let file_id = analysis.get_file_id(&uri)?;
     let mut semantic_model = analysis.compilation.get_semantic_model(file_id)?;
     if !semantic_model.get_emmyrc().inline_values.enable {

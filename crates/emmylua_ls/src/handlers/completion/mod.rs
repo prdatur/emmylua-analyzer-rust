@@ -31,7 +31,7 @@ pub async fn on_completion_handler(
 ) -> Option<CompletionResponse> {
     let uri = params.text_document_position.text_document.uri;
     let position = params.text_document_position.position;
-    let analysis = context.analysis.read().await;
+    let analysis = context.analysis().read().await;
     let file_id = analysis.get_file_id(&uri)?;
     let semantic_model = analysis.compilation.get_semantic_model(file_id)?;
     if !semantic_model.get_emmyrc().completion.enable {
@@ -96,8 +96,8 @@ pub async fn on_completion_resolve_handler(
     params: CompletionItem,
     _: CancellationToken,
 ) -> CompletionItem {
-    let analysis = context.analysis.read().await;
-    let config_manager = context.workspace_manager.read().await;
+    let analysis = context.analysis().read().await;
+    let config_manager = context.workspace_manager().read().await;
     let client_id = config_manager.client_config.client_id;
     completion_resolve(&analysis, params, client_id)
 }

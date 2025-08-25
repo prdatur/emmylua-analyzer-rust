@@ -24,7 +24,7 @@ pub async fn on_did_rename_files_handler(
 ) -> Option<()> {
     let mut all_renames: Vec<RenameInfo> = vec![];
 
-    let analysis = context.analysis.read().await;
+    let analysis = context.analysis().read().await;
 
     let module_index = analysis.compilation.get_db().get_module_index();
     for file_rename in params.files {
@@ -54,7 +54,7 @@ pub async fn on_did_rename_files_handler(
     if !all_renames.is_empty() {
         drop(analysis);
         // 更新
-        let mut analysis = context.analysis.write().await;
+        let mut analysis = context.analysis().write().await;
         let encoding = &analysis.get_emmyrc().workspace.encoding;
         for rename in all_renames.iter() {
             analysis.remove_file_by_uri(&rename.old_uri);
@@ -66,14 +66,14 @@ pub async fn on_did_rename_files_handler(
         }
         drop(analysis);
 
-        let analysis = context.analysis.read().await;
+        let analysis = context.analysis().read().await;
         if let Some(changes) = try_modify_require_path(&analysis.compilation, &all_renames) {
             drop(analysis);
             if changes.is_empty() {
                 return Some(());
             }
 
-            let client = context.client.clone();
+            let client = context.client();
 
             let show_message_params = ShowMessageRequestParams {
                 typ: MessageType::INFO,

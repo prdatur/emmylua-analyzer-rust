@@ -17,7 +17,7 @@ pub async fn get_client_config_vscode(
 ) -> Option<()> {
     get_client_config_default(context, config, None).await;
 
-    let client = &context.client;
+    let client = context.client();
     let params = lsp_types::ConfigurationParams {
         items: vec![lsp_types::ConfigurationItem {
             scope_uri: None,

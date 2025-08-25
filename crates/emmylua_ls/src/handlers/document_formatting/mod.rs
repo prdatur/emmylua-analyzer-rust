@@ -22,8 +22,8 @@ pub async fn on_formatting_handler(
     _: CancellationToken,
 ) -> Option<Vec<TextEdit>> {
     let uri = params.text_document.uri;
-    let analysis = context.analysis.read().await;
-    let workspace_manager = context.workspace_manager.read().await;
+    let analysis = context.analysis().read().await;
+    let workspace_manager = context.workspace_manager().read().await;
     let client_id = workspace_manager.client_config.client_id;
     let emmyrc = analysis.get_emmyrc();
 

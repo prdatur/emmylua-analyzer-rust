@@ -19,7 +19,7 @@ pub async fn on_inlay_hint_handler(
     _: CancellationToken,
 ) -> Option<Vec<InlayHint>> {
     let uri = params.text_document.uri;
-    let analysis = context.analysis.read().await;
+    let analysis = context.analysis().read().await;
     inlay_hint(&analysis, analysis.get_file_id(&uri)?)
 }
 

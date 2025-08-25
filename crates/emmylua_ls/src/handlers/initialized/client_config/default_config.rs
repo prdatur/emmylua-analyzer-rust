@@ -14,13 +14,13 @@ pub async fn get_client_config_default(
     scopes: Option<&[&str]>,
 ) -> Option<()> {
     let workspace_folders = context
-        .workspace_manager
+        .workspace_manager()
         .read()
         .await
         .workspace_folders
         .clone();
     let main_workspace_folder = workspace_folders.get(0);
-    let client = &context.client;
+    let client = context.client();
     let scope_uri = main_workspace_folder.map(|p| file_path_to_uri(p).unwrap());
 
     let mut configs = Vec::new();

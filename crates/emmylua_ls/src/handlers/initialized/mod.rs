@@ -8,7 +8,7 @@ use std::{path::PathBuf, str::FromStr, sync::Arc};
 use crate::{
     cmd_args::CmdArgs,
     context::{
-        ClientId, ClientProxy, FileDiagnostic, ProgressTask, ServerContextSnapshot, StatusBar,
+        ClientId, FileDiagnostic, ProgressTask, ServerContextSnapshot, StatusBar,
         WorkspaceFileMatcher, get_client_id, load_emmy_config,
     },
     handlers::{
@@ -52,7 +52,7 @@ pub async fn initialized_handler(
 
     {
         log::info!("set workspace folders: {:?}", workspace_folders);
-        let mut workspace_manager = context.workspace_manager.write().await;
+        let mut workspace_manager = context.workspace_manager().write().await;
         workspace_manager.workspace_folders = workspace_folders.clone();
         log::info!("workspace folders set");
     }
@@ -74,21 +74,19 @@ pub async fn initialized_handler(
     load_editorconfig(workspace_folders.clone());
 
     // init std lib
-    init_std_lib(context.analysis.clone(), &cmd_args, emmyrc.clone()).await;
+    init_std_lib(context.analysis(), &cmd_args, emmyrc.clone()).await;
 
     init_analysis(
-        context.analysis.clone(),
-        context.client.clone(),
-        &context.status_bar,
+        context.analysis(),
+        context.status_bar(),
+        context.file_diagnostic(),
         workspace_folders,
         emmyrc.clone(),
         client_id,
-        context.file_diagnostic.clone(),
     )
     .await;
-
     {
-        let mut workspace_manager = context.workspace_manager.write().await;
+        let mut workspace_manager = context.workspace_manager().write().await;
         workspace_manager.client_config = client_config.clone();
         let (include, exclude, exclude_dir) = calculate_include_and_exclude(&emmyrc);
         workspace_manager.match_file_pattern =
@@ -101,13 +99,12 @@ pub async fn initialized_handler(
 }
 
 pub async fn init_analysis(
-    analysis: Arc<RwLock<EmmyLuaAnalysis>>,
-    _: Arc<ClientProxy>,
+    analysis: &RwLock<EmmyLuaAnalysis>,
     status_bar: &StatusBar,
+    file_diagnostic: &FileDiagnostic,
     workspace_folders: Vec<PathBuf>,
     emmyrc: Arc<Emmyrc>,
     client_id: ClientId,
-    file_diagnostic: Arc<FileDiagnostic>,
 ) {
     let mut mut_analysis = analysis.write().await;
 
@@ -204,7 +201,7 @@ pub fn get_workspace_folders(params: &InitializeParams) -> Vec<PathBuf> {
 }
 
 pub async fn init_std_lib(
-    analysis: Arc<RwLock<EmmyLuaAnalysis>>,
+    analysis: &RwLock<EmmyLuaAnalysis>,
     cmd_args: &CmdArgs,
     emmyrc: Arc<Emmyrc>,
 ) {

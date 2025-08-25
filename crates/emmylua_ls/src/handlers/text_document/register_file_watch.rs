@@ -5,10 +5,7 @@ use lsp_types::{
     FileEvent, FileSystemWatcher, GlobPattern, Registration, RegistrationParams, WatchKind,
 };
 use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
-use std::{
-    sync::{Arc, mpsc::channel},
-    time::Duration,
-};
+use std::{sync::mpsc::channel, time::Duration};
 
 use crate::{
     context::{ClientProxy, ServerContextSnapshot},
@@ -22,7 +19,7 @@ pub async fn register_files_watch(
     let lsp_client_can_watch_files = is_lsp_client_can_watch_files(client_capabilities);
 
     if lsp_client_can_watch_files {
-        register_files_watch_use_lsp_client(context.client);
+        register_files_watch_use_lsp_client(context.client());
     } else {
         info!("use notify to watch files");
         register_files_watch_use_fsnotify(context).await;
@@ -40,7 +37,7 @@ fn is_lsp_client_can_watch_files(client_capabilities: &ClientCapabilities) -> bo
     false
 }
 
-fn register_files_watch_use_lsp_client(client: Arc<ClientProxy>) {
+fn register_files_watch_use_lsp_client(client: &ClientProxy) {
     let options = DidChangeWatchedFilesRegistrationOptions {
         watchers: vec![
             FileSystemWatcher {
@@ -100,14 +97,14 @@ async fn register_files_watch_use_fsnotify(context: ServerContextSnapshot) -> Op
         }
     };
 
-    let mut config_manager = context.workspace_manager.write().await;
-    for workspace in &config_manager.workspace_folders {
+    let mut workspace_manager = context.workspace_manager().write().await;
+    for workspace in &workspace_manager.workspace_folders {
         if let Err(e) = watcher.watch(workspace, RecursiveMode::Recursive) {
             warn!("can not watch {:?}: {:?}", workspace, e);
         }
     }
-    config_manager.watcher = Some(watcher);
-    drop(config_manager);
+    workspace_manager.watcher = Some(watcher);
+    drop(workspace_manager);
 
     tokio::spawn(async move {
         loop {
