@@ -19,14 +19,14 @@ use crate::handlers::{
 pub fn goto_def_definition(
     semantic_model: &SemanticModel,
     compilation: &LuaCompilation,
-    property_owner: LuaSemanticDeclId,
+    semantic_id: LuaSemanticDeclId,
     trigger_token: &LuaSyntaxToken,
 ) -> Option<GotoDefinitionResponse> {
     // 首先检查属性源位置
     if let Some(property) = semantic_model
         .get_db()
         .get_property_index()
-        .get_property(&property_owner)
+        .get_property(&semantic_id)
     {
         if let Some(source) = &property.source {
             if let Some(location) = goto_source_location(source) {
@@ -36,12 +36,12 @@ pub fn goto_def_definition(
     }
 
     // 根据不同的语义声明类型处理
-    match property_owner {
+    match semantic_id {
         LuaSemanticDeclId::LuaDecl(decl_id) => handle_decl_definition(
             semantic_model,
             compilation,
             trigger_token,
-            &property_owner,
+            &semantic_id,
             &decl_id,
         ),
         LuaSemanticDeclId::Member(member_id) => {
