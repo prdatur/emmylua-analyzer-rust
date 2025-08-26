@@ -37,6 +37,7 @@ pub async fn on_folding_range_handler(
     let document = semantic_model.get_document();
     let root = semantic_model.get_root();
     let emmyrc = semantic_model.get_emmyrc();
+
     let mut builder = FoldingRangeBuilder::new(&document, root.clone());
     build_folding_ranges(&mut builder, emmyrc);
     Some(builder.build())
