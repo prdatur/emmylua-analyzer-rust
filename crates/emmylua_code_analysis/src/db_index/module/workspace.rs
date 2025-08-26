@@ -12,7 +12,7 @@ impl Workspace {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord)]
 pub struct WorkspaceId {
     pub id: u32,
 }
@@ -32,6 +32,16 @@ impl WorkspaceId {
 
     pub fn is_std(&self) -> bool {
         self.id == 0
+    }
+}
+
+impl PartialOrd for WorkspaceId {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        match self.id.cmp(&other.id) {
+            std::cmp::Ordering::Less => Some(std::cmp::Ordering::Less),
+            std::cmp::Ordering::Greater => Some(std::cmp::Ordering::Greater),
+            std::cmp::Ordering::Equal => Some(std::cmp::Ordering::Equal),
+        }
     }
 }
 
