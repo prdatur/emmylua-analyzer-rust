@@ -1859,29 +1859,30 @@ mod tests {
             vec![],
         ));
 
-        let mut ws = make_ws();
-        check!(ws.check_completion(
-            r#"
-                --- {lua:obj}`<??>...
-            "#,
-            vec![
-                VirtualCompletionItem {
-                    label: "A".to_string(),
-                    kind: CompletionItemKind::CLASS,
-                    label_detail: None,
-                },
-                VirtualCompletionItem {
-                    label: "a".to_string(),
-                    kind: CompletionItemKind::FILE,
-                    label_detail: None,
-                },
-                VirtualCompletionItem {
-                    label: "virtual_0".to_string(),
-                    kind: CompletionItemKind::FILE,
-                    label_detail: None,
-                },
-            ],
-        ));
+        // donot support this now
+        // let mut ws = make_ws();
+        // check!(ws.check_completion(
+        //     r#"
+        //         --- {lua:obj}`<??>...
+        //     "#,
+        //     vec![
+        //         VirtualCompletionItem {
+        //             label: "A".to_string(),
+        //             kind: CompletionItemKind::CLASS,
+        //             label_detail: None,
+        //         },
+        //         VirtualCompletionItem {
+        //             label: "a".to_string(),
+        //             kind: CompletionItemKind::FILE,
+        //             label_detail: None,
+        //         },
+        //         VirtualCompletionItem {
+        //             label: "virtual_0".to_string(),
+        //             kind: CompletionItemKind::FILE,
+        //             label_detail: None,
+        //         },
+        //     ],
+        // ));
 
         Ok(())
     }

@@ -187,7 +187,8 @@ pub trait ResultContainer {
 
     fn emit_range(&mut self, range: SourceRange, kind: DescItemKind) {
         let should_emit = if let Some(cursor_position) = self.cursor_position() {
-            kind == DescItemKind::Ref && range.contains_inclusive(cursor_position)
+            matches!(kind, DescItemKind::Ref | DescItemKind::JavadocLink)
+                && range.contains_inclusive(cursor_position)
         } else {
             !range.is_empty()
         };

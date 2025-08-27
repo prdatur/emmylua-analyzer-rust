@@ -49,7 +49,7 @@ pub fn find_ref_at(
     let items = parse_desc(workspace_id, emmyrc, text, desc, Some(offset.into()));
 
     for item in items {
-        if item.kind == DescItemKind::Ref {
+        if matches!(item.kind, DescItemKind::Ref | DescItemKind::JavadocLink) {
             if !item.range.contains_inclusive(offset) {
                 continue;
             }

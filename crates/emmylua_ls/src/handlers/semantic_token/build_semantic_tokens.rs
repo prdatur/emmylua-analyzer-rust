@@ -839,7 +839,7 @@ fn render_desc_ranges(
                 );
                 pos = item.range.end();
             }
-            DescItemKind::Link => {
+            DescItemKind::Link | DescItemKind::JavadocLink => {
                 builder.push_at_range(
                     token_text,
                     item.range,

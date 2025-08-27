@@ -1,7 +1,7 @@
 mod lang;
-mod md;
+mod markdown;
+mod markdown_rst;
 mod ref_target;
-mod rst;
 mod util;
 
 use emmylua_parser::LuaDocDescription;
@@ -34,6 +34,9 @@ pub enum DescItemKind {
 
     /// Hyperlink.
     Link,
+
+    /// Javadoc @link
+    JavadocLink,
 
     /// Inline markup, like stars around emphasized text.
     Markup,
@@ -104,14 +107,15 @@ pub fn parse(
 ) -> Vec<DescItem> {
     let mut items = match kind {
         DescParserType::None => Vec::new(),
-        DescParserType::Md => md::MdParser::new(cursor_position).parse(text, desc),
+        DescParserType::Md => markdown::MarkdownParser::new(cursor_position).parse(text, desc),
         DescParserType::MySt { primary_domain } => {
-            md::MdParser::new_myst(primary_domain, cursor_position).parse(text, desc)
+            markdown::MarkdownParser::new_myst(primary_domain, cursor_position).parse(text, desc)
         }
         DescParserType::Rst {
             primary_domain,
             default_role,
-        } => rst::RstParser::new(primary_domain, default_role, cursor_position).parse(text, desc),
+        } => markdown_rst::MarkdownRstParser::new(primary_domain, default_role, cursor_position)
+            .parse(text, desc),
     };
 
     sort_result(&mut items);

@@ -1,18 +1,20 @@
+mod test;
+
 use crate::lang::{CodeBlockLang, process_code};
-use crate::rst::{eat_rst_flag_body, process_inline_code, process_lua_ref};
+use crate::markdown_rst::{eat_rst_flag_body, process_inline_code};
 use crate::util::{
-    BacktrackPoint, ResultContainer, desc_to_lines, is_blank, is_code_directive, is_lua_role,
-    is_punct, is_ws,
+    BacktrackPoint, ResultContainer, desc_to_lines, is_blank, is_code_directive, is_punct, is_ws,
 };
-use crate::{DescItem, DescItemKind, LuaDescParser};
+use crate::{CodeBlockHighlightKind, DescItem, DescItemKind, LuaDescParser};
 use emmylua_parser::{LexerState, Reader, SourceRange};
 use emmylua_parser::{LuaAstNode, LuaDocDescription};
 use std::cell::RefCell;
 use std::rc::Rc;
 
-pub struct MdParser {
+pub struct MarkdownParser {
     states: Rc<RefCell<Vec<State>>>,
     inline_state: Vec<InlineState>,
+    #[allow(unused)]
     primary_domain: Option<String>,
     enable_myst: bool,
     results: Vec<DescItem>,
@@ -66,7 +68,7 @@ enum InlineState {
     Both(char, SourceRange, usize),
 }
 
-impl LuaDescParser for MdParser {
+impl LuaDescParser for MarkdownParser {
     fn parse(&mut self, text: &str, desc: LuaDocDescription) -> Vec<DescItem> {
         assert!(self.results.is_empty());
 
@@ -91,7 +93,7 @@ impl LuaDescParser for MdParser {
     }
 }
 
-impl ResultContainer for MdParser {
+impl ResultContainer for MarkdownParser {
     fn results(&self) -> &Vec<DescItem> {
         &self.results
     }
@@ -105,7 +107,7 @@ impl ResultContainer for MdParser {
     }
 }
 
-impl MdParser {
+impl MarkdownParser {
     pub fn new(cursor_position: Option<usize>) -> Self {
         Self {
             states: Default::default(),
@@ -1027,42 +1029,34 @@ impl MdParser {
 
                     bt.commit(self, reader);
                 }
-                '{' if self.enable_myst => {
-                    let bt = BacktrackPoint::new(self, reader);
-
+                '{' => {
                     let prev = reader.reset_buff_into_sub_reader();
                     let after_prev = reader.current_char();
 
-                    let Ok(role_text) = self.process_role_name(reader) else {
+                    // Try MyST inline role first (if MyST is enabled)
+                    if self.enable_myst {
+                        let bt = BacktrackPoint::new(self, reader);
+                        if Self::eat_myst_inline_role(reader) {
+                            self.process_inline_content_style(prev, after_prev);
+                            self.process_myst_inline_role(reader.reset_buff_into_sub_reader());
+                            bt.commit(self, reader);
+                            continue;
+                        }
                         bt.rollback(self, reader);
-                        reader.bump();
-                        // guard.backtrack(reader);
-                        continue;
-                    };
+                    }
 
-                    if !Self::eat_inline_code(reader, self.cursor_position) {
-                        bt.rollback(self, reader);
-                        reader.bump();
-                        // guard.backtrack(reader);
+                    // Try Javadoc link
+                    let bt = BacktrackPoint::new(self, reader);
+                    if Self::eat_javadoc_link(reader) {
+                        self.process_inline_content_style(prev, after_prev);
+                        self.process_javadoc_link(reader.reset_buff_into_sub_reader());
+                        bt.commit(self, reader);
                         continue;
                     }
 
-                    let code = reader.reset_buff_into_sub_reader();
+                    bt.rollback(self, reader);
 
-                    self.process_inline_content_style(prev, after_prev);
-
-                    let is_lua_ref = role_text.starts_with("lua:")
-                        || (self.primary_domain.as_deref() == Some("lua")
-                            && !role_text.contains(":")
-                            && is_lua_role(role_text));
-
-                    if is_lua_ref {
-                        process_lua_ref(self, code);
-                    } else {
-                        process_inline_code(self, code, DescItemKind::Code);
-                    }
-
-                    bt.commit(self, reader);
+                    reader.bump();
                 }
                 _ => {
                     reader.bump();
@@ -1218,6 +1212,93 @@ impl MdParser {
         false
     }
 
+    #[must_use]
+    fn eat_javadoc_link(reader: &mut Reader) -> bool {
+        // Parse {@link class#method} or {@link class.method} format
+        if reader.current_char() != '{' {
+            return false;
+        }
+        reader.bump();
+
+        // Expect '@link'
+        if !reader.tail_text().starts_with("@link") {
+            return false;
+        }
+
+        // Consume '@link'
+        for _ in 0..5 {
+            reader.bump();
+        }
+
+        // Consume whitespace after @link
+        if !reader.current_char().is_whitespace() {
+            return false;
+        }
+        reader.eat_while(|c| c.is_whitespace());
+
+        // Parse the reference (class#method or class.method)
+        while !reader.is_eof() {
+            match reader.current_char() {
+                '}' => {
+                    reader.bump();
+                    return true;
+                }
+                '\\' => {
+                    reader.bump();
+                    reader.bump();
+                }
+                _ => reader.bump(),
+            }
+        }
+
+        false
+    }
+
+    #[must_use]
+    fn eat_myst_inline_role(reader: &mut Reader) -> bool {
+        // Parse {role}`content` format
+        if reader.current_char() != '{' {
+            return false;
+        }
+        reader.bump();
+
+        // Eat role name (can contain letters, numbers, colon, dash, underscore)
+        let role_start = reader.current_range().start_offset;
+        reader.eat_while(|c| c.is_ascii_alphanumeric() || matches!(c, ':' | '-' | '_' | '.'));
+        let role_end = reader.current_range().end_offset();
+
+        if role_start == role_end {
+            return false; // No role name found
+        }
+
+        if reader.current_char() != '}' {
+            return false;
+        }
+        reader.bump();
+
+        if reader.current_char() != '`' {
+            return false;
+        }
+
+        // Find the matching closing backtick
+        reader.bump();
+        while !reader.is_eof() {
+            if reader.current_char() == '`' {
+                reader.bump();
+                return true;
+            } else if reader.current_char() == '\\' {
+                reader.bump();
+                if !reader.is_eof() {
+                    reader.bump();
+                }
+            } else {
+                reader.bump();
+            }
+        }
+
+        false
+    }
+
     fn process_inline_math(&mut self, mut reader: Reader) {
         let n_backticks = reader.eat_when('$');
         self.emit(&mut reader, DescItemKind::Markup);
@@ -1229,21 +1310,201 @@ impl MdParser {
         self.emit(&mut reader, DescItemKind::Markup);
     }
 
-    fn process_role_name<'a>(&mut self, reader: &mut Reader<'a>) -> Result<&'a str, ()> {
-        if reader.current_char() != '{' {
-            return Err(());
-        }
-        reader.bump();
-        self.emit(reader, DescItemKind::Markup);
-        reader.eat_while(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | ':' | '+' | '_' | '-'));
-        if reader.current_char() == '}' {
-            let role_text = reader.current_text();
-            self.emit(reader, DescItemKind::Arg);
-            reader.bump();
-            self.emit(reader, DescItemKind::Markup);
-            Ok(role_text)
+    fn process_myst_inline_role(&mut self, mut reader: Reader) {
+        // Process {role}`content` format
+        // Emit opening brace as markup
+        reader.bump(); // consume '{'
+        self.emit(&mut reader, DescItemKind::Markup);
+
+        // Emit role name as Arg
+        reader.eat_while(|c| c.is_ascii_alphanumeric() || matches!(c, ':' | '-' | '_' | '.'));
+        let role_text = reader.current_text();
+
+        // Check if this is a lua role
+        let is_lua_ref = role_text.starts_with("lua:")
+            || (self.primary_domain.as_deref() == Some("lua")
+                && !role_text.contains(":")
+                && crate::util::is_lua_role(role_text));
+
+        self.emit(&mut reader, DescItemKind::Arg);
+
+        // Emit closing brace and opening backtick as markup
+        reader.bump(); // consume '}'
+        reader.bump(); // consume '`'
+        self.emit(&mut reader, DescItemKind::Markup);
+
+        // Process content until closing backtick
+        reader.reset_buff();
+
+        if is_lua_ref {
+            self.process_myst_lua_content(&mut reader);
         } else {
-            Err(())
+            // For non-lua roles, treat as code
+            while !reader.is_eof() && reader.current_char() != '`' {
+                if reader.current_char() == '\\' {
+                    reader.bump();
+                    if !reader.is_eof() {
+                        reader.bump();
+                    }
+                } else {
+                    reader.bump();
+                }
+            }
+            self.emit(&mut reader, DescItemKind::Code);
+        }
+
+        // Emit closing backtick as markup
+        if reader.current_char() == '`' {
+            reader.bump();
+            self.emit(&mut reader, DescItemKind::Markup);
+        }
+    }
+
+    fn process_myst_lua_content(&mut self, reader: &mut Reader) {
+        // Handle special lua reference patterns
+        if reader.is_eof() || reader.current_char() == '`' {
+            // Empty content
+            self.emit(reader, DescItemKind::Ref);
+            return;
+        }
+
+        if reader.current_char() == '~' {
+            // Short form: ~ref
+            reader.bump();
+            self.emit(reader, DescItemKind::Code);
+            reader.reset_buff();
+
+            // Rest is reference
+            while !reader.is_eof() && reader.current_char() != '`' {
+                reader.bump();
+            }
+            self.emit(reader, DescItemKind::Ref);
+        } else if reader.current_char() == '<' {
+            // Angle bracket format: <ref> or <~ref>
+            reader.bump();
+            self.emit(reader, DescItemKind::Code);
+            reader.reset_buff();
+
+            if reader.current_char() == '~' {
+                reader.bump();
+                self.emit(reader, DescItemKind::Code);
+                reader.reset_buff();
+            }
+
+            // Reference part
+            while !reader.is_eof() && reader.current_char() != '>' && reader.current_char() != '`' {
+                reader.bump();
+            }
+            self.emit(reader, DescItemKind::Ref);
+
+            // Closing >
+            reader.reset_buff();
+            if reader.current_char() == '>' {
+                reader.bump();
+                self.emit(reader, DescItemKind::Code);
+            }
+        } else {
+            // Check for title format by looking ahead
+            let mut title_present = false;
+            let mut temp_pos = 0;
+            let mut temp_reader = reader.clone();
+
+            // Look for " <" pattern
+            while !temp_reader.is_eof() && temp_reader.current_char() != '`' {
+                if temp_reader.current_char() == ' ' && temp_reader.next_char() == '<' {
+                    title_present = true;
+                    break;
+                }
+                temp_reader.bump();
+                temp_pos += 1;
+            }
+
+            if title_present {
+                // Title format: "title <ref>" or "title <~ref>"
+                for _ in 0..temp_pos {
+                    reader.bump();
+                }
+                reader.bump(); // space
+                reader.bump(); // <
+                self.emit(reader, DescItemKind::Code);
+                reader.reset_buff();
+
+                if reader.current_char() == '~' {
+                    reader.bump();
+                    self.emit(reader, DescItemKind::Code);
+                    reader.reset_buff();
+                }
+
+                // Reference
+                while !reader.is_eof()
+                    && reader.current_char() != '>'
+                    && reader.current_char() != '`'
+                {
+                    reader.bump();
+                }
+                self.emit(reader, DescItemKind::Ref);
+
+                // Closing >
+                reader.reset_buff();
+                if reader.current_char() == '>' {
+                    reader.bump();
+                    self.emit(reader, DescItemKind::Code);
+                }
+            } else {
+                // Plain reference
+                while !reader.is_eof() && reader.current_char() != '`' {
+                    reader.bump();
+                }
+                self.emit(reader, DescItemKind::Ref);
+            }
+        }
+    }
+
+    fn process_javadoc_link(&mut self, mut reader: Reader) {
+        // Process {@link class#method} or {@link class.method} format
+        // The reader should already be positioned at the start of the javadoc link
+
+        // Emit opening brace as markup
+        reader.bump(); // consume '{'
+        self.emit(
+            &mut reader,
+            DescItemKind::CodeBlockHl(CodeBlockHighlightKind::Operators),
+        );
+
+        // Emit '@link' as markup
+        reader.bump(); // consume '@'
+        reader.eat_while(|c| c.is_ascii_alphabetic()); // consume 'link'
+        self.emit(
+            &mut reader,
+            DescItemKind::CodeBlockHl(CodeBlockHighlightKind::Decorator),
+        );
+
+        // Skip whitespace and reset buffer for content
+        reader.eat_while(|c| c.is_whitespace());
+        reader.reset_buff();
+
+        // Process the reference content until closing brace
+        while !reader.is_eof() && reader.current_char() != '}' {
+            if reader.current_char() == '\\' {
+                reader.bump();
+                if !reader.is_eof() {
+                    reader.bump();
+                }
+            } else {
+                reader.bump();
+            }
+        }
+
+        // Emit the link reference content
+        self.emit(&mut reader, DescItemKind::JavadocLink);
+
+        // Emit closing brace as markup
+        if reader.current_char() == '}' {
+            reader.bump();
+            self.emit(
+                &mut reader,
+                DescItemKind::CodeBlockHl(CodeBlockHighlightKind::Operators),
+            );
         }
     }
 
@@ -1457,475 +1718,5 @@ impl MdParser {
             }
         }
         reader.reset_buff();
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[allow(unused)]
-    use crate::testlib::{print_result, test};
-    use googletest::prelude::*;
-
-    #[gtest]
-    fn test_md() -> Result<()> {
-        let code = r#"
---- # Inline code
----
---- `code`
---- `` code ` with ` backticks ``
---- `code``with``backticks`
---- `broken code
---- [link]
---- [link `with backticks]`]
---- [link [with brackets] ]
---- [link](explicit_href)
---- [link](explicit()href)
---- [link](<explicit)href>)
---- Paragraph with `code`!
---- Paragraph with [link]!
---- \` escaped backtick
---- *em* em*in*text
---- _em_ em_in_text
---- **strong** strong**in**text
---- __strong__ strong__in__text
---- broken *em
---- broken em*
---- broken **strong
---- broken strong**
---- ***both*** both***in***text
---- ***both end* separately**
---- ***both end** separately*
---- *both **start separately***
---- **both *start separately***
---- *`foo`*
----
---- # Blocks
----
---- ## Thematic breaks
----
---- - - -
---- _ _ _
---- * * *
---- - _ -
----
---- ## Lists
----
---- - List
---- * List 2
---- + List 3
---- -Broken list
----
---- -    List with indented text
----
---- -     List with code
----       Continuation
----
----       Continuation 2
----
---- -测试 <- not a list
----
---- - 测试 <- list
----
---- -
----   List that starts with empty string
----
----  Not list
----
----   -  not code
----
----         still not code
----
----     code
----
---- ## Numbered lists
----
---- 1. List
---- 2: List
---- 3) List
----   Not list
----
---- ## Code
----
----     This is code
----      This is also code
----       function foo() end
----
---- ## Fenced code
----
---- ```syntax
---- code
---- ```
---- not code
---- ~~~syntax
---- code
---- ```
---- still code
---- ~~~
----
---- ````code with 4 fences
---- ```
---- ````
----
---- ```inline code```
---- not code
----
---- ```lua
---- function foo()
----     local long_string = [[
----         content
----     ]]
---- end
---- ```
----
---- ## Quotes
----
---- > Quote
---- > Continues
----
---- > Quote 2
----
---- ## Disabled MySt extensions
----
---- $$
---- math
---- $$
----
---- ```{directive}
---- ```
----
---- ## Link anchor
----
---- [link]: https://example.com
-"#;
-        let expected = r#"
---- <Scope><Markup>#</Markup> Inline code</Scope>
----
---- <Markup>`</Markup><Code>code</Code><Markup>`</Markup>
---- <Markup>``</Markup><Code> code ` with ` backticks </Code><Markup>``</Markup>
---- <Markup>`</Markup><Code>code``with``backticks</Code><Markup>`</Markup>
---- `broken code
---- <Link>[link]</Link>
---- <Link>[link `with backticks]`]</Link>
---- <Link>[link [with brackets] ]</Link>
---- <Link>[link](explicit_href)</Link>
---- <Link>[link](explicit()href)</Link>
---- <Link>[link](<explicit)href>)</Link>
---- Paragraph with <Markup>`</Markup><Code>code</Code><Markup>`</Markup>!
---- Paragraph with <Link>[link]</Link>!
---- <Markup>\`</Markup> escaped backtick
---- <Em><Markup>*</Markup>em<Markup>*</Markup></Em> em<Em><Markup>*</Markup>in<Markup>*</Markup></Em>text
---- <Em><Markup>_</Markup>em<Markup>_</Markup></Em> em_in_text
---- <Strong><Markup>**</Markup>strong<Markup>**</Markup></Strong> strong<Strong><Markup>**</Markup>in<Markup>**</Markup></Strong>text
---- <Strong><Markup>__</Markup>strong<Markup>__</Markup></Strong> strong__in__text
---- broken *em
---- broken em*
---- broken **strong
---- broken strong**
---- <Em><Strong><Markup>***</Markup>both<Markup>***</Markup></Strong></Em> both<Em><Strong><Markup>***</Markup>in<Markup>***</Markup></Strong></Em>text
---- <Em><Strong><Markup>***</Markup>both end<Markup>*</Markup></Strong></Em><Strong> separately<Markup>**</Markup></Strong>
---- <Em><Strong><Markup>***</Markup>both end<Markup>**</Markup></Strong></Em><Em> separately<Markup>*</Markup></Em>
---- <Em><Markup>*</Markup>both <Strong><Markup>**</Markup>start separately<Markup>***</Markup></Strong></Em>
---- <Strong><Markup>**</Markup>both <Em><Markup>*</Markup>start separately<Markup>***</Markup></Em></Strong>
---- <Em><Markup>*</Markup><Markup>`</Markup><Code>foo</Code><Markup>`</Markup><Markup>*</Markup></Em>
----
---- <Scope><Markup>#</Markup> Blocks</Scope>
----
---- <Scope><Markup>##</Markup> Thematic breaks</Scope>
----
---- <Scope><Markup>-</Markup> <Markup>-</Markup> <Markup>-</Markup></Scope>
---- <Scope><Markup>_</Markup> <Markup>_</Markup> <Markup>_</Markup></Scope>
---- <Scope><Markup>*</Markup> <Markup>*</Markup> <Markup>*</Markup></Scope>
---- <Scope><Markup>-</Markup> _ -
----
---- </Scope><Scope><Markup>##</Markup> Lists</Scope>
----
---- <Scope><Markup>-</Markup> List
---- </Scope><Scope><Markup>*</Markup> List 2
---- </Scope><Scope><Markup>+</Markup> List 3
---- </Scope>-Broken list
----
---- <Scope><Markup>-</Markup>    List with indented text
----
---- </Scope><Scope><Markup>-</Markup> <Scope>    <CodeBlock>List with code</CodeBlock>
----       <CodeBlock>Continuation</CodeBlock>
----
----       <CodeBlock>Continuation 2</CodeBlock>
----
---- </Scope></Scope>-测试 <- not a list
----
---- <Scope><Markup>-</Markup> 测试 <- list
----
---- </Scope><Scope><Markup>-</Markup>
----   List that starts with empty string
----
---- </Scope> Not list
----
---- <Scope>  <Markup>-</Markup>  not code
----
----         still not code
----
---- </Scope><Scope>    <CodeBlock>code</CodeBlock>
----
---- </Scope><Scope><Markup>##</Markup> Numbered lists</Scope>
----
---- <Scope><Markup>1.</Markup> List
---- </Scope><Scope><Markup>2:</Markup> List
---- </Scope><Scope><Markup>3)</Markup> List
---- </Scope>  Not list
----
---- <Scope><Markup>##</Markup> Code</Scope>
----
---- <Scope>    <CodeBlock>This is code</CodeBlock>
----     <CodeBlock> This is also code</CodeBlock>
----     <CodeBlock>  function foo() end</CodeBlock>
----
---- </Scope><Scope><Markup>##</Markup> Fenced code</Scope>
----
---- <Scope><Markup>```</Markup><CodeBlock>syntax</CodeBlock>
---- <CodeBlock>code</CodeBlock>
---- <Markup>```</Markup></Scope>
---- not code
---- <Scope><Markup>~~~</Markup><CodeBlock>syntax</CodeBlock>
---- <CodeBlock>code</CodeBlock>
---- <CodeBlock>```</CodeBlock>
---- <CodeBlock>still code</CodeBlock>
---- <Markup>~~~</Markup></Scope>
----
---- <Scope><Markup>````</Markup><CodeBlock>code with 4 fences</CodeBlock>
---- <CodeBlock>```</CodeBlock>
---- <Markup>````</Markup></Scope>
----
---- <Markup>```</Markup><Code>inline code</Code><Markup>```</Markup>
---- not code
----
---- <Scope><Markup>```</Markup><CodeBlock>lua</CodeBlock>
---- <CodeBlockHl(Keyword)>function</CodeBlockHl(Keyword)> <CodeBlockHl(Function)>foo</CodeBlockHl(Function)><CodeBlockHl(Operators)>()</CodeBlockHl(Operators)>
----     <CodeBlockHl(Keyword)>local</CodeBlockHl(Keyword)> <CodeBlockHl(Variable)>long_string</CodeBlockHl(Variable)> <CodeBlockHl(Operators)>=</CodeBlockHl(Operators)> <CodeBlockHl(String)>[[</CodeBlockHl(String)>
---- <CodeBlockHl(String)>        content</CodeBlockHl(String)>
---- <CodeBlockHl(String)>    ]]</CodeBlockHl(String)>
---- <CodeBlockHl(Keyword)>end</CodeBlockHl(Keyword)>
---- <Markup>```</Markup></Scope>
----
---- <Scope><Markup>##</Markup> Quotes</Scope>
----
---- <Scope><Markup>></Markup> Quote
---- <Markup>></Markup> Continues
----</Scope>
---- <Scope><Markup>></Markup> Quote 2
----</Scope>
---- <Scope><Markup>##</Markup> Disabled MySt extensions</Scope>
----
---- $$
---- math
---- $$
----
---- <Scope><Markup>```</Markup><CodeBlock>{directive}</CodeBlock>
---- <Markup>```</Markup></Scope>
----
---- <Scope><Markup>##</Markup> Link anchor</Scope>
----
---- <Scope><Link>[link]</Link><Markup>:</Markup> <Link>https://example.com</Link></Scope>
-"#;
-
-        // print_result(&code, Box::new(MdParser::new(None)));
-        test(&code, Box::new(MdParser::new(None)), &expected).or_fail()?;
-        Ok(())
-    }
-
-    #[gtest]
-    fn test_myst() -> Result<()> {
-        let code = r#"
---- # Inline
----
---- {lua:obj}`a.b.c`, {lua:obj}`~a.b.c`,
---- {lua:obj}`<a.b.c>`, {lua:obj}`<~a.b.c>`, {lua:obj}`title <~a.b.c>`.
---- $inline math$, text, $$more inline math$$, a simple $dollar,
---- $$even more inline math$$.
----
---- # Directives
----
---- ```{directive}
---- ```
---- ```{directive}
---- Body
---- ```
---- ```{directive}
---- :param: value
---- Body
---- ```
---- ```{directive}
---- ---
---- param
---- ---
---- Body
---- ```
---- ````{directive1}
---- Body
---- ```{directive2}
---- Body
---- ```
---- Body
---- ````
---- ```{code-block} lua
---- function foo() end
---- ```
----
---- # Math
----
---- $$
---- \frac{1}{2}
---- $$
----
---- Text
----
---- $$
---- \frac{1}{2}
---- $$ (anchor)
-"#;
-
-        let expected = r#"
---- <Scope><Markup>#</Markup> Inline</Scope>
----
---- <Markup>{</Markup><Arg>lua:obj</Arg><Markup>}`</Markup><Ref>a.b.c</Ref><Markup>`</Markup>, <Markup>{</Markup><Arg>lua:obj</Arg><Markup>}`</Markup><Code>~</Code><Ref>a.b.c</Ref><Markup>`</Markup>,
---- <Markup>{</Markup><Arg>lua:obj</Arg><Markup>}`</Markup><Code><</Code><Ref>a.b.c</Ref><Code>></Code><Markup>`</Markup>, <Markup>{</Markup><Arg>lua:obj</Arg><Markup>}`</Markup><Code><~</Code><Ref>a.b.c</Ref><Code>></Code><Markup>`</Markup>, <Markup>{</Markup><Arg>lua:obj</Arg><Markup>}`</Markup><Code>title <~</Code><Ref>a.b.c</Ref><Code>></Code><Markup>`</Markup>.
---- <Markup>$</Markup><Code>inline math</Code><Markup>$</Markup>, text, <Markup>$$</Markup><Code>more inline math</Code><Markup>$$</Markup>, a simple $dollar,
---- <Markup>$$</Markup><Code>even more inline math</Code><Markup>$$</Markup>.
----
---- <Scope><Markup>#</Markup> Directives</Scope>
----
---- <Scope><Markup>```{</Markup><Arg>directive</Arg><Markup>}</Markup>
---- <Markup>```</Markup></Scope>
---- <Scope><Markup>```{</Markup><Arg>directive</Arg><Markup>}</Markup>
---- Body
---- <Markup>```</Markup></Scope>
---- <Scope><Markup>```{</Markup><Arg>directive</Arg><Markup>}</Markup>
---- <Markup>:</Markup><Arg>param</Arg><Markup>:</Markup> <CodeBlock>value</CodeBlock>
---- Body
---- <Markup>```</Markup></Scope>
---- <Scope><Markup>```{</Markup><Arg>directive</Arg><Markup>}</Markup>
---- <Markup>---</Markup>
---- <CodeBlock>param</CodeBlock>
---- <Markup>---</Markup>
---- Body
---- <Markup>```</Markup></Scope>
---- <Scope><Markup>````{</Markup><Arg>directive1</Arg><Markup>}</Markup>
---- Body
---- <Scope><Markup>```{</Markup><Arg>directive2</Arg><Markup>}</Markup>
---- Body
---- <Markup>```</Markup></Scope>
---- Body
---- <Markup>````</Markup></Scope>
---- <Scope><Markup>```{</Markup><Arg>code-block</Arg><Markup>}</Markup> <CodeBlock>lua</CodeBlock>
---- <CodeBlockHl(Keyword)>function</CodeBlockHl(Keyword)> <CodeBlockHl(Function)>foo</CodeBlockHl(Function)><CodeBlockHl(Operators)>()</CodeBlockHl(Operators)> <CodeBlockHl(Keyword)>end</CodeBlockHl(Keyword)>
---- <Markup>```</Markup></Scope>
----
---- <Scope><Markup>#</Markup> Math</Scope>
----
---- <Scope><Markup>$$</Markup>
---- <CodeBlock>\frac{1}{2}</CodeBlock>
---- <Markup>$$</Markup></Scope>
----
---- Text
----
---- <Scope><Markup>$$</Markup>
---- <CodeBlock>\frac{1}{2}</CodeBlock>
---- <Markup>$$</Markup> <Arg>(anchor)</Arg></Scope>
-"#;
-
-        test(&code, Box::new(MdParser::new_myst(None, None)), &expected).or_fail()?;
-        Ok(())
-    }
-
-    #[gtest]
-    fn test_myst_primary_domain() -> Result<()> {
-        let code = r#"--- See {obj}`ref`"#;
-
-        let expected = r#"
-            --- See <Markup>{</Markup><Arg>obj</Arg><Markup>}`</Markup><Ref>ref</Ref><Markup>`</Markup>
-        "#;
-
-        test(
-            &code,
-            Box::new(MdParser::new_myst(Some("lua".to_string()), None)),
-            &expected,
-        )
-        .or_fail()?;
-        Ok(())
-    }
-
-    #[gtest]
-    fn test_myst_search_at_offset() -> Result<()> {
-        let code = r#"--- See {lua:obj}`x` {lua:obj}`ref`"#;
-        let expected = r#"--- See {lua:obj}`x` {lua:obj}`<Ref>ref</Ref>`"#;
-        test(
-            &code,
-            Box::new(MdParser::new_myst(None, Some(31))),
-            &expected,
-        )
-        .or_fail()?;
-        test(
-            &code,
-            Box::new(MdParser::new_myst(None, Some(32))),
-            &expected,
-        )
-        .or_fail()?;
-        test(
-            &code,
-            Box::new(MdParser::new_myst(None, Some(34))),
-            &expected,
-        )
-        .or_fail()?;
-
-        let code = r#"--- See {lua:obj}`x` {lua:obj}`"#;
-        let expected = r#"--- See {lua:obj}`x` {lua:obj}`<Ref></Ref>"#;
-        test(
-            &code,
-            Box::new(MdParser::new_myst(None, Some(31))),
-            &expected,
-        )
-        .or_fail()?;
-
-        let code = r#"--- See {lua:obj}`x` {lua:obj}``..."#;
-        let expected = r#"--- See {lua:obj}`x` {lua:obj}`<Ref>`...</Ref>"#;
-        test(
-            &code,
-            Box::new(MdParser::new_myst(None, Some(31))),
-            &expected,
-        )
-        .or_fail()?;
-        Ok(())
-    }
-
-    #[gtest]
-    fn test_md_no_indent() -> Result<()> {
-        let code = r#"
----```lua
----
---- local t = 213
----```
----
---- .. code-block:: lua
----
----    local t = 123
----    yes = 1123
-local t = 123
-"#;
-
-        let expected = r#"
----<Scope><Markup>```</Markup><CodeBlock>lua</CodeBlock>
----
---- <CodeBlockHl(Keyword)>local</CodeBlockHl(Keyword)> <CodeBlockHl(Variable)>t</CodeBlockHl(Variable)> <CodeBlockHl(Operators)>=</CodeBlockHl(Operators)> <CodeBlockHl(Number)>213</CodeBlockHl(Number)>
----<Markup>```</Markup></Scope>
----
---- .. code-block:: lua
----
----<Scope>    <CodeBlock>local t = 123</CodeBlock>
----    <CodeBlock>yes = 1123</CodeBlock></Scope>
-local t = 123
-"#;
-
-        test(&code, Box::new(MdParser::new(None)), &expected).or_fail()?;
-        Ok(())
     }
 }
