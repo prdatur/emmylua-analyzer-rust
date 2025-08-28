@@ -8,11 +8,25 @@ use crate::util::{
 use crate::{CodeBlockHighlightKind, DescItem, DescItemKind, LuaDescParser};
 use emmylua_parser::{LexerState, Reader, SourceRange};
 use emmylua_parser::{LuaAstNode, LuaDocDescription};
-use std::cell::RefCell;
-use std::rc::Rc;
+
+/// Error types for Markdown parsing
+#[allow(unused)]
+#[derive(Debug, Clone, PartialEq)]
+pub enum ParseError {
+    /// Nesting depth exceeded the maximum allowed limit
+    NestingTooDeep,
+    /// Invalid Markdown syntax encountered
+    InvalidSyntax,
+    /// Unexpected end of file
+    UnexpectedEof,
+    /// Invalid fence configuration
+    InvalidFence,
+}
+
+type ParseResult<T> = Result<T, ParseError>;
 
 pub struct MarkdownParser {
-    states: Rc<RefCell<Vec<State>>>,
+    states: Vec<State>,
     inline_state: Vec<InlineState>,
     #[allow(unused)]
     primary_domain: Option<String>,
@@ -20,6 +34,7 @@ pub struct MarkdownParser {
     results: Vec<DescItem>,
     cursor_position: Option<usize>,
     state: LexerState,
+    max_nesting_depth: usize,
 }
 
 #[derive(Copy, Clone)]
@@ -72,7 +87,7 @@ impl LuaDescParser for MarkdownParser {
     fn parse(&mut self, text: &str, desc: LuaDocDescription) -> Vec<DescItem> {
         assert!(self.results.is_empty());
 
-        self.states.borrow_mut().clear();
+        self.states.clear();
         self.inline_state.clear();
 
         let desc_end = desc.get_range().end().into();
@@ -84,7 +99,6 @@ impl LuaDescParser for MarkdownParser {
         }
 
         self.flush_state(
-            &mut self.states.clone().borrow_mut(),
             0,
             &mut Reader::new_with_range("", SourceRange::new(desc_end, 0)),
         );
@@ -110,35 +124,44 @@ impl ResultContainer for MarkdownParser {
 impl MarkdownParser {
     pub fn new(cursor_position: Option<usize>) -> Self {
         Self {
-            states: Default::default(),
-            inline_state: Default::default(),
+            states: Vec::new(),
+            inline_state: Vec::new(),
             primary_domain: None,
             enable_myst: false,
             results: Vec::new(),
             cursor_position,
             state: LexerState::Normal,
+            max_nesting_depth: 64, // Reasonable limit to prevent stack overflow
         }
     }
 
     pub fn new_myst(primary_domain: Option<String>, cursor_position: Option<usize>) -> Self {
         Self {
-            states: Default::default(),
-            inline_state: Default::default(),
+            states: Vec::new(),
+            inline_state: Vec::new(),
             primary_domain,
             enable_myst: true,
             results: Vec::new(),
             cursor_position,
             state: LexerState::Normal,
+            max_nesting_depth: 64,
         }
     }
 
     fn process_line(&mut self, reader: &mut Reader) {
-        // First, find out which blocks are still present
-        // and which finished.
+        // Check nesting depth to prevent stack overflow
+        if self.states.len() >= self.max_nesting_depth {
+            // Skip processing if nesting is too deep
+            reader.eat_till_end();
+            self.emit(reader, DescItemKind::CodeBlock);
+            return;
+        }
+
+        // First, find out which blocks are still present and which finished.
         let mut last_state = 0;
-        let states = self.states.clone();
-        let mut states = states.borrow_mut();
-        for (i, &state) in states.iter().enumerate() {
+        let states_copy = self.states.clone();
+
+        for (i, &state) in states_copy.iter().enumerate() {
             match state {
                 State::Quote { .. } => {
                     if self.try_process_quote_continuation(reader).is_ok() {
@@ -168,7 +191,7 @@ impl MarkdownParser {
                     ..
                 } => {
                     if self.try_process_fence_end(reader, n_fences, fence).is_ok() {
-                        self.flush_state(&mut states, i, reader);
+                        self.flush_state(i, reader);
                         return;
                     } else {
                         self.process_code_line(reader, lang);
@@ -182,26 +205,25 @@ impl MarkdownParser {
                     scope_start,
                 } => {
                     if self.try_process_fence_end(reader, n_fences, fence).is_ok() {
-                        self.flush_state(&mut states, i, reader);
+                        self.flush_state(i, reader);
                         return;
                     } else if self.try_process_fence_long_params_marker(reader).is_ok() {
-                        self.flush_state(&mut states, i + 1, reader);
-                        states.pop();
-                        states.push(State::FencedDirectiveParamsLong {
+                        self.flush_state(i + 1, reader);
+                        self.states.pop();
+                        self.states.push(State::FencedDirectiveParamsLong {
                             n_fences,
                             fence,
                             lang,
                             scope_start,
                         });
                         return;
-                    }
-                    if self.try_process_fence_short_param(reader).is_ok() {
+                    } else if self.try_process_fence_short_param(reader).is_ok() {
                         return;
                     } else if lang.is_some() {
-                        self.flush_state(&mut states, i + 1, reader);
-                        states.pop();
+                        self.flush_state(i + 1, reader);
+                        self.states.pop();
                         let lang = lang.unwrap_or(CodeBlockLang::None);
-                        states.push(State::FencedCode {
+                        self.states.push(State::FencedCode {
                             n_fences,
                             fence,
                             lang,
@@ -210,9 +232,9 @@ impl MarkdownParser {
                         self.process_code_line(reader, lang);
                         return;
                     } else {
-                        self.flush_state(&mut states, i + 1, reader);
-                        states.pop();
-                        states.push(State::FencedDirectiveBody {
+                        self.flush_state(i + 1, reader);
+                        self.states.pop();
+                        self.states.push(State::FencedDirectiveBody {
                             n_fences,
                             fence,
                             scope_start,
@@ -228,20 +250,20 @@ impl MarkdownParser {
                     scope_start,
                 } => {
                     if self.try_process_fence_end(reader, n_fences, fence).is_ok() {
-                        self.flush_state(&mut states, i, reader);
+                        self.flush_state(i, reader);
                         return;
                     } else if self.try_process_fence_long_params_marker(reader).is_ok() {
-                        self.flush_state(&mut states, i + 1, reader);
-                        states.pop();
+                        self.flush_state(i + 1, reader);
+                        self.states.pop();
                         if lang.is_some() {
-                            states.push(State::FencedCode {
+                            self.states.push(State::FencedCode {
                                 n_fences,
                                 fence,
                                 lang: lang.unwrap_or(CodeBlockLang::None),
                                 scope_start,
                             });
                         } else {
-                            states.push(State::FencedDirectiveBody {
+                            self.states.push(State::FencedDirectiveBody {
                                 n_fences,
                                 fence,
                                 scope_start,
@@ -257,7 +279,7 @@ impl MarkdownParser {
                     n_fences, fence, ..
                 } => {
                     if self.try_process_fence_end(reader, n_fences, fence).is_ok() {
-                        self.flush_state(&mut states, i, reader);
+                        self.flush_state(i, reader);
                         return;
                     } else {
                         // Continue with nested states.
@@ -265,7 +287,7 @@ impl MarkdownParser {
                 }
                 State::Math { .. } => {
                     if self.try_process_math_end(reader).is_ok() {
-                        self.flush_state(&mut states, i, reader);
+                        self.flush_state(i, reader);
                         return;
                     } else {
                         reader.eat_till_end();
@@ -278,9 +300,7 @@ impl MarkdownParser {
             last_state = i + 1;
         }
 
-        drop(states);
-
-        self.flush_state(&mut self.states.clone().borrow_mut(), last_state, reader);
+        self.flush_state(last_state, reader);
 
         // Second, handle the rest of the line. Each iteration will add a new block
         // onto the state stack. The final iteration will handle inline content.
@@ -315,7 +335,7 @@ impl MarkdownParser {
                     return NO_MORE_CONTENT;
                 } else if let Ok((indent_more, scope_start)) = self.try_process_list(reader) {
                     indent += indent_more;
-                    self.states.borrow_mut().push(State::Indented {
+                    self.states.push(State::Indented {
                         indent,
                         scope_start,
                     });
@@ -343,37 +363,77 @@ impl MarkdownParser {
             }
             // Fenced code.
             '`' | '~' | ':' => {
-                if let Ok((n_fences, fence, scope_start)) = self.try_process_fence_start(reader) {
-                    if let Ok((dir_name, dir_args)) = self.try_process_fence_directive_name(reader)
-                    {
-                        // This is a directive.
-                        let is_code = is_code_directive(dir_name);
-                        let lang = if is_code {
-                            CodeBlockLang::try_parse(dir_args.trim())
+                // Try improved fence processing first, fallback to original on error
+                match self.try_process_fence_start_improved(reader) {
+                    Ok((n_fences, fence, scope_start)) => {
+                        if let Ok((dir_name, dir_args)) =
+                            self.try_process_fence_directive_name(reader)
+                        {
+                            // This is a directive.
+                            let is_code = is_code_directive(dir_name);
+                            let lang = if is_code {
+                                CodeBlockLang::try_parse(dir_args.trim())
+                            } else {
+                                None
+                            };
+                            self.states.push(State::FencedDirectiveParams {
+                                n_fences,
+                                fence,
+                                lang,
+                                scope_start,
+                            });
                         } else {
-                            None
-                        };
-                        self.states.borrow_mut().push(State::FencedDirectiveParams {
-                            n_fences,
-                            fence,
-                            lang,
-                            scope_start,
-                        });
-                    } else {
-                        // This is a code block.
-                        reader.eat_till_end();
-                        let lang = CodeBlockLang::try_parse(reader.current_text().trim());
-                        self.emit(reader, DescItemKind::CodeBlock);
-                        self.states.borrow_mut().push(State::FencedCode {
-                            n_fences,
-                            fence,
-                            lang: lang.unwrap_or(CodeBlockLang::None),
-                            scope_start,
-                        });
+                            // This is a code block.
+                            reader.eat_till_end();
+                            let lang = CodeBlockLang::try_parse(reader.current_text().trim());
+                            self.emit(reader, DescItemKind::CodeBlock);
+                            self.states.push(State::FencedCode {
+                                n_fences,
+                                fence,
+                                lang: lang.unwrap_or(CodeBlockLang::None),
+                                scope_start,
+                            });
+                        }
+                        return NO_MORE_CONTENT;
                     }
-                    return NO_MORE_CONTENT;
-                } else {
-                    // This is a normal text, continue to inline parsing.
+                    Err(_) => {
+                        // Fallback to original method for compatibility
+                        if let Ok((n_fences, fence, scope_start)) =
+                            self.try_process_fence_start(reader)
+                        {
+                            if let Ok((dir_name, dir_args)) =
+                                self.try_process_fence_directive_name(reader)
+                            {
+                                // This is a directive.
+                                let is_code = is_code_directive(dir_name);
+                                let lang = if is_code {
+                                    CodeBlockLang::try_parse(dir_args.trim())
+                                } else {
+                                    None
+                                };
+                                self.states.push(State::FencedDirectiveParams {
+                                    n_fences,
+                                    fence,
+                                    lang,
+                                    scope_start,
+                                });
+                            } else {
+                                // This is a code block.
+                                reader.eat_till_end();
+                                let lang = CodeBlockLang::try_parse(reader.current_text().trim());
+                                self.emit(reader, DescItemKind::CodeBlock);
+                                self.states.push(State::FencedCode {
+                                    n_fences,
+                                    fence,
+                                    lang: lang.unwrap_or(CodeBlockLang::None),
+                                    scope_start,
+                                });
+                            }
+                            return NO_MORE_CONTENT;
+                        } else {
+                            // This is a normal text, continue to inline parsing.
+                        }
+                    }
                 }
             }
             // Indented code.
@@ -383,14 +443,14 @@ impl MarkdownParser {
                 reader.reset_buff();
                 reader.eat_till_end();
                 self.emit(reader, DescItemKind::CodeBlock);
-                self.states.borrow_mut().push(State::Code { scope_start });
+                self.states.push(State::Code { scope_start });
                 return NO_MORE_CONTENT;
             }
             // Numbered list.
             '0'..='9' => {
                 if let Ok((indent_more, scope_start)) = self.try_process_list(reader) {
                     indent += indent_more;
-                    self.states.borrow_mut().push(State::Indented {
+                    self.states.push(State::Indented {
                         indent,
                         scope_start,
                     });
@@ -402,7 +462,7 @@ impl MarkdownParser {
             // Quote.
             '>' => {
                 if let Ok(scope_start) = self.try_process_quote(reader) {
-                    self.states.borrow_mut().push(State::Quote { scope_start });
+                    self.states.push(State::Quote { scope_start });
                     return HAS_MORE_CONTENT;
                 } else {
                     // This is a normal text, continue to inline parsing.
@@ -411,7 +471,7 @@ impl MarkdownParser {
             // Math block.
             '$' if self.enable_myst => {
                 if let Ok(scope_start) = self.try_process_math(reader) {
-                    self.states.borrow_mut().push(State::Math { scope_start });
+                    self.states.push(State::Math { scope_start });
                     return NO_MORE_CONTENT;
                 } else {
                     // This is a normal text, continue to inline parsing.
@@ -716,6 +776,63 @@ impl MarkdownParser {
             _ => {
                 bt.rollback(self, reader);
                 Err(())
+            }
+        }
+    }
+
+    /// Improved fence start processing with better error handling
+    fn try_process_fence_start_improved(
+        &mut self,
+        reader: &mut Reader,
+    ) -> ParseResult<(usize, char, usize)> {
+        let bt = BacktrackPoint::new(self, reader);
+        let scope_start = reader.current_range().start_offset;
+
+        reader.consume_n_times(is_ws, 3);
+        match reader.current_char() {
+            '`' => {
+                reader.reset_buff();
+                let n_fences = reader.eat_when('`');
+                if n_fences < 3 {
+                    bt.rollback(self, reader);
+                    return Err(ParseError::InvalidFence);
+                }
+                if reader.tail_text().contains('`') {
+                    bt.rollback(self, reader);
+                    return Err(ParseError::InvalidSyntax);
+                }
+                self.emit(reader, DescItemKind::Markup);
+
+                bt.commit(self, reader);
+                Ok((n_fences, '`', scope_start))
+            }
+            '~' => {
+                reader.reset_buff();
+                let n_fences = reader.eat_when('~');
+                if n_fences < 3 {
+                    bt.rollback(self, reader);
+                    return Err(ParseError::InvalidFence);
+                }
+                self.emit(reader, DescItemKind::Markup);
+
+                bt.commit(self, reader);
+                Ok((n_fences, '~', scope_start))
+            }
+            ':' if self.enable_myst => {
+                reader.reset_buff();
+                let n_fences = reader.eat_when(':');
+                if n_fences < 3 {
+                    bt.rollback(self, reader);
+                    return Err(ParseError::InvalidFence);
+                }
+                self.emit(reader, DescItemKind::Markup);
+
+                bt.commit(self, reader);
+                Ok((n_fences, ':', scope_start))
+            }
+            _ => {
+                bt.rollback(self, reader);
+                Err(ParseError::InvalidSyntax)
             }
         }
     }
@@ -1581,8 +1698,10 @@ impl MarkdownParser {
         reader.reset_buff();
     }
 
-    fn flush_state(&mut self, states: &mut Vec<State>, end: usize, reader: &mut Reader) {
-        for state in states.drain(end..).rev() {
+    fn flush_state(&mut self, end: usize, reader: &mut Reader) {
+        let drained_states: Vec<State> = self.states.drain(end..).rev().collect();
+
+        for state in drained_states {
             let scope_start = match state {
                 State::Quote { scope_start, .. } => scope_start,
                 State::Indented { scope_start, .. } => scope_start,
