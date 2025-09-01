@@ -205,7 +205,7 @@ async fn workspace_diagnostic(
                     status_bar.finish_progress_task(
                         client_id,
                         ProgressTask::DiagnoseWorkspace,
-                        None,
+                        Some("Diagnosis complete".to_string()),
                     );
                     break;
                 }

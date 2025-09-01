@@ -163,15 +163,15 @@ pub async fn init_analysis(
         mut_analysis.update_files_by_path(files);
     }
 
-    status_bar.finish_progress_task(
-        client_id,
-        ProgressTask::LoadWorkspace,
-        Some(String::from("Finished loading workspace files")),
-    );
     status_bar.update_progress_task(
         client_id,
         ProgressTask::LoadWorkspace,
-        Some(100),
+        None,
+        Some(String::from("Finished loading workspace files")),
+    );
+    status_bar.finish_progress_task(
+        client_id,
+        ProgressTask::LoadWorkspace,
         Some("Indexing complete".to_string()),
     );
 
