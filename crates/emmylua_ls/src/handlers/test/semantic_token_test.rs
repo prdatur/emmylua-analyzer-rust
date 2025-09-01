@@ -56,7 +56,7 @@ mod tests {
                     start: 22,
                     length: 1,
                     token_type: SemanticTokenType::VARIABLE,
-                    token_modifier: HashSet::new(),
+                    token_modifier: HashSet::from([SemanticTokenModifier::READONLY]),
                 },
                 VirtualSemanticToken {
                     line: 4,
@@ -70,7 +70,7 @@ mod tests {
                     start: 27,
                     length: 1,
                     token_type: SemanticTokenType::VARIABLE,
-                    token_modifier: HashSet::new(),
+                    token_modifier: HashSet::from([SemanticTokenModifier::READONLY]),
                 },
                 VirtualSemanticToken {
                     line: 4,
