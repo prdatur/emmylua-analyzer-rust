@@ -1,6 +1,8 @@
 #[cfg(feature = "cli")]
 use clap::{Parser, ValueEnum};
 
+use crate::context::ClientId;
+
 #[allow(unused)]
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "cli", derive(Parser))]
@@ -33,6 +35,10 @@ pub struct CmdArgs {
     /// Whether to load the standard library.
     #[cfg_attr(feature = "cli", structopt(long, default_value = "true"))]
     pub load_stdlib: CmdBool,
+
+    /// Force editor mode. Options: vscode, intellij, neovim
+    #[cfg_attr(feature = "cli", structopt(long))]
+    pub editor: Option<Editor>,
 }
 
 /// Logging level enum
@@ -125,6 +131,40 @@ impl std::str::FromStr for CmdBool {
                 "Invalid boolean value: '{}'. Please choose 'true' or 'false'",
                 s
             )),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "cli", derive(ValueEnum))]
+pub enum Editor {
+    Vscode,
+    Intellij,
+    Neovim,
+}
+
+impl std::str::FromStr for Editor {
+    type Err = String;
+
+    fn from_str(input: &str) -> Result<Editor, Self::Err> {
+        match input.to_lowercase().as_str() {
+            "vscode" => Ok(Editor::Vscode),
+            "intellij" => Ok(Editor::Intellij),
+            "neovim" => Ok(Editor::Neovim),
+            _ => Err(format!(
+                "Invalid editor: '{}'. Please choose 'vscode', 'intellij', 'neovim'",
+                input
+            )),
+        }
+    }
+}
+
+impl From<Editor> for ClientId {
+    fn from(editor: Editor) -> Self {
+        match editor {
+            Editor::Vscode => ClientId::VSCode,
+            Editor::Intellij => ClientId::Intellij,
+            Editor::Neovim => ClientId::Neovim,
         }
     }
 }

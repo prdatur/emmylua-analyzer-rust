@@ -65,7 +65,7 @@ fn check_vscode(client_info: &ClientInfo) -> bool {
 fn check_lsp4ij(client_info: &ClientInfo) -> bool {
     let name = &client_info.name;
 
-    if name.contains("IntelliJ")
+    name.contains("IntelliJ")
         || name.contains("JetBrains")
         || name.contains("IDEA")
         || name.contains("PyCharm")
@@ -74,9 +74,4 @@ fn check_lsp4ij(client_info: &ClientInfo) -> bool {
         || name.contains("Rider")
         || name.contains("Fleet")
         || name.contains("Android Studio")
-    {
-        return true;
-    }
-
-    false
 }

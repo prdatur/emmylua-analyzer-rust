@@ -41,7 +41,11 @@ pub async fn initialized_handler(
     init_logger(main_root, &cmd_args);
     log::info!("main root: {:?}", main_root);
 
-    let client_id = get_client_id(&params.client_info);
+    let client_id = if let Some(editor) = &cmd_args.editor {
+        editor.clone().into()
+    } else {
+        get_client_id(&params.client_info)
+    };
     let supports_config_request = params
         .capabilities
         .workspace
