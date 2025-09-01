@@ -38,14 +38,70 @@ pub fn get_type_at_binary_expr(
         return Ok(ResultTypeOrContinue::Continue);
     };
 
-    let condition_flow = match op_token.get_op() {
-        BinaryOperator::OpEq => condition_flow,
-        BinaryOperator::OpNe => condition_flow.get_negated(),
+    match op_token.get_op() {
+        BinaryOperator::OpEq => try_get_at_eq_or_neq_expr(
+            db,
+            tree,
+            cache,
+            root,
+            var_ref_id,
+            flow_node,
+            left_expr,
+            right_expr,
+            condition_flow,
+        ),
+        BinaryOperator::OpNe => try_get_at_eq_or_neq_expr(
+            db,
+            tree,
+            cache,
+            root,
+            var_ref_id,
+            flow_node,
+            left_expr,
+            right_expr,
+            condition_flow.get_negated(),
+        ),
+        BinaryOperator::OpGt => try_get_at_gt_or_ge_expr(
+            db,
+            tree,
+            cache,
+            root,
+            var_ref_id,
+            flow_node,
+            left_expr,
+            right_expr,
+            condition_flow,
+            true,
+        ),
+        BinaryOperator::OpGe => try_get_at_gt_or_ge_expr(
+            db,
+            tree,
+            cache,
+            root,
+            var_ref_id,
+            flow_node,
+            left_expr,
+            right_expr,
+            condition_flow,
+            false,
+        ),
         _ => {
             return Ok(ResultTypeOrContinue::Continue);
         }
-    };
+    }
+}
 
+fn try_get_at_eq_or_neq_expr(
+    db: &DbIndex,
+    tree: &FlowTree,
+    cache: &mut LuaInferCache,
+    root: &LuaChunk,
+    var_ref_id: &VarRefId,
+    flow_node: &FlowNode,
+    left_expr: LuaExpr,
+    right_expr: LuaExpr,
+    condition_flow: InferConditionFlow,
+) -> Result<ResultTypeOrContinue, InferFailReason> {
     let mut result_type = maybe_type_guard_binary(
         db,
         tree,
@@ -88,6 +144,71 @@ pub fn get_type_at_binary_expr(
         right_expr,
         condition_flow,
     );
+}
+
+fn try_get_at_gt_or_ge_expr(
+    db: &DbIndex,
+    tree: &FlowTree,
+    cache: &mut LuaInferCache,
+    root: &LuaChunk,
+    var_ref_id: &VarRefId,
+    flow_node: &FlowNode,
+    left_expr: LuaExpr,
+    right_expr: LuaExpr,
+    condition_flow: InferConditionFlow,
+    gt: bool,
+) -> Result<ResultTypeOrContinue, InferFailReason> {
+    match left_expr {
+        LuaExpr::UnaryExpr(unary_expr) => {
+            let Some(op) = unary_expr.get_op_token() else {
+                return Ok(ResultTypeOrContinue::Continue);
+            };
+
+            match op.get_op() {
+                UnaryOperator::OpLen => {}
+                _ => return Ok(ResultTypeOrContinue::Continue),
+            };
+
+            let Some(expr) = unary_expr.get_expr() else {
+                return Ok(ResultTypeOrContinue::Continue);
+            };
+
+            let Some(maybe_ref_id) = get_var_expr_var_ref_id(db, cache, expr) else {
+                return Ok(ResultTypeOrContinue::Continue);
+            };
+
+            if maybe_ref_id != *var_ref_id {
+                // If the reference declaration ID does not match, we cannot narrow it
+                return Ok(ResultTypeOrContinue::Continue);
+            }
+
+            let right_expr_type = infer_expr(db, cache, right_expr)?;
+            let antecedent_flow_id = get_single_antecedent(tree, flow_node)?;
+            let antecedent_type =
+                get_type_at_flow(db, tree, cache, root, &var_ref_id, antecedent_flow_id)?;
+            match (&antecedent_type, &right_expr_type) {
+                (
+                    LuaType::Array(array_type),
+                    LuaType::IntegerConst(i) | LuaType::DocIntegerConst(i),
+                ) => {
+                    let add = if gt { 1 } else { 0 };
+                    if condition_flow.is_true() {
+                        let new_array_type = LuaArrayType::new(
+                            array_type.get_base().clone(),
+                            LuaArrayLen::Max(*i + add),
+                        );
+                        return Ok(ResultTypeOrContinue::Result(LuaType::Array(
+                            new_array_type.into(),
+                        )));
+                    }
+                }
+                _ => return Ok(ResultTypeOrContinue::Continue),
+            }
+
+            Ok(ResultTypeOrContinue::Continue)
+        }
+        _ => Ok(ResultTypeOrContinue::Continue),
+    }
 }
 
 fn maybe_type_guard_binary(

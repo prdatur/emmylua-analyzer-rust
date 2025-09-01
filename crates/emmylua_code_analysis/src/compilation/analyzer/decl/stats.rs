@@ -69,12 +69,28 @@ pub fn analyze_assign_stat(analyzer: &mut DeclAnalyzer, stat: LuaAssignStat) -> 
         };
 
         match &var {
-            LuaVarExpr::NameExpr(name) => {
-                let name_token = name.get_name_token()?;
+            LuaVarExpr::NameExpr(name_expr) => {
+                let name_token = name_expr.get_name_token()?;
                 let position = name_token.get_position();
                 let name = name_token.get_name_text();
                 let file_id = analyzer.get_file_id();
                 let range = name_token.get_range();
+                if name == "_" {
+                    let decl = LuaDecl::new(
+                        name,
+                        file_id,
+                        range,
+                        LuaDeclExtra::Local {
+                            kind: name_expr.syntax().kind(),
+                            attrib: Some(LocalAttribute::Const),
+                        },
+                        value_expr_id,
+                    );
+
+                    analyzer.add_decl(decl);
+                    continue;
+                }
+
                 if let Some(decl) = analyzer.find_decl(&name, position) {
                     let decl_id = decl.get_id();
                     analyzer

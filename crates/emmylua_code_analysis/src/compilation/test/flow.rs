@@ -1331,4 +1331,28 @@ end
         let expected = LuaType::Function;
         assert_eq!(a, expected);
     }
+
+    #[test]
+    fn test_issue_734() {
+        let mut ws = VirtualWorkspace::new();
+        assert!(ws.check_code_for(
+            DiagnosticCode::AssignTypeMismatch,
+            r#"
+local a --- @type string[]
+
+assert(#a >= 1)
+
+--- @type string
+_ = a[1]
+
+assert(#a == 1)
+
+--- @type string
+_ = a[1]
+
+--- @type string
+_2 = a[1]
+            "#
+        ));
+    }
 }
