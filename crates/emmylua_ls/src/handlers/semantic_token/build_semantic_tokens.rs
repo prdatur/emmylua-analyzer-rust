@@ -368,16 +368,17 @@ fn build_node_semantic_token(
             builder.push(name.syntax(), SemanticTokenType::NAMESPACE);
         }
         LuaAst::LuaParamName(param_name) => {
-            let name = param_name.get_name_token()?;
-            if name.get_name_text() == "self" {
-                builder.push_with_modifier(
-                    name.syntax(),
-                    SemanticTokenType::VARIABLE,
-                    SemanticTokenModifier::DEFINITION,
-                );
-            } else {
-                builder.push(name.syntax(), SemanticTokenType::PARAMETER);
-            }
+            let name_token = param_name.get_name_token()?;
+            // if name.get_name_text() == "self" {
+            //     builder.push_with_modifier(
+            //         name.syntax(),
+            //         SemanticTokenType::VARIABLE,
+            //         SemanticTokenModifier::DEFINITION,
+            //     );
+            // } else {
+            //     builder.push(name.syntax(), SemanticTokenType::PARAMETER);
+            // }
+            handle_name_node(semantic_model, builder, &param_name.syntax(), &name_token);
         }
         LuaAst::LuaLocalName(local_name) => {
             handle_name_node(
@@ -697,7 +698,7 @@ fn handle_name_node(
                 return Some(());
             }
 
-            let (token_type, modifier) = match decl_type {
+            let (token_type, mut modifier) = match decl_type {
                 LuaType::Def(_) => (SemanticTokenType::CLASS, None),
                 LuaType::Ref(ref_id) => {
                     if let Some(is_require) =
@@ -737,27 +738,44 @@ fn handle_name_node(
                         }
                     }
                 }
-                _ => match &decl.extra {
-                    LuaDeclExtra::Param {
-                        idx, signature_id, ..
-                    } => {
-                        let signature = semantic_model
-                            .get_db()
-                            .get_signature_index()
-                            .get(&signature_id)?;
-                        if let Some(param_info) = signature.get_param_info_by_id(*idx) {
-                            if param_info.type_ref.is_function() {
-                                (SemanticTokenType::FUNCTION, None)
+                _ => {
+                    let token_type = match &decl.extra {
+                        LuaDeclExtra::Param {
+                            idx, signature_id, ..
+                        } => {
+                            let signature = semantic_model
+                                .get_db()
+                                .get_signature_index()
+                                .get(&signature_id)?;
+                            if let Some(param_info) = signature.get_param_info_by_id(*idx) {
+                                if param_info.type_ref.is_function() {
+                                    SemanticTokenType::FUNCTION
+                                } else {
+                                    SemanticTokenType::PARAMETER
+                                }
                             } else {
-                                (SemanticTokenType::PARAMETER, None)
+                                SemanticTokenType::VARIABLE
                             }
-                        } else {
-                            (SemanticTokenType::VARIABLE, None)
                         }
-                    }
-                    _ => (SemanticTokenType::VARIABLE, None),
-                },
+                        _ => SemanticTokenType::VARIABLE,
+                    };
+
+                    (token_type, None)
+                }
             };
+
+            if modifier.is_none() {
+                let file_id = semantic_model.get_file_id();
+                let ref_decl = semantic_model
+                    .get_db()
+                    .get_reference_index()
+                    .get_decl_references(&file_id, &decl_id);
+                if let Some(ref_decl) = ref_decl {
+                    if !ref_decl.mutable {
+                        modifier = Some(SemanticTokenModifier::READONLY);
+                    }
+                }
+            }
 
             if let Some(modifier) = modifier {
                 builder.push_with_modifier(name_token.syntax(), token_type, modifier);
