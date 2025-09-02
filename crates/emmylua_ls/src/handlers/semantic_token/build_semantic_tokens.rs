@@ -369,15 +369,6 @@ fn build_node_semantic_token(
         }
         LuaAst::LuaParamName(param_name) => {
             let name_token = param_name.get_name_token()?;
-            // if name.get_name_text() == "self" {
-            //     builder.push_with_modifier(
-            //         name.syntax(),
-            //         SemanticTokenType::VARIABLE,
-            //         SemanticTokenModifier::DEFINITION,
-            //     );
-            // } else {
-            //     builder.push(name.syntax(), SemanticTokenType::PARAMETER);
-            // }
             handle_name_node(semantic_model, builder, &param_name.syntax(), &name_token);
         }
         LuaAst::LuaLocalName(local_name) => {
@@ -777,8 +768,17 @@ fn handle_name_node(
                 }
             }
 
-            if let Some(modifier) = modifier {
-                builder.push_with_modifier(name_token.syntax(), token_type, modifier);
+            let mut modifiers = vec![];
+            if decl.is_global() {
+                modifiers.push(SemanticTokenModifier::STATIC);
+            }
+
+            if modifier.is_some() {
+                modifiers.push(modifier.unwrap());
+            }
+
+            if !modifiers.is_empty() {
+                builder.push_with_modifiers(name_token.syntax(), token_type, &modifiers);
             } else {
                 builder.push(name_token.syntax(), token_type);
             }
