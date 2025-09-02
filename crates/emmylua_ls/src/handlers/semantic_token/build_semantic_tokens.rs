@@ -124,10 +124,7 @@ fn build_tokens_semantic_token(
         | LuaTokenKind::TkRightBracket
         | LuaTokenKind::TkLeftParen
         | LuaTokenKind::TkRightParen => {
-            // 改进：不将这些标记为运算符，让编辑器使用默认的分隔符高亮
-            if !client_id.is_vscode() {
-                builder.push(token, SemanticTokenType::OPERATOR);
-            }
+            builder.push(token, SemanticTokenType::OPERATOR);
         }
         LuaTokenKind::TkTrue | LuaTokenKind::TkFalse | LuaTokenKind::TkNil => {
             builder.push_with_modifier(
