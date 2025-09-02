@@ -220,6 +220,18 @@ fn instantiate_generic(
     let mut new_params = Vec::new();
     for param in generic_params {
         let new_param = instantiate_type_generic(db, param, substitutor);
+        match &new_param {
+            LuaType::Variadic(variadic) => match variadic.deref() {
+                VariadicType::Base(_) => {}
+                VariadicType::Multi(types) => {
+                    for typ in types {
+                        new_params.push(typ.clone());
+                    }
+                    continue;
+                }
+            },
+            _ => {}
+        }
         new_params.push(new_param);
     }
 
@@ -349,8 +361,17 @@ fn instantiate_variadic_type(
                 let mut new_types = Vec::new();
                 for t in types {
                     let t = instantiate_type_generic(db, t, substitutor);
-                    if !t.is_never() {
-                        new_types.push(t);
+                    match t {
+                        LuaType::Never => {}
+                        LuaType::Variadic(variadic) => match variadic.deref() {
+                            VariadicType::Base(base) => new_types.push(base.clone()),
+                            VariadicType::Multi(multi) => {
+                                for mt in multi {
+                                    new_types.push(mt.clone());
+                                }
+                            }
+                        },
+                        _ => new_types.push(t),
                     }
                 }
                 return LuaType::Variadic(VariadicType::Multi(new_types).into());

@@ -519,7 +519,15 @@ fn generic_tpl_pattern_match(
             let target_params = target_generic.get_params();
             let min_len = params.len().min(target_params.len());
             for i in 0..min_len {
-                tpl_pattern_match(context, &params[i], &target_params[i])?;
+                match (&params[i], &target_params[i]) {
+                    (LuaType::Variadic(variadict), _) => {
+                        variadic_tpl_pattern_match(context, variadict, &target_params[i..])?;
+                        break;
+                    }
+                    _ => {
+                        tpl_pattern_match(context, &params[i], &target_params[i])?;
+                    }
+                }
             }
         }
         _ => {}
