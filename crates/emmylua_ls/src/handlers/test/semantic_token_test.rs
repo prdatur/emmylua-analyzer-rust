@@ -81,6 +81,13 @@ mod tests {
                 },
                 VirtualSemanticToken {
                     line: 4,
+                    start: 28,
+                    length: 1,
+                    token_type: SemanticTokenType::OPERATOR,
+                    token_modifier: HashSet::new(),
+                },
+                VirtualSemanticToken {
+                    line: 4,
                     start: 29,
                     length: 3,
                     token_type: SemanticTokenType::METHOD,
@@ -88,9 +95,23 @@ mod tests {
                 },
                 VirtualSemanticToken {
                     line: 4,
+                    start: 32,
+                    length: 1,
+                    token_type: SemanticTokenType::OPERATOR,
+                    token_modifier: HashSet::new(),
+                },
+                VirtualSemanticToken {
+                    line: 4,
                     start: 33,
                     length: 1,
                     token_type: SemanticTokenType::NUMBER,
+                    token_modifier: HashSet::new(),
+                },
+                VirtualSemanticToken {
+                    line: 4,
+                    start: 34,
+                    length: 1,
+                    token_type: SemanticTokenType::OPERATOR,
                     token_modifier: HashSet::new(),
                 },
                 VirtualSemanticToken {
@@ -130,6 +151,13 @@ mod tests {
                 },
                 VirtualSemanticToken {
                     line: 4,
+                    start: 50,
+                    length: 1,
+                    token_type: SemanticTokenType::OPERATOR,
+                    token_modifier: HashSet::new(),
+                },
+                VirtualSemanticToken {
+                    line: 4,
                     start: 51,
                     length: 3,
                     token_type: SemanticTokenType::METHOD,
@@ -137,9 +165,23 @@ mod tests {
                 },
                 VirtualSemanticToken {
                     line: 4,
+                    start: 54,
+                    length: 1,
+                    token_type: SemanticTokenType::OPERATOR,
+                    token_modifier: HashSet::new(),
+                },
+                VirtualSemanticToken {
+                    line: 4,
                     start: 55,
                     length: 1,
                     token_type: SemanticTokenType::NUMBER,
+                    token_modifier: HashSet::new(),
+                },
+                VirtualSemanticToken {
+                    line: 4,
+                    start: 56,
+                    length: 1,
+                    token_type: SemanticTokenType::OPERATOR,
                     token_modifier: HashSet::new(),
                 },
             ],
