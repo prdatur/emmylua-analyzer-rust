@@ -113,11 +113,28 @@ fn build_tokens_semantic_token(
         | LuaTokenKind::TkBitAnd
         | LuaTokenKind::TkBitOr
         | LuaTokenKind::TkBitXor
+        | LuaTokenKind::TkAssign => {
+            builder.push(token, SemanticTokenType::OPERATOR);
+        }
+        // 冒号不标记为运算符，让VS Code使用默认的分隔符高亮
+        LuaTokenKind::TkColon
         | LuaTokenKind::TkLeftBrace
         | LuaTokenKind::TkRightBrace
         | LuaTokenKind::TkLeftBracket
-        | LuaTokenKind::TkRightBracket => {
-            builder.push(token, SemanticTokenType::OPERATOR);
+        | LuaTokenKind::TkRightBracket
+        | LuaTokenKind::TkLeftParen
+        | LuaTokenKind::TkRightParen => {
+            // 改进：不将这些标记为运算符，让编辑器使用默认的分隔符高亮
+            if !client_id.is_vscode() {
+                builder.push(token, SemanticTokenType::OPERATOR);
+            }
+        }
+        LuaTokenKind::TkTrue | LuaTokenKind::TkFalse | LuaTokenKind::TkNil => {
+            builder.push_with_modifier(
+                token,
+                SemanticTokenType::KEYWORD,
+                SemanticTokenModifier::READONLY,
+            );
         }
         LuaTokenKind::TkComplex | LuaTokenKind::TkInt | LuaTokenKind::TkFloat => {
             builder.push(token, SemanticTokenType::NUMBER);
@@ -271,7 +288,11 @@ fn build_node_semantic_token(
         }
         LuaAst::LuaDocTagEnum(doc_enum) => {
             let name = doc_enum.get_name_token()?;
-            builder.push(name.syntax(), SemanticTokenType::ENUM);
+            builder.push_with_modifier(
+                name.syntax(),
+                SemanticTokenType::ENUM,
+                SemanticTokenModifier::DECLARATION,
+            );
             if let Some(attribs) = doc_enum.get_attrib() {
                 for token in attribs.tokens::<LuaGeneralToken>() {
                     builder.push(token.syntax(), SemanticTokenType::DECORATOR);
@@ -280,11 +301,19 @@ fn build_node_semantic_token(
         }
         LuaAst::LuaDocTagAlias(doc_alias) => {
             let name = doc_alias.get_name_token()?;
-            builder.push(name.syntax(), SemanticTokenType::TYPE);
+            builder.push_with_modifier(
+                name.syntax(),
+                SemanticTokenType::TYPE,
+                SemanticTokenModifier::DECLARATION,
+            );
         }
         LuaAst::LuaDocTagField(doc_field) => {
             if let Some(LuaDocFieldKey::Name(name)) = doc_field.get_field_key() {
-                builder.push(name.syntax(), SemanticTokenType::PROPERTY);
+                builder.push_with_modifier(
+                    name.syntax(),
+                    SemanticTokenType::PROPERTY,
+                    SemanticTokenModifier::DECLARATION,
+                );
             }
         }
         LuaAst::LuaDocTagDiagnostic(doc_diagnostic) => {
@@ -298,7 +327,11 @@ fn build_node_semantic_token(
         }
         LuaAst::LuaDocTagParam(doc_param) => {
             let name = doc_param.get_name_token()?;
-            builder.push(name.syntax(), SemanticTokenType::PARAMETER);
+            builder.push_with_modifier(
+                name.syntax(),
+                SemanticTokenType::PARAMETER,
+                SemanticTokenModifier::DECLARATION,
+            );
         }
         LuaAst::LuaDocTagReturn(doc_return) => {
             let type_name_list = doc_return.get_type_and_name_list();
@@ -357,7 +390,11 @@ fn build_node_semantic_token(
         }
         LuaAst::LuaDocTagNamespace(doc_namespace) => {
             let name = doc_namespace.get_name_token()?;
-            builder.push(name.syntax(), SemanticTokenType::NAMESPACE);
+            builder.push_with_modifier(
+                name.syntax(),
+                SemanticTokenType::NAMESPACE,
+                SemanticTokenModifier::DECLARATION,
+            );
         }
         LuaAst::LuaDocTagUsing(doc_using) => {
             let name = doc_using.get_name_token()?;
@@ -365,7 +402,11 @@ fn build_node_semantic_token(
         }
         LuaAst::LuaDocTagExport(doc_export) => {
             let name = doc_export.get_name_token()?;
-            builder.push(name.syntax(), SemanticTokenType::NAMESPACE);
+            builder.push_with_modifier(
+                name.syntax(),
+                SemanticTokenType::NAMESPACE,
+                SemanticTokenModifier::MODIFICATION,
+            );
         }
         LuaAst::LuaParamName(param_name) => {
             let name_token = param_name.get_name_token()?;
@@ -383,32 +424,59 @@ fn build_node_semantic_token(
             let name_token = name_expr.get_name_token()?;
             handle_name_node(semantic_model, builder, name_expr.syntax(), &name_token)
                 .unwrap_or_else(|| {
-                    builder.push(name_token.syntax(), SemanticTokenType::VARIABLE);
+                    // 改进：为未知名称提供更好的默认分类
+                    let name_text = name_token.get_name_text();
+                    if name_text.chars().next().map_or(false, |c| c.is_uppercase()) {
+                        // 首字母大写可能是类或常量
+                        builder.push(name_token.syntax(), SemanticTokenType::CLASS);
+                    } else {
+                        builder.push(name_token.syntax(), SemanticTokenType::VARIABLE);
+                    }
                 });
         }
         LuaAst::LuaForRangeStat(for_range_stat) => {
             for name in for_range_stat.get_var_name_list() {
-                builder.push(name.syntax(), SemanticTokenType::VARIABLE);
+                builder.push_with_modifier(
+                    name.syntax(),
+                    SemanticTokenType::VARIABLE,
+                    SemanticTokenModifier::DECLARATION,
+                );
             }
         }
         LuaAst::LuaForStat(for_stat) => {
             let name = for_stat.get_var_name()?;
-            builder.push(name.syntax(), SemanticTokenType::VARIABLE);
+            builder.push_with_modifier(
+                name.syntax(),
+                SemanticTokenType::VARIABLE,
+                SemanticTokenModifier::DECLARATION,
+            );
         }
         LuaAst::LuaLocalFuncStat(local_func_stat) => {
             let name = local_func_stat.get_local_name()?.get_name_token()?;
-            builder.push(name.syntax(), SemanticTokenType::FUNCTION);
+            builder.push_with_modifier(
+                name.syntax(),
+                SemanticTokenType::FUNCTION,
+                SemanticTokenModifier::DECLARATION,
+            );
         }
         LuaAst::LuaFuncStat(func_stat) => {
             let func_name = func_stat.get_func_name()?;
             match func_name {
                 LuaVarExpr::NameExpr(name_expr) => {
                     let name = name_expr.get_name_token()?;
-                    builder.push(name.syntax(), SemanticTokenType::FUNCTION);
+                    builder.push_with_modifier(
+                        name.syntax(),
+                        SemanticTokenType::FUNCTION,
+                        SemanticTokenModifier::DECLARATION,
+                    );
                 }
                 LuaVarExpr::IndexExpr(index_expr) => {
                     let name = index_expr.get_index_name_token()?;
-                    builder.push(&name, SemanticTokenType::FUNCTION);
+                    builder.push_with_modifier(
+                        &name,
+                        SemanticTokenType::METHOD,
+                        SemanticTokenModifier::DECLARATION,
+                    );
                 }
             }
         }
@@ -451,18 +519,39 @@ fn build_node_semantic_token(
                 }
                 LuaExpr::IndexExpr(index_expr) => {
                     let name = index_expr.get_index_name_token()?;
-                    builder.push(&name, SemanticTokenType::FUNCTION);
+                    // 改进：区分方法调用和属性访问
+                    if call_expr.get_args_list().is_some() {
+                        builder.push(&name, SemanticTokenType::METHOD);
+                    } else {
+                        builder.push(&name, SemanticTokenType::FUNCTION);
+                    }
                 }
                 _ => {}
             }
         }
         LuaAst::LuaDocNameType(doc_name_type) => {
             let name = doc_name_type.get_name_token()?;
-            if name.get_name_text() == "self" {
+            let name_text = name.get_name_text();
+            if name_text == "self" {
+                builder.push_with_modifier(
+                    name.syntax(),
+                    SemanticTokenType::PARAMETER,
+                    SemanticTokenModifier::READONLY,
+                );
+            } else if name_text == "nil"
+                || name_text == "boolean"
+                || name_text == "number"
+                || name_text == "string"
+                || name_text == "table"
+                || name_text == "function"
+                || name_text == "userdata"
+                || name_text == "thread"
+            {
+                // Lua内置类型
                 builder.push_with_modifier(
                     name.syntax(),
                     SemanticTokenType::TYPE,
-                    SemanticTokenModifier::READONLY,
+                    SemanticTokenModifier::DEFAULT_LIBRARY,
                 );
             } else {
                 builder.push(name.syntax(), SemanticTokenType::TYPE);
@@ -511,11 +600,15 @@ fn build_node_semantic_token(
                 if let LuaSemanticDeclId::Member(member_id) = property_owner {
                     let decl_type = semantic_model.get_type(member_id.into());
                     if decl_type.is_function() {
-                        builder.push(name.syntax(), SemanticTokenType::FUNCTION);
+                        builder.push(name.syntax(), SemanticTokenType::METHOD);
                         return Some(());
                     }
                     if decl_type.is_def() {
-                        builder.push(name.syntax(), SemanticTokenType::CLASS);
+                        builder.push_with_modifier(
+                            name.syntax(),
+                            SemanticTokenType::CLASS,
+                            SemanticTokenModifier::READONLY,
+                        );
                         return Some(());
                     }
 
@@ -530,14 +623,28 @@ fn build_node_semantic_token(
                             .get_type_decl(&type_id)
                         {
                             if type_decl.is_enum() {
-                                builder.push(name.syntax(), SemanticTokenType::ENUM_MEMBER);
+                                builder.push_with_modifier(
+                                    name.syntax(),
+                                    SemanticTokenType::ENUM_MEMBER,
+                                    SemanticTokenModifier::READONLY,
+                                );
                                 return Some(());
                             }
                         }
                     }
                 }
             }
-            builder.push(name.syntax(), SemanticTokenType::PROPERTY);
+
+            // 默认情况：检查是否在调用上下文中
+            if index_expr
+                .syntax()
+                .parent()
+                .is_some_and(|p| p.kind() == LuaSyntaxKind::CallExpr.into())
+            {
+                builder.push(name.syntax(), SemanticTokenType::METHOD);
+            } else {
+                builder.push(name.syntax(), SemanticTokenType::PROPERTY);
+            }
         }
         LuaAst::LuaTableField(table_field) => {
             let owner_id =
@@ -558,10 +665,13 @@ fn build_node_semantic_token(
                         .get_type_decl(&type_id)
                     {
                         if type_decl.is_enum() {
-                            builder.push(
-                                table_field.get_field_key()?.get_name()?.syntax(),
-                                SemanticTokenType::ENUM_MEMBER,
-                            );
+                            if let Some(field_name) = table_field.get_field_key()?.get_name() {
+                                builder.push_with_modifier(
+                                    field_name.syntax(),
+                                    SemanticTokenType::ENUM_MEMBER,
+                                    SemanticTokenModifier::DECLARATION,
+                                );
+                            }
                             return Some(());
                         }
                     }
@@ -573,12 +683,23 @@ fn build_node_semantic_token(
                 .ok()?;
             match value_type {
                 LuaType::Signature(_) | LuaType::DocFunction(_) => {
-                    builder.push(
-                        table_field.get_field_key()?.get_name()?.syntax(),
-                        SemanticTokenType::FUNCTION,
-                    );
+                    if let Some(field_name) = table_field.get_field_key()?.get_name() {
+                        builder.push_with_modifier(
+                            field_name.syntax(),
+                            SemanticTokenType::METHOD,
+                            SemanticTokenModifier::DECLARATION,
+                        );
+                    }
                 }
-                _ => {}
+                _ => {
+                    if let Some(field_name) = table_field.get_field_key()?.get_name() {
+                        builder.push_with_modifier(
+                            field_name.syntax(),
+                            SemanticTokenType::PROPERTY,
+                            SemanticTokenModifier::DECLARATION,
+                        );
+                    }
+                }
             }
         }
         LuaAst::LuaDocLiteralType(literal) => match &literal.get_literal()? {
@@ -654,11 +775,57 @@ fn handle_name_node(
     node: &LuaSyntaxNode,
     name_token: &LuaNameToken,
 ) -> Option<()> {
-    if name_token.get_name_text() == "self" {
+    let name_text = name_token.get_name_text();
+
+    if name_text == "self" {
         builder.push_with_modifier(
             name_token.syntax(),
-            SemanticTokenType::VARIABLE,
-            SemanticTokenModifier::DEFINITION,
+            SemanticTokenType::PARAMETER,
+            SemanticTokenModifier::READONLY,
+        );
+        return Some(());
+    }
+
+    // 检查是否是 Lua 内置全局变量
+    if matches!(
+        name_text,
+        "_G" | "_ENV"
+            | "_VERSION"
+            | "arg"
+            | "package"
+            | "require"
+            | "load"
+            | "loadfile"
+            | "dofile"
+            | "print"
+            | "assert"
+            | "error"
+            | "warn"
+            | "type"
+            | "getmetatable"
+            | "setmetatable"
+            | "rawget"
+            | "rawset"
+            | "rawequal"
+            | "rawlen"
+            | "next"
+            | "pairs"
+            | "ipairs"
+            | "tostring"
+            | "tonumber"
+            | "select"
+            | "unpack"
+            | "pcall"
+            | "xpcall"
+            | "collectgarbage"
+    ) {
+        builder.push_with_modifiers(
+            name_token.syntax(),
+            SemanticTokenType::FUNCTION,
+            &[
+                SemanticTokenModifier::DEFAULT_LIBRARY,
+                SemanticTokenModifier::READONLY,
+            ],
         );
         return Some(());
     }
@@ -680,6 +847,7 @@ fn handle_name_node(
                 .get_decl_index()
                 .get_decl(&decl_id)?;
             let decl_type = semantic_model.get_type(decl_id.into());
+
             if let Some(true) = check_require_decl(semantic_model, &decl) {
                 builder.push_with_modifier(
                     name_token.syntax(),
@@ -701,10 +869,25 @@ fn handle_name_node(
                                 Some(SemanticTokenModifier::READONLY),
                             )
                         } else {
-                            (SemanticTokenType::VARIABLE, None)
+                            // 改进：根据声明类型选择更准确的token类型
+                            let base_type = if decl.is_param() {
+                                SemanticTokenType::PARAMETER
+                            } else if decl.is_local() {
+                                SemanticTokenType::VARIABLE
+                            } else {
+                                SemanticTokenType::VARIABLE
+                            };
+                            (base_type, None)
                         }
                     } else {
-                        (SemanticTokenType::VARIABLE, None)
+                        let base_type = if decl.is_param() {
+                            SemanticTokenType::PARAMETER
+                        } else if decl.is_local() {
+                            SemanticTokenType::VARIABLE
+                        } else {
+                            SemanticTokenType::VARIABLE
+                        };
+                        (base_type, None)
                     }
                 }
                 LuaType::Signature(signature) => {
@@ -722,11 +905,14 @@ fn handle_name_node(
                     if union.into_vec().iter().any(|typ| typ.is_function()) {
                         (SemanticTokenType::FUNCTION, None)
                     } else {
-                        if decl.is_param() {
-                            (SemanticTokenType::PARAMETER, None)
+                        let base_type = if decl.is_param() {
+                            SemanticTokenType::PARAMETER
+                        } else if decl.is_local() {
+                            SemanticTokenType::VARIABLE
                         } else {
-                            (SemanticTokenType::VARIABLE, None)
-                        }
+                            SemanticTokenType::VARIABLE
+                        };
+                        (base_type, None)
                     }
                 }
                 _ => {
@@ -745,16 +931,25 @@ fn handle_name_node(
                                     SemanticTokenType::PARAMETER
                                 }
                             } else {
+                                SemanticTokenType::PARAMETER
+                            }
+                        }
+                        _ => {
+                            if decl.is_param() {
+                                SemanticTokenType::PARAMETER
+                            } else if decl.is_local() {
+                                SemanticTokenType::VARIABLE
+                            } else {
                                 SemanticTokenType::VARIABLE
                             }
                         }
-                        _ => SemanticTokenType::VARIABLE,
                     };
 
                     (token_type, None)
                 }
             };
 
+            // 检查是否只读
             if modifier.is_none() {
                 let file_id = semantic_model.get_file_id();
                 let ref_decl = semantic_model
@@ -773,8 +968,19 @@ fn handle_name_node(
                 modifiers.push(SemanticTokenModifier::STATIC);
             }
 
-            if modifier.is_some() {
-                modifiers.push(modifier.unwrap());
+            // 为声明添加 DECLARATION modifier
+            if node.parent().is_some_and(|p| {
+                matches!(p.kind(),
+                    k if k == LuaSyntaxKind::LocalName.into() ||
+                         k == LuaSyntaxKind::ParamName.into() ||
+                         k == LuaSyntaxKind::LocalFuncStat.into()
+                )
+            }) {
+                modifiers.push(SemanticTokenModifier::DECLARATION);
+            }
+
+            if let Some(modifier) = modifier {
+                modifiers.push(modifier);
             }
 
             if !modifiers.is_empty() {
@@ -788,7 +994,14 @@ fn handle_name_node(
         _ => {}
     }
 
-    builder.push(name_token.syntax(), SemanticTokenType::VARIABLE);
+    // 默认情况：如果不能确定类型，根据名称约定推断
+    let default_type = if name_text.chars().next().map_or(false, |c| c.is_uppercase()) {
+        SemanticTokenType::CLASS
+    } else {
+        SemanticTokenType::VARIABLE
+    };
+
+    builder.push(name_token.syntax(), default_type);
     Some(())
 }
 

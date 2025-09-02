@@ -67,6 +67,13 @@ mod tests {
                 },
                 VirtualSemanticToken {
                     line: 4,
+                    start: 25,
+                    length: 1,
+                    token_type: SemanticTokenType::OPERATOR,
+                    token_modifier: HashSet::new(),
+                },
+                VirtualSemanticToken {
+                    line: 4,
                     start: 27,
                     length: 1,
                     token_type: SemanticTokenType::VARIABLE,
@@ -76,7 +83,7 @@ mod tests {
                     line: 4,
                     start: 29,
                     length: 3,
-                    token_type: SemanticTokenType::FUNCTION,
+                    token_type: SemanticTokenType::METHOD,
                     token_modifier: HashSet::new(),
                 },
                 VirtualSemanticToken {
@@ -125,7 +132,7 @@ mod tests {
                     line: 4,
                     start: 51,
                     length: 3,
-                    token_type: SemanticTokenType::FUNCTION,
+                    token_type: SemanticTokenType::METHOD,
                     token_modifier: HashSet::new(),
                 },
                 VirtualSemanticToken {
