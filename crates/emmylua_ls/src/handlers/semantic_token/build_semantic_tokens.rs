@@ -529,13 +529,8 @@ fn build_node_semantic_token(
         LuaAst::LuaDocNameType(doc_name_type) => {
             let name = doc_name_type.get_name_token()?;
             let name_text = name.get_name_text();
-            if name_text == "self" {
-                builder.push_with_modifier(
-                    name.syntax(),
-                    SemanticTokenType::PARAMETER,
-                    SemanticTokenModifier::READONLY,
-                );
-            } else if name_text == "nil"
+            if name_text == "self"
+                || name_text == "nil"
                 || name_text == "boolean"
                 || name_text == "number"
                 || name_text == "string"
@@ -777,8 +772,8 @@ fn handle_name_node(
     if name_text == "self" {
         builder.push_with_modifier(
             name_token.syntax(),
-            SemanticTokenType::PARAMETER,
-            SemanticTokenModifier::READONLY,
+            SemanticTokenType::VARIABLE,
+            SemanticTokenModifier::DEFINITION,
         );
         return Some(());
     }
