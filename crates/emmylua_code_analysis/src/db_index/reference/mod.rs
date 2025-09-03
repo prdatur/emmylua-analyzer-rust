@@ -4,14 +4,13 @@ mod string_reference;
 use std::collections::{HashMap, HashSet};
 
 use emmylua_parser::LuaSyntaxId;
-pub use file_reference::{DeclReferenceCell, FileReference};
+pub use file_reference::{DeclReference, DeclReferenceCell, FileReference};
 use rowan::TextRange;
 use smol_str::SmolStr;
 use string_reference::StringReference;
 
-use crate::{FileId, InFiled, db_index::reference::file_reference::DeclReference};
-
 use super::{LuaDeclId, LuaMemberKey, LuaTypeDeclId, traits::LuaIndex};
+use crate::{FileId, InFiled};
 
 #[derive(Debug)]
 pub struct LuaReferenceIndex {
