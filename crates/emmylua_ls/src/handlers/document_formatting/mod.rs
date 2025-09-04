@@ -8,11 +8,9 @@ use lsp_types::{
 use tokio_util::sync::CancellationToken;
 
 use crate::{
-    context::ServerContextSnapshot,
-    handlers::document_formatting::{
-        external_format::external_tool_format, format_diff::format_diff,
-    },
+    context::ServerContextSnapshot, handlers::document_formatting::format_diff::format_diff,
 };
+pub use external_format::{FormattingRange, external_tool_format};
 
 use super::RegisterCapabilities;
 
@@ -54,7 +52,14 @@ pub async fn on_formatting_handler(
     };
 
     let mut formatted_text = if let Some(external_config) = &emmyrc.format.external_tool {
-        external_tool_format(&external_config, text, &normalized_path, formatting_options).await?
+        external_tool_format(
+            &external_config,
+            text,
+            &normalized_path,
+            None,
+            formatting_options,
+        )
+        .await?
     } else {
         reformat_code(text, &normalized_path, formatting_options)
     };

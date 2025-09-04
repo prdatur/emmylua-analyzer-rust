@@ -64,6 +64,7 @@
       "$ref": "#/$defs/EmmyrcReformat",
       "default": {
         "externalTool": null,
+        "externalToolRangeFormat": null,
         "useDiff": false
       }
     },
@@ -678,6 +679,7 @@
           "default": ""
         },
         "timeout": {
+          "description": "The timeout for the external tool in milliseconds.",
           "type": "integer",
           "format": "uint64",
           "default": 5000,
@@ -873,7 +875,19 @@
       "type": "object",
       "properties": {
         "externalTool": {
-          "description": "Whether to enable internal code reformatting.",
+          "description": "Whether to enable external tool formatting.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EmmyrcExternalTool"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "externalToolRangeFormat": {
+          "description": "Whether to enable external tool range formatting.",
           "anyOf": [
             {
               "$ref": "#/$defs/EmmyrcExternalTool"

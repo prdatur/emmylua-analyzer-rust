@@ -1,14 +1,23 @@
 use emmylua_code_analysis::{EmmyrcExternalTool, FormattingOptions};
+use rowan::TextSize;
 use std::process::Stdio;
 use std::time::Duration;
 use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
 use tokio::time::timeout;
 
+pub struct FormattingRange {
+    pub start_offset: TextSize,
+    pub end_offset: TextSize,
+    pub start_line: u32,
+    pub end_line: u32,
+}
+
 pub async fn external_tool_format(
     emmyrc_external_tool: &EmmyrcExternalTool,
     text: &str,
     file_path: &str,
+    range: Option<FormattingRange>,
     options: FormattingOptions,
 ) -> Option<String> {
     let exe_path = &emmyrc_external_tool.program;
@@ -18,7 +27,7 @@ pub async fn external_tool_format(
     let mut cmd = Command::new(exe_path);
 
     for arg in args {
-        if let Some(processed_arg) = parse_macro_arg(arg, file_path, &options) {
+        if let Some(processed_arg) = parse_macro_arg(arg, file_path, &range, &options) {
             cmd.arg(processed_arg);
         }
     }
@@ -82,7 +91,12 @@ pub async fn external_tool_format(
     }
 }
 
-fn parse_macro_arg(arg: &str, file_path: &str, options: &FormattingOptions) -> Option<String> {
+fn parse_macro_arg(
+    arg: &str,
+    file_path: &str,
+    range: &Option<FormattingRange>,
+    options: &FormattingOptions,
+) -> Option<String> {
     let mut result = String::new();
     let mut chars = arg.chars().peekable();
 
@@ -160,6 +174,34 @@ fn parse_macro_arg(arg: &str, file_path: &str, options: &FormattingOptions) -> O
                 match content.trim() {
                     "file" => file_path.to_string(),
                     "indent_size" => options.indent_size.to_string(),
+                    "start_offset" => {
+                        if let Some(r) = range {
+                            u32::from(r.start_offset).to_string()
+                        } else {
+                            "".to_string()
+                        }
+                    }
+                    "end_offset" => {
+                        if let Some(r) = range {
+                            u32::from(r.end_offset).to_string()
+                        } else {
+                            "".to_string()
+                        }
+                    }
+                    "start_line" => {
+                        if let Some(r) = range {
+                            r.start_line.to_string()
+                        } else {
+                            "".to_string()
+                        }
+                    }
+                    "end_line" => {
+                        if let Some(r) = range {
+                            r.end_line.to_string()
+                        } else {
+                            "".to_string()
+                        }
+                    }
                     _ => "".to_string(),
                 }
             };

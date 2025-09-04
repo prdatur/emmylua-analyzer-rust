@@ -1,3 +1,5 @@
+mod external_range_format;
+
 use emmylua_code_analysis::{FormattingOptions, range_format_code};
 use lsp_types::{
     ClientCapabilities, DocumentRangeFormattingParams, OneOf, Position, Range, ServerCapabilities,
@@ -5,7 +7,10 @@ use lsp_types::{
 };
 use tokio_util::sync::CancellationToken;
 
-use crate::context::ServerContextSnapshot;
+use crate::{
+    context::ServerContextSnapshot,
+    handlers::document_range_formatting::external_range_format::external_tool_range_format,
+};
 
 use super::RegisterCapabilities;
 
@@ -44,18 +49,28 @@ pub async fn on_range_formatting_handler(
         insert_final_newline: params.options.insert_final_newline.unwrap_or(true),
         non_standard_symbol: !emmyrc.runtime.nonstandard_symbol.is_empty(),
     };
-    let formatted_result = range_format_code(
-        text,
-        &normalized_path,
-        request_range.start.line as i32,
-        0,
-        request_range.end.line as i32 + 1,
-        0,
-        formatting_options,
-    )?;
+    let formatted_result = if let Some(external_tool) = &emmyrc.format.external_tool_range_format {
+        external_tool_range_format(
+            external_tool,
+            &document,
+            &request_range,
+            &normalized_path,
+            formatting_options,
+        )
+        .await?
+    } else {
+        range_format_code(
+            text,
+            &normalized_path,
+            request_range.start.line as i32,
+            0,
+            request_range.end.line as i32 + 1,
+            0,
+            formatting_options,
+        )?
+    };
 
     let mut formatted_text = formatted_result.text;
-
     if client_id.is_intellij() || client_id.is_other() {
         formatted_text = formatted_text.replace("\r\n", "\n");
     }
