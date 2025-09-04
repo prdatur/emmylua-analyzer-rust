@@ -6,7 +6,7 @@ use crate::{
     AsyncState, DbIndex, GenericTpl, LuaAliasCallType, LuaFunctionType, LuaGenericType,
     LuaInstanceType, LuaIntersectionType, LuaMemberKey, LuaMemberOwner, LuaObjectType,
     LuaSignatureId, LuaStringTplType, LuaTupleType, LuaType, LuaTypeDeclId, LuaUnionType,
-    VariadicType,
+    TypeSubstitutor, VariadicType,
 };
 
 use super::{LuaAliasCallKind, LuaMultiLineUnion};
@@ -125,7 +125,13 @@ fn humanize_def_type(db: &DbIndex, id: &LuaTypeDeclId, level: RenderLevel) -> St
 
     let generic_names = generic
         .iter()
-        .map(|it| it.0.clone())
+        .map(|it| {
+            if it.is_variadic {
+                format!("{}...", it.name)
+            } else {
+                it.name.to_string()
+            }
+        })
         .collect::<Vec<_>>()
         .join(", ");
     format!("{}<{}>", full_name, generic_names)
@@ -488,14 +494,28 @@ fn humanize_generic_type(db: &DbIndex, generic: &LuaGenericType, level: RenderLe
 
     let full_name = type_decl.get_full_name();
 
-    let generic_params = generic
+    let generic_inst_params = generic
         .get_params()
         .iter()
         .map(|ty| humanize_type(db, ty, level.next_level()))
         .collect::<Vec<_>>()
         .join(",");
 
-    format!("{}<{}>", full_name, generic_params)
+    let generic_base = format!("{}<{}>", full_name, generic_inst_params);
+    if (level == RenderLevel::Detailed || level == RenderLevel::Documentation)
+        && type_decl.is_alias()
+    {
+        let substituor = TypeSubstitutor::from_type_array(generic.get_params().clone());
+        if let Some(origin_type) = type_decl.get_alias_origin(db, Some(&substituor)) {
+            // prevent infinite recursion
+            if origin_type.is_function() {
+                let origin_type_str = humanize_type(db, &origin_type, level);
+                return format!("{} = {}", generic_base, origin_type_str);
+            }
+        }
+    }
+
+    generic_base
 }
 
 fn humanize_table_const_type_detail_and_simple(

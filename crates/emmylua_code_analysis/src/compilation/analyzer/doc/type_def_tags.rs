@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use emmylua_parser::{
     LuaAssignStat, LuaAst, LuaAstNode, LuaAstToken, LuaCommentOwner, LuaDocDescription,
     LuaDocDescriptionOwner, LuaDocGenericDeclList, LuaDocTagAlias, LuaDocTagClass, LuaDocTagEnum,
@@ -7,10 +5,12 @@ use emmylua_parser::{
     LuaSyntaxKind, LuaTokenKind, LuaVarExpr,
 };
 use rowan::TextRange;
+use smol_str::SmolStr;
 
 use super::{
     DocAnalyzer, infer_type::infer_type, preprocess_description, tags::find_owner_closure,
 };
+use crate::GenericParam;
 use crate::compilation::analyzer::doc::tags::report_orphan_tag;
 use crate::{
     LuaTypeCache, LuaTypeDeclId,
@@ -30,20 +30,14 @@ pub fn analyze_class(analyzer: &mut DocAnalyzer, tag: LuaDocTagClass) -> Option<
     let class_decl_id = class_decl.get_id();
     analyzer.current_type_id = Some(class_decl_id.clone());
     if let Some(generic_params) = tag.get_generic_decl() {
-        let params = get_generic_params(analyzer, generic_params);
-        let mut params_index = HashMap::new();
-        let mut count = 0;
-        for (name, _) in params.iter() {
-            params_index.insert(name.clone(), count);
-            count += 1;
-        }
+        let generic_params = get_generic_params(analyzer, generic_params);
 
         analyzer
             .db
             .get_type_index_mut()
-            .add_generic_params(class_decl_id.clone(), params);
+            .add_generic_params(class_decl_id.clone(), generic_params.clone());
 
-        add_generic_index(analyzer, params_index);
+        add_generic_index(analyzer, generic_params);
     }
 
     if let Some(supers) = tag.get_supers() {
@@ -154,22 +148,16 @@ pub fn analyze_alias(analyzer: &mut DocAnalyzer, tag: LuaDocTagAlias) -> Option<
     };
 
     if let Some(generic_params) = tag.get_generic_decl_list() {
-        let params = get_generic_params(analyzer, generic_params);
-        let mut params_index = HashMap::new();
-        let mut count = 0;
-        for (name, _) in params.iter() {
-            params_index.insert(name.clone(), count);
-            count += 1;
-        }
+        let generic_params = get_generic_params(analyzer, generic_params);
 
         analyzer
             .db
             .get_type_index_mut()
-            .add_generic_params(alias_decl_id.clone(), params);
+            .add_generic_params(alias_decl_id.clone(), generic_params.clone());
         let range = analyzer.comment.get_range();
         analyzer
             .generic_index
-            .add_generic_scope(vec![range], params_index, false);
+            .add_generic_scope(vec![range], generic_params, false);
     }
 
     let origin_type = infer_type(analyzer, tag.get_type()?);
@@ -189,11 +177,11 @@ pub fn analyze_alias(analyzer: &mut DocAnalyzer, tag: LuaDocTagAlias) -> Option<
 fn get_generic_params(
     analyzer: &mut DocAnalyzer,
     params: LuaDocGenericDeclList,
-) -> Vec<(String, Option<LuaType>)> {
+) -> Vec<GenericParam> {
     let mut params_result = Vec::new();
     for param in params.get_generic_decl() {
         let name = if let Some(param) = param.get_name_token() {
-            param.get_name_text().to_string()
+            SmolStr::new(param.get_name_text())
         } else {
             continue;
         };
@@ -204,13 +192,14 @@ fn get_generic_params(
             None
         };
 
-        params_result.push((name, type_ref));
+        let is_variadic = param.is_variadic();
+        params_result.push(GenericParam::new(name, type_ref, is_variadic));
     }
 
     params_result
 }
 
-fn add_generic_index(analyzer: &mut DocAnalyzer, params_index: HashMap<String, usize>) {
+fn add_generic_index(analyzer: &mut DocAnalyzer, generic_params: Vec<GenericParam>) {
     let mut ranges = Vec::new();
     let range = analyzer.comment.get_range();
     ranges.push(range);
@@ -234,7 +223,7 @@ fn add_generic_index(analyzer: &mut DocAnalyzer, params_index: HashMap<String, u
 
     analyzer
         .generic_index
-        .add_generic_scope(ranges, params_index, false);
+        .add_generic_scope(ranges, generic_params, false);
 }
 
 fn get_local_stat_reference_ranges(
@@ -328,10 +317,9 @@ pub fn analyze_func_generic(analyzer: &mut DocAnalyzer, tag: LuaDocTagGeneric) -
         report_orphan_tag(analyzer, &tag);
         return None;
     };
-    let mut params_result = HashMap::new();
+    let mut params_result = vec![];
     let mut param_info = Vec::new();
     if let Some(params_list) = tag.get_generic_decl_list() {
-        let mut count = 0;
         for param in params_list.get_generic_decl() {
             let name = if let Some(param) = param.get_name_token() {
                 param.get_name_text().to_string()
@@ -345,9 +333,12 @@ pub fn analyze_func_generic(analyzer: &mut DocAnalyzer, tag: LuaDocTagGeneric) -
                 None
             };
 
-            params_result.insert(name.clone(), count);
+            params_result.push(GenericParam::new(
+                SmolStr::new(name.as_str()),
+                type_ref.clone(),
+                false,
+            ));
             param_info.push((name, type_ref));
-            count += 1;
         }
     }
 

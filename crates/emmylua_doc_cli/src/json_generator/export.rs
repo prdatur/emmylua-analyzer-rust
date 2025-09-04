@@ -191,9 +191,10 @@ fn export_generics(db: &DbIndex, type_decl_id: &LuaTypeDeclId) -> Vec<TypeVar> {
         .map(|v| v.as_slice())
         .unwrap_or_default()
         .iter()
-        .map(|(name, typ)| TypeVar {
-            name: name.clone(),
-            base: typ
+        .map(|it| TypeVar {
+            name: it.name.to_string(),
+            base: it
+                .type_constraint
                 .as_ref()
                 .map(|typ| render_typ(db, typ, RenderLevel::Simple)),
         })

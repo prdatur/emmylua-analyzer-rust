@@ -1,7 +1,7 @@
 use std::{collections::HashMap, ops::Deref};
 
 use crate::{
-    DbIndex, GenericTpl, LuaArrayType, LuaSignatureId,
+    DbIndex, GenericTpl, LuaArrayType, LuaSignatureId, LuaTupleStatus,
     db_index::{
         LuaFunctionType, LuaGenericType, LuaIntersectionType, LuaObjectType, LuaTupleType, LuaType,
         LuaUnionType, VariadicType,
@@ -63,6 +63,13 @@ fn instantiate_tuple(db: &DbIndex, tuple: &LuaTupleType, substitutor: &TypeSubst
             match inner.deref() {
                 VariadicType::Base(base) => {
                     if let LuaType::TplRef(tpl) = base {
+                        if tpl.is_variadic() {
+                            if let Some(generics) = substitutor.get_variadic(tpl.get_tpl_id()) {
+                                new_types.extend_from_slice(&generics);
+                            }
+                            break;
+                        }
+
                         if let Some(value) = substitutor.get(tpl.get_tpl_id()) {
                             match value {
                                 SubstitutorValue::None => {}
@@ -118,6 +125,15 @@ pub fn instantiate_doc_function(
             LuaType::Variadic(variadic) => match variadic.deref() {
                 VariadicType::Base(base) => {
                     if let LuaType::TplRef(tpl) = base {
+                        if tpl.is_variadic() {
+                            if let Some(generics) = substitutor.get_variadic(tpl.get_tpl_id()) {
+                                for (j, typ) in generics.iter().enumerate() {
+                                    let param_name = format!("param{}", i + j);
+                                    new_params.push((param_name, Some(typ.clone())));
+                                }
+                            }
+                            continue;
+                        }
                         if let Some(value) = substitutor.get(tpl.get_tpl_id()) {
                             match value {
                                 SubstitutorValue::Params(params) => {
@@ -272,6 +288,20 @@ fn instantiate_table_generic(
 }
 
 fn instantiate_tpl_ref(_: &DbIndex, tpl: &GenericTpl, substitutor: &TypeSubstitutor) -> LuaType {
+    if tpl.is_variadic() {
+        if let Some(generics) = substitutor.get_variadic(tpl.get_tpl_id()) {
+            if generics.len() == 1 {
+                return generics[0].clone();
+            } else {
+                return LuaType::Tuple(
+                    LuaTupleType::new(generics.clone(), LuaTupleStatus::DocResolve).into(),
+                );
+            }
+        } else {
+            return LuaType::Never;
+        }
+    }
+
     if let Some(value) = substitutor.get(tpl.get_tpl_id()) {
         match value {
             SubstitutorValue::None => {}
@@ -331,6 +361,18 @@ fn instantiate_variadic_type(
     match variadic {
         VariadicType::Base(base) => {
             if let LuaType::TplRef(tpl) = base {
+                if tpl.is_variadic() {
+                    if let Some(generics) = substitutor.get_variadic(tpl.get_tpl_id()) {
+                        if generics.len() == 1 {
+                            return generics[0].clone();
+                        } else {
+                            return LuaType::Variadic(VariadicType::Multi(generics.clone()).into());
+                        }
+                    } else {
+                        return LuaType::Never;
+                    }
+                }
+
                 if let Some(value) = substitutor.get(tpl.get_tpl_id()) {
                     match value {
                         SubstitutorValue::None => {

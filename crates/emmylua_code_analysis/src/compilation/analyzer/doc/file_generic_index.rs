@@ -2,11 +2,11 @@ use std::collections::HashMap;
 
 use rowan::{TextRange, TextSize};
 
-use crate::GenericTplId;
+use crate::{GenericParam, GenericTplId};
 
 #[derive(Debug, Clone)]
 pub struct FileGenericIndex {
-    generic_params: Vec<GenericParams>,
+    generic_params: Vec<TagGenericParams>,
     root_node_ids: Vec<GenericEffectId>,
     effect_nodes: Vec<GenericEffectRangeNode>,
 }
@@ -23,12 +23,12 @@ impl FileGenericIndex {
     pub fn add_generic_scope(
         &mut self,
         ranges: Vec<TextRange>,
-        params: HashMap<String, usize>,
+        params: Vec<GenericParam>,
         is_func: bool,
     ) {
         let params_id = self.generic_params.len();
         self.generic_params
-            .push(GenericParams::new(params, is_func));
+            .push(TagGenericParams::new(params, is_func));
         let params_id = GenericParamId::new(params_id);
         let root_node_ids: Vec<_> = self.root_node_ids.clone();
         for range in ranges {
@@ -93,16 +93,18 @@ impl FileGenericIndex {
         false
     }
 
-    pub fn find_generic(&self, position: TextSize, name: &str) -> Option<GenericTplId> {
+    /// Find generic parameter by position and name.
+    /// return (GenericTplId, is_variadic)
+    pub fn find_generic(&self, position: TextSize, name: &str) -> Option<(GenericTplId, bool)> {
         let params_ids = self.find_generic_params(position)?;
 
         for params_id in params_ids.iter().rev() {
             if let Some(params) = self.generic_params.get(*params_id) {
-                if let Some(id) = params.params.get(name) {
+                if let Some((id, is_variadic)) = params.params.get(name) {
                     if params.is_func {
-                        return Some(GenericTplId::Func(*id as u32));
+                        return Some((GenericTplId::Func(*id as u32), *is_variadic));
                     } else {
-                        return Some(GenericTplId::Type(*id as u32));
+                        return Some((GenericTplId::Type(*id as u32), *is_variadic));
                     }
                 }
             }
@@ -177,13 +179,17 @@ impl GenericEffectId {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct GenericParams {
-    params: HashMap<String, usize>,
+pub struct TagGenericParams {
+    params: HashMap<String, (usize, bool)>, // bool: is_variadic
     is_func: bool,
 }
 
-impl GenericParams {
-    pub fn new(params: HashMap<String, usize>, is_func: bool) -> Self {
+impl TagGenericParams {
+    pub fn new(generic_params: Vec<GenericParam>, is_func: bool) -> Self {
+        let mut params = HashMap::new();
+        for (i, param) in generic_params.into_iter().enumerate() {
+            params.insert(param.name.to_string(), (i, param.is_variadic));
+        }
         Self { params, is_func }
     }
 }

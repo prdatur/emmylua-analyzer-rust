@@ -81,7 +81,10 @@ pub fn get_tpl_ref_extend_type(
                                     LuaMemberOwner::Type(type_id) => {
                                         let generic_params =
                                             db.get_type_index().get_generic_params(&type_id)?;
-                                        return generic_params.get(tpl_id as usize)?.1.clone();
+                                        return generic_params
+                                            .get(tpl_id as usize)?
+                                            .type_constraint
+                                            .clone();
                                     }
                                     _ => return None,
                                 }

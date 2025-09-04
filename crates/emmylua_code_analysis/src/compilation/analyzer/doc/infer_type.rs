@@ -142,10 +142,12 @@ fn infer_buildin_or_ref_type(
             LuaType::Table
         }
         _ => {
-            if let Some(tpl_id) = analyzer.generic_index.find_generic(position, name) {
+            if let Some((tpl_id, is_variadic)) = analyzer.generic_index.find_generic(position, name)
+            {
                 return LuaType::TplRef(Arc::new(GenericTpl::new(
                     tpl_id,
                     SmolStr::new(name).into(),
+                    is_variadic,
                 )));
             }
 

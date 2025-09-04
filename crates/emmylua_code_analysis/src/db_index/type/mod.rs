@@ -1,3 +1,4 @@
+mod generic_param;
 mod humanize_type;
 mod test;
 mod type_decl;
@@ -8,6 +9,7 @@ mod types;
 
 use super::traits::LuaIndex;
 use crate::{DbIndex, FileId, InFiled};
+pub use generic_param::GenericParam;
 pub use humanize_type::{RenderLevel, format_union_type, humanize_type};
 use std::collections::{HashMap, HashSet};
 pub use type_decl::{
@@ -24,7 +26,7 @@ pub struct LuaTypeIndex {
     file_using_namespace: HashMap<FileId, Vec<String>>,
     file_types: HashMap<FileId, Vec<LuaTypeDeclId>>,
     full_name_type_map: HashMap<LuaTypeDeclId, LuaTypeDecl>,
-    generic_params: HashMap<LuaTypeDeclId, Vec<(String, Option<LuaType>)>>,
+    generic_params: HashMap<LuaTypeDeclId, Vec<GenericParam>>,
     supers: HashMap<LuaTypeDeclId, Vec<InFiled<LuaType>>>,
     types: HashMap<LuaTypeOwner, LuaTypeCache>,
     in_filed_type_owner: HashMap<FileId, HashSet<LuaTypeOwner>>,
@@ -161,18 +163,11 @@ impl LuaTypeIndex {
         result
     }
 
-    pub fn add_generic_params(
-        &mut self,
-        decl_id: LuaTypeDeclId,
-        params: Vec<(String, Option<LuaType>)>,
-    ) {
+    pub fn add_generic_params(&mut self, decl_id: LuaTypeDeclId, params: Vec<GenericParam>) {
         self.generic_params.insert(decl_id, params);
     }
 
-    pub fn get_generic_params(
-        &self,
-        decl_id: &LuaTypeDeclId,
-    ) -> Option<&Vec<(String, Option<LuaType>)>> {
+    pub fn get_generic_params(&self, decl_id: &LuaTypeDeclId) -> Option<&Vec<GenericParam>> {
         self.generic_params.get(decl_id)
     }
 

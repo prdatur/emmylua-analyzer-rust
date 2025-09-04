@@ -53,7 +53,7 @@ fn check_doc_tag_type(
             .get_type_index()
             .get_generic_params(&generic_type.get_base_type_id())?;
         for (i, param_type) in generic_type.get_params().iter().enumerate() {
-            let extend_type = generic_params.get(i)?.1.clone()?;
+            let extend_type = generic_params.get(i)?.type_constraint.clone()?;
             let result = semantic_model.type_check(&extend_type, &param_type);
             if !result.is_ok() {
                 add_type_check_diagnostic(
@@ -217,7 +217,7 @@ fn get_extend_type(
                                 .get_db()
                                 .get_type_index()
                                 .get_generic_params(&type_id)?;
-                            generic_params.get(tpl_id as usize)?.1.clone()
+                            generic_params.get(tpl_id as usize)?.type_constraint.clone()
                         }
                         _ => None,
                     }
@@ -422,7 +422,10 @@ fn try_instantiate_arg_type(
                                             .get_db()
                                             .get_type_index()
                                             .get_generic_params(&type_id)?;
-                                        return generic_params.get(tpl_id as usize)?.1.clone();
+                                        return generic_params
+                                            .get(tpl_id as usize)?
+                                            .type_constraint
+                                            .clone();
                                     }
                                     _ => return None,
                                 }

@@ -2,7 +2,6 @@ use std::{collections::HashSet, ops::Deref, sync::Arc};
 
 use emmylua_parser::{LuaAstNode, LuaCallExpr, LuaExpr};
 use internment::ArcIntern;
-use smol_str::SmolStr;
 
 use crate::{
     GenericTpl, GenericTplId, LuaFunctionType, LuaGenericType, TypeVisitTrait,
@@ -161,13 +160,14 @@ pub fn build_self_type(db: &DbIndex, self_type: &LuaType) -> LuaType {
         LuaType::Def(id) | LuaType::Ref(id) => {
             if let Some(generic) = db.get_type_index().get_generic_params(id) {
                 let mut params = Vec::new();
-                for (i, ty) in generic.iter().enumerate() {
-                    if let Some(t) = &ty.1 {
+                for (i, generic_param) in generic.iter().enumerate() {
+                    if let Some(t) = &generic_param.type_constraint {
                         params.push(t.clone());
                     } else {
                         params.push(LuaType::TplRef(Arc::new(GenericTpl::new(
                             GenericTplId::Type(i as u32),
-                            ArcIntern::new(SmolStr::from(ty.0.clone())),
+                            ArcIntern::new(generic_param.name.clone()),
+                            generic_param.is_variadic,
                         ))));
                     }
                 }
