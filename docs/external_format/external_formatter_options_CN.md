@@ -6,6 +6,7 @@ emmyLua_ls支持使用外部格式化工具来格式化 Lua 代码。通过配�
 
 在 `.emmyrc.json` 文件中，你可以配置外部格式化工具：
 
+文档格式化配置:
 ```json
 {
   "format" : {
@@ -20,7 +21,30 @@ emmyLua_ls支持使用外部格式化工具来格式化 Lua 代码。通过配�
       }
   }
 }
+
 ```
+范围格式化配置:
+```json
+{
+    "format" : {
+        "externalToolRangeFormat": {
+            "program": "stylua",
+            "args": [
+                "-",
+                "--stdin-filepath",
+                "${file}",
+                "--indent-width=${indent_size}",
+                "--indent-type",
+                "${use_tabs?Tabs:Spaces}",
+                "--range-start=${start_offset}",
+                "--range-end=${end_offset}"
+            ],
+            "timeout": 5000
+        }
+    }
+}
+```
+
 
 ## 配置项说明
 
@@ -38,6 +62,10 @@ emmyLua_ls支持使用外部格式化工具来格式化 Lua 代码。通过配�
 |------|------|--------|
 | `${file}` | 当前文件的完整路径 | `/path/to/script.lua` |
 | `${indent_size}` | 缩进大小（空格数） | `4` |
+| `${start_offset}` | 选定范围的起始UTF8偏移量 | `0` |
+| `${end_offset}` | 选定范围的结束UTF8偏移量 | `100` |
+| `${start_line}` | 当前文件的起始行 | `1` |
+| `${end_line}` | 当前文件的结束行 | `10` |
 
 ### 条件变量
 
@@ -78,6 +106,20 @@ emmyLua_ls支持使用外部格式化工具来格式化 Lua 代码。通过配�
                 "--indent-type",
                 "${use_tabs?Tabs:Spaces}"
             ]
+        },
+        "externalToolRangeFormat": {
+            "program": "stylua",
+            "args": [
+                "-",
+                "--stdin-filepath",
+                "${file}",
+                "--indent-width=${indent_size}",
+                "--indent-type",
+                "${use_tabs?Tabs:Spaces}",
+                "--range-start=${start_offset}",
+                "--range-end=${end_offset}"
+            ],
+            "timeout": 5000
         }
     }
 }
