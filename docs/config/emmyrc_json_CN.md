@@ -2,17 +2,12 @@
 
 # 🔧 EmmyLua 配置指南
 
-*全面掌握 EmmyLua Analyzer Rust 的配置选项*
-
-[![Back to Main](https://img.shields.io/badge/← 返回主页-blue?style=for-the-badge)](../../README.md)
+*全面掌握 EmmyLua Analyzer Rust 的配置选项，让您的 Lua 开发更加高效*
 
 </div>
 
 ---
 
-## 📋 概述
-
-EmmyLua 语言服务器支持灵活的配置系统，通过配置文件可以精细控制各种功能特性。
 
 ### 📁 配置文件
 
@@ -24,6 +19,7 @@ EmmyLua 语言服务器支持灵活的配置系统，通过配置文件可以精
 - **`.emmyrc.json`**: 主要配置文件
 - **位置**: 项目根目录
 - **优先级**: 最高
+- **格式**: JSON Schema 支持
 
 </td>
 <td width="50%">
@@ -32,12 +28,13 @@ EmmyLua 语言服务器支持灵活的配置系统，通过配置文件可以精
 - **`.luarc.json`**: 兼容配置文件
 - **自动转换**: 转换为 `.emmyrc.json` 格式
 - **覆盖规则**: 被 `.emmyrc.json` 覆盖
+- **兼容性**: 部分功能支持
 
 </td>
 </tr>
 </table>
 
-> **💡 注意**: `.emmyrc.json` 配置格式更加丰富，不兼容的部分会被自动忽略。
+> **💡 提示**: `.emmyrc.json` 配置格式更加丰富和灵活，建议使用该格式以获得最佳体验。
 
 ### 🛠️ Schema 支持
 
@@ -56,10 +53,11 @@ EmmyLua 语言服务器支持灵活的配置系统，通过配置文件可以精
 以下是包含所有配置选项的完整配置文件示例：
 
 <details>
-<summary><b>点击展开完整配置</b></summary>
+<summary><b>🔧 点击展开完整配置</b></summary>
 
 ```json
 {
+    "$schema": "https://raw.githubusercontent.com/EmmyLuaLs/emmylua-analyzer-rust/refs/heads/main/crates/emmylua_code_analysis/resources/schema.json",
     "codeAction": {
         "insertSpace": false
     },
@@ -67,34 +65,42 @@ EmmyLua 语言服务器支持灵活的配置系统，通过配置文件可以精
         "enable": true
     },
     "completion": {
+        "enable": true,
         "autoRequire": true,
         "autoRequireFunction": "require",
         "autoRequireNamingConvention": "keep",
         "autoRequireSeparator": ".",
         "callSnippet": false,
-        "enable": true,
-        "postfix": "@"
+        "postfix": "@",
+        "baseFunctionIncludesName": true
     },
     "diagnostics": {
-        "diagnosticInterval": 500,
-        "disable": [],
         "enable": true,
+        "disable": [],
         "enables": [],
         "globals": [],
         "globalsRegex": [],
-        "severity": {}
+        "severity": {},
+        "diagnosticInterval": 500
+    },
+    "doc": {
+        "syntax": "md"
     },
     "documentColor": {
         "enable": true
     },
+    "hover": {
+        "enable": true
+    },
     "hint": {
         "enable": true,
+        "paramHint": true,
         "indexHint": true,
         "localHint": true,
         "overrideHint": true,
-        "paramHint": true
+        "metaCallHint": true
     },
-    "hover": {
+    "inlineValues": {
         "enable": true
     },
     "references": {
@@ -102,20 +108,27 @@ EmmyLua 语言服务器支持灵活的配置系统，通过配置文件可以精
         "fuzzySearch": true,
         "shortStringSearch": false
     },
+    "reformat": {
+        "externalTool": null,
+        "externalToolRangeFormat": null,
+        "useDiff": false
+    },
     "resource": {
         "paths": []
     },
     "runtime": {
-        "classDefaultCall": {
-            "forceNonColon": false,
-            "forceReturnSelf": false,
-            "functionName": ""
-        },
-        "extensions": [],
-        "frameworkVersions": [],
+        "version": "LuaLatest",
         "requireLikeFunction": [],
+        "frameworkVersions": [],
+        "extensions": [],
         "requirePattern": [],
-        "version": "LuaLatest"
+        "classDefaultCall": {
+            "functionName": "",
+            "forceNonColon": false,
+            "forceReturnSelf": false
+        },
+        "nonstandardSymbol": [],
+        "special": {}
     },
     "semanticTokens": {
         "enable": true
@@ -124,22 +137,22 @@ EmmyLua 语言服务器支持灵活的配置系统，通过配置文件可以精
         "detailSignatureHelper": true
     },
     "strict": {
-        "arrayIndex": true,
-        "docBaseConstMatchBaseType": true,
-        "metaOverrideFileDefine": true,
         "requirePath": false,
-        "typeCall": false
+        "typeCall": false,
+        "arrayIndex": true,
+        "metaOverrideFileDefine": true,
+        "docBaseConstMatchBaseType": true
     },
     "workspace": {
-        "enableReindex": false,
-        "encoding": "utf-8",
         "ignoreDir": [],
         "ignoreGlobs": [],
         "library": [],
-        "moduleMap": [],
+        "workspaceRoots": [],
         "preloadFileSize": 0,
+        "encoding": "utf-8",
+        "moduleMap": [],
         "reindexDuration": 5000,
-        "workspaceRoots": []
+        "enableReindex": false
     }
 }
 ```
@@ -164,8 +177,10 @@ EmmyLua 语言服务器支持灵活的配置系统，通过配置文件可以精
 | **`autoRequire`** | `boolean` | `true` | 📦 自动补全 require 语句 |
 | **`autoRequireFunction`** | `string` | `"require"` | ⚡ 自动补全时使用的函数名 |
 | **`autoRequireNamingConvention`** | `string` | `"keep"` | 🏷️ 命名规范转换方式 |
+| **`autoRequireSeparator`** | `string` | `"."` | 🔗 自动引用路径分隔符 |
 | **`callSnippet`** | `boolean` | `false` | 🎪 启用函数调用代码片段 |
 | **`postfix`** | `string` | `"@"` | 🔧 后缀补全触发符号 |
+| **`baseFunctionIncludesName`** | `boolean` | `true` | 📝 基础函数补全时包含函数名 |
 
 #### 🏷️ 命名规范选项
 
@@ -197,6 +212,69 @@ EmmyLua 语言服务器支持灵活的配置系统，通过配置文件可以精
 </td>
 </tr>
 </table>
+
+---
+
+### 🎯 codeAction - 代码操作
+
+<div align="center">
+
+#### 代码快速修复和重构操作配置
+
+</div>
+
+| 配置项 | 类型 | 默认值 | 描述 |
+|--------|------|--------|------|
+| **`insertSpace`** | `boolean` | `false` | 🔧 在 `---` 注释后插入 `@diagnostic disable-next-line` 时添加空格 |
+
+---
+
+### 📄 doc - 文档语法
+
+| 配置项 | 类型 | 默认值 | 描述 |
+|--------|------|--------|------|
+| **`syntax`** | `string` | `"md"` | 📝 文档注释语法类型 |
+
+#### 📚 支持的文档语法
+
+<table>
+<tr>
+<td width="50%">
+
+**`md`**
+Markdown 语法
+
+</td>
+<td width="50%">
+
+**`myst`**
+MyST 语法
+
+</td>
+</tr>
+</table>
+
+---
+
+### 🎨 documentColor - 文档颜色
+
+| 配置项 | 类型 | 默认值 | 描述 |
+|--------|------|--------|------|
+| **`enable`** | `boolean` | `true` | 🌈 启用/禁用文档中的颜色显示功能 |
+
+---
+
+### 🔧 reformat - 代码格式化
+
+see [External Formatter Options](../external_format/external_formatter_options_CN.md)
+
+---
+
+### 📊 inlineValues - 内联值
+
+| 配置项 | 类型 | 默认值 | 描述 |
+|--------|------|--------|------|
+| **`enable`** | `boolean` | `true` | 🔍 启用/禁用调试时的内联值显示 |
 
 ---
 
@@ -332,8 +410,9 @@ EmmyLua 语言服务器支持灵活的配置系统，通过配置文件可以精
 | **`enable`** | `boolean` | `true` | 🔧 启用/禁用内联提示 |
 | **`paramHint`** | `boolean` | `true` | 🏷️ 显示函数参数提示 |
 | **`indexHint`** | `boolean` | `true` | 📊 显示跨行索引表达式提示 |
-| **`localHint`** | `boolean` | `false` | 📍 显示局部变量类型提示 |
+| **`localHint`** | `boolean` | `true` | 📍 显示局部变量类型提示 |
 | **`overrideHint`** | `boolean` | `true` | 🔄 显示方法重载提示 |
+| **`metaCallHint`** | `boolean` | `true` | 🎭 显示元表 `__call` 调用提示 |
 
 ---
 
@@ -347,44 +426,53 @@ EmmyLua 语言服务器支持灵活的配置系统，通过配置文件可以精
 
 | 配置项 | 类型 | 默认值 | 描述 |
 |--------|------|--------|------|
-| **`version`** | `string` | `"Lua5.4"` | 🚀 Lua 版本选择 |
+| **`version`** | `string` | `"LuaLatest"` | 🚀 Lua 版本选择 |
 | **`requireLikeFunction`** | `string[]` | `[]` | 📦 类似 require 的函数列表 |
 | **`frameworkVersions`** | `string[]` | `[]` | 🎯 框架版本标识 |
 | **`extensions`** | `string[]` | `[]` | 📄 支持的文件扩展名 |
 | **`requirePattern`** | `string[]` | `[]` | 🔍 require 模式匹配规则 |
+| **`classDefaultCall`** | `object` | `{}` | 🏗️ 类默认调用配置 |
+| **`nonstandardSymbol`** | `string[]` | `[]` | 🔧 非标准符号列表 |
+| **`special`** | `object` | `{}` | ✨ 特殊符号配置 |
 
 #### 🚀 支持的 Lua 版本
 
 <table>
 <tr>
-<td width="20%">
+<td width="16.6%">
 
 **`Lua5.1`**
 经典版本
 
 </td>
-<td width="20%">
+<td width="16.6%">
 
 **`Lua5.2`**
 增强功能
 
 </td>
-<td width="20%">
+<td width="16.6%">
 
 **`Lua5.3`**
 整数支持
 
 </td>
-<td width="20%">
+<td width="16.6%">
 
 **`Lua5.4`**
 最新特性
 
 </td>
-<td width="20%">
+<td width="16.6%">
 
 **`LuaJIT`**
 高性能版本
+
+</td>
+<td width="16.6%">
+
+**`LuaLatest`**
+最新特性合集
 
 </td>
 </tr>
@@ -395,11 +483,20 @@ EmmyLua 语言服务器支持灵活的配置系统，通过配置文件可以精
 ```json
 {
   "runtime": {
-    "version": "Lua5.4",
-    "requireLikeFunction": ["import", "load"],
-    "frameworkVersions": ["love2d", "openresty"],
-    "extensions": [".lua", ".lua.txt"],
-    "requirePattern": ["?.lua", "?/init.lua"]
+    "version": "LuaLatest",
+    "requireLikeFunction": ["import", "load", "dofile"],
+    "frameworkVersions": ["love2d", "openresty", "nginx"],
+    "extensions": [".lua", ".lua.txt", ".luau"],
+    "requirePattern": ["?.lua", "?/init.lua", "lib/?.lua"],
+    "classDefaultCall": {
+      "functionName": "new",
+      "forceNonColon": false,
+      "forceReturnSelf": true
+    },
+    "nonstandardSymbol": ["continue"],
+    "special": {
+      "errorf":"error"
+    }
   }
 }
 ```
@@ -531,21 +628,33 @@ EmmyLua 语言服务器支持灵活的配置系统，通过配置文件可以精
 | 配置项 | 类型 | 默认值 | 描述 |
 |--------|------|--------|------|
 | **`enable`** | `boolean` | `true` | 🔍 启用/禁用引用查找功能 |
-| **`fuzzy_search`** | `boolean` | `true` | 🎯 启用模糊搜索 |
+| **`fuzzySearch`** | `boolean` | `true` | 🎯 启用模糊搜索 |
+| **`shortStringSearch`** | `boolean` | `false` | 🔤 启用短字符串搜索 |
 
 ---
 
+
+### 📚 相关资源
+
 <div align="center">
 
-## 🎯 总结
+[![GitHub](https://img.shields.io/badge/GitHub-EmmyLuaLs/emmylua--analyzer--rust-blue?style=for-the-badge&logo=github)](https://github.com/EmmyLuaLs/emmylua-analyzer-rust)
+[![Documentation](https://img.shields.io/badge/文档-完整配置指南-green?style=for-the-badge&logo=gitbook)](../../README.md)
+[![Issues](https://img.shields.io/badge/问题反馈-GitHub%20Issues-red?style=for-the-badge&logo=github)](https://github.com/EmmyLuaLs/emmylua-analyzer-rust/issues)
 
-通过合理配置 EmmyLua，您可以：
+</div>
 
-- **🎯 提升开发效率**: 智能补全和提示
-- **🔍 提高代码质量**: 严格的类型检查和诊断
-- **🛠️ 定制开发环境**: 适应不同项目需求
-- **⚡ 优化性能**: 合理的工作区和索引配置
+---
 
-[⬆ 返回顶部](#-emmylua-配置指南)
+### 🎉 开始使用
+
+1. **创建配置文件**: 在项目根目录创建 `.emmyrc.json`
+2. **添加 Schema**: 复制上方的 schema URL 以获得智能提示
+3. **逐步配置**: 根据项目需求逐步添加配置项
+4. **测试验证**: 保存配置并测试语言服务器功能
+
+> **💡 小贴士**: 建议从基础配置开始，逐步添加高级功能，这样可以更好地理解每个配置项的作用。
+
+[⬆ 返回顶部](#-emmylua-analyzer-rust-配置指南)
 
 </div>
