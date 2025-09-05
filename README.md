@@ -101,9 +101,6 @@
 #### 📝 **Annotation System**
 - ✅ **EmmyLua** annotations
 - ✅ **Luacats** documentation
-- ✅ **Type definitions**
-- ✅ **Generic types**
-- ✅ **Union types**
 
 </td>
 </tr>
@@ -142,8 +139,7 @@
 - ✅ **Error detection**
 - ✅ **Code formatting**
 - ✅ **Style enforcement**
-- ✅ **Unused variable detection**
-- ✅ **Type checking**
+- ✅ **More Linting**
 
 </td>
 </tr>
@@ -329,6 +325,8 @@ cargo test --all-features --no-fail-fast
 ### Contributing
 
 We welcome contributions!.
+
+More details can be found in our [CONTRIBUTING.md](./CONTRIBUTING.md) file.
 
 ---
 

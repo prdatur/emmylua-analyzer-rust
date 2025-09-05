@@ -64,8 +64,8 @@ In the `args` parameters, you can use the following variables that will be repla
 |----------|-------------|---------------|
 | `${file}` | Full path of the current file | `/path/to/script.lua` |
 | `${indent_size}` | Indentation size (number of spaces) | `4` |
-| `${start_offset}` | Start UTF8 offset of the selected range | `0` |
-| `${end_offset}` | End UTF8 offset of the selected range | `100` |
+| `${start_offset}` | Start byte offset of the selected range | `0` |
+| `${end_offset}` | End byte offset of the selected range | `100` |
 | `${start_line}` | Start line of the current file | `1` |
 | `${end_line}` | End line of the current file | `10` |
 
