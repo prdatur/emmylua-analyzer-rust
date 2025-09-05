@@ -12,6 +12,7 @@ mod document_link;
 mod document_range_formatting;
 mod document_selection_range;
 mod document_symbol;
+mod document_type_format;
 mod emmy_annotator;
 mod fold_range;
 mod hover;
@@ -73,7 +74,8 @@ capabilities!(modules: {
     document_selection_range => DocumentSelectionRangeCapabilities,
     document_highlight => DocumentHighlightCapabilities,
     document_formatting => DocumentFormattingCapabilities,
-    document_range_formatting => DocumentRangeFormatting,
+    document_range_formatting => DocumentRangeFormattingCapabilities,
+    // document_type_format => DocumentTypeFormattingCapabilities,
     completion => CompletionCapabilities,
     inlay_hint => InlayHintCapabilities,
     definition => DefinitionCapabilities,

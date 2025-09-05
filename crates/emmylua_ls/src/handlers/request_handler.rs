@@ -8,12 +8,12 @@ use lsp_types::request::{
     DocumentColor, DocumentHighlightRequest, DocumentLinkRequest, DocumentLinkResolve,
     DocumentSymbolRequest, ExecuteCommand, FoldingRangeRequest, Formatting, GotoDefinition,
     GotoImplementation, HoverRequest, InlayHintRequest, InlayHintResolveRequest,
-    InlineValueRequest, PrepareRenameRequest, RangeFormatting, References, Rename,
-    Request as LspRequest, ResolveCompletionItem, SelectionRangeRequest, SemanticTokensFullRequest,
-    SignatureHelpRequest, WorkspaceSymbolRequest,
+    InlineValueRequest, OnTypeFormatting, PrepareRenameRequest, RangeFormatting, References,
+    Rename, Request as LspRequest, ResolveCompletionItem, SelectionRangeRequest,
+    SemanticTokensFullRequest, SignatureHelpRequest, WorkspaceSymbolRequest,
 };
 
-use crate::context::ServerContext;
+use crate::{context::ServerContext, handlers::document_type_format::on_type_formatting_handler};
 
 use super::{
     call_hierarchy::{
@@ -108,6 +108,7 @@ pub async fn on_request_handler(
         WorkspaceSymbolRequest => on_workspace_symbol_handler,
         Formatting => on_formatting_handler,
         RangeFormatting => on_range_formatting_handler,
+        OnTypeFormatting => on_type_formatting_handler,
         CallHierarchyPrepare => on_prepare_call_hierarchy_handler,
         CallHierarchyIncomingCalls => on_incoming_calls_handler,
         CallHierarchyOutgoingCalls => on_outgoing_calls_handler,

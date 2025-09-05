@@ -92,9 +92,9 @@ pub async fn on_range_formatting_handler(
     Some(vec![text_edit])
 }
 
-pub struct DocumentRangeFormatting;
+pub struct DocumentRangeFormattingCapabilities;
 
-impl RegisterCapabilities for DocumentRangeFormatting {
+impl RegisterCapabilities for DocumentRangeFormattingCapabilities {
     fn register_capabilities(server_capabilities: &mut ServerCapabilities, _: &ClientCapabilities) {
         server_capabilities.document_range_formatting_provider = Some(OneOf::Left(true));
     }
