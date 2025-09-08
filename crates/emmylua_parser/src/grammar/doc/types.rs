@@ -1,6 +1,6 @@
 use crate::{
     UNARY_TYPE_PRIORITY,
-    grammar::ParseResult,
+    grammar::DocParseResult,
     kind::{LuaOpKind, LuaSyntaxKind, LuaTokenKind, LuaTypeBinaryOperator, LuaTypeUnaryOperator},
     lexer::LuaDocLexerState,
     parser::{CompleteMarker, LuaDocParser, MarkerEventContainer},
@@ -9,7 +9,7 @@ use crate::{
 
 use super::{expect_token, if_token_bump, parse_description};
 
-pub fn parse_type(p: &mut LuaDocParser) -> ParseResult {
+pub fn parse_type(p: &mut LuaDocParser) -> DocParseResult {
     if p.current_token() == LuaTokenKind::TkDocContinueOr {
         return parse_multi_line_union_type(p);
     }
@@ -55,7 +55,7 @@ pub fn parse_type(p: &mut LuaDocParser) -> ParseResult {
 // <type>
 // keyof <type>, -1
 // <type> | <type> , <type> & <type>, <type> extends <type>, <type> in keyof <type>
-fn parse_sub_type(p: &mut LuaDocParser, limit: i32) -> ParseResult {
+fn parse_sub_type(p: &mut LuaDocParser, limit: i32) -> DocParseResult {
     let uop = LuaOpKind::to_type_unary_operator(p.current_token());
     let mut cm = if uop != LuaTypeUnaryOperator::None {
         let range = p.current_token_range();
@@ -106,7 +106,7 @@ fn parse_sub_type(p: &mut LuaDocParser, limit: i32) -> ParseResult {
     Ok(cm)
 }
 
-pub fn parse_type_list(p: &mut LuaDocParser) -> ParseResult {
+pub fn parse_type_list(p: &mut LuaDocParser) -> DocParseResult {
     let m = p.mark(LuaSyntaxKind::DocTypeList);
     parse_type(p)?;
     while p.current_token() == LuaTokenKind::TkComma {
@@ -116,13 +116,13 @@ pub fn parse_type_list(p: &mut LuaDocParser) -> ParseResult {
     Ok(m.complete(p))
 }
 
-fn parse_simple_type(p: &mut LuaDocParser) -> ParseResult {
+fn parse_simple_type(p: &mut LuaDocParser) -> DocParseResult {
     let cm = parse_primary_type(p)?;
 
     parse_suffixed_type(p, cm)
 }
 
-fn parse_primary_type(p: &mut LuaDocParser) -> ParseResult {
+fn parse_primary_type(p: &mut LuaDocParser) -> DocParseResult {
     match p.current_token() {
         LuaTokenKind::TkLeftBrace => parse_object_or_mapped_type(p),
         LuaTokenKind::TkLeftBracket => parse_tuple_type(p),
@@ -143,7 +143,7 @@ fn parse_primary_type(p: &mut LuaDocParser) -> ParseResult {
 
 // { <name>: <type>, ... }
 // { <name> : <type>, ... }
-fn parse_object_or_mapped_type(p: &mut LuaDocParser) -> ParseResult {
+fn parse_object_or_mapped_type(p: &mut LuaDocParser) -> DocParseResult {
     let m = p.mark(LuaSyntaxKind::TypeObject);
     p.bump();
 
@@ -168,7 +168,7 @@ fn parse_object_or_mapped_type(p: &mut LuaDocParser) -> ParseResult {
 // [<string>] : <type>
 // [<type>] : <type>
 // <name>? : <type>
-fn parse_typed_field(p: &mut LuaDocParser) -> ParseResult {
+fn parse_typed_field(p: &mut LuaDocParser) -> DocParseResult {
     let m = p.mark(LuaSyntaxKind::DocObjectField);
     match p.current_token() {
         LuaTokenKind::TkName => {
@@ -200,7 +200,7 @@ fn parse_typed_field(p: &mut LuaDocParser) -> ParseResult {
 
 // [ <type> , <type>  ...]
 // [ string, number ]
-fn parse_tuple_type(p: &mut LuaDocParser) -> ParseResult {
+fn parse_tuple_type(p: &mut LuaDocParser) -> DocParseResult {
     let m = p.mark(LuaSyntaxKind::TypeTuple);
     p.bump();
     if p.current_token() != LuaTokenKind::TkRightBracket {
@@ -216,7 +216,7 @@ fn parse_tuple_type(p: &mut LuaDocParser) -> ParseResult {
 }
 
 // ( <type> )
-fn parse_paren_type(p: &mut LuaDocParser) -> ParseResult {
+fn parse_paren_type(p: &mut LuaDocParser) -> DocParseResult {
     p.bump();
     let cm = parse_type(p)?;
     expect_token(p, LuaTokenKind::TkRightParen)?;
@@ -224,13 +224,13 @@ fn parse_paren_type(p: &mut LuaDocParser) -> ParseResult {
 }
 
 // <string> | <integer> | <bool>
-fn parse_literal_type(p: &mut LuaDocParser) -> ParseResult {
+fn parse_literal_type(p: &mut LuaDocParser) -> DocParseResult {
     let m = p.mark(LuaSyntaxKind::TypeLiteral);
     p.bump();
     Ok(m.complete(p))
 }
 
-fn parse_name_or_func_type(p: &mut LuaDocParser) -> ParseResult {
+fn parse_name_or_func_type(p: &mut LuaDocParser) -> DocParseResult {
     let text = p.current_token_text();
     match text {
         "fun" | "async" | "sync" => parse_fun_type(p),
@@ -240,7 +240,7 @@ fn parse_name_or_func_type(p: &mut LuaDocParser) -> ParseResult {
 
 // fun ( <name>: <type>, ... ): <type>, ...
 // async fun ( <name>: <type>, ... ) <type>, ...
-pub fn parse_fun_type(p: &mut LuaDocParser) -> ParseResult {
+pub fn parse_fun_type(p: &mut LuaDocParser) -> DocParseResult {
     let m = p.mark(LuaSyntaxKind::TypeFun);
     if matches!(p.current_token_text(), "async" | "sync") {
         p.bump();
@@ -276,7 +276,7 @@ pub fn parse_fun_type(p: &mut LuaDocParser) -> ParseResult {
     Ok(m.complete(p))
 }
 
-fn parse_fun_return_list(p: &mut LuaDocParser) -> ParseResult {
+fn parse_fun_return_list(p: &mut LuaDocParser) -> DocParseResult {
     let m = p.mark(LuaSyntaxKind::DocTypeList);
     // compact luals return type (number, integer)
     let parse_paren = if p.current_token() == LuaTokenKind::TkLeftParen {
@@ -300,7 +300,7 @@ fn parse_fun_return_list(p: &mut LuaDocParser) -> ParseResult {
     Ok(m.complete(p))
 }
 
-fn parse_fun_return_type(p: &mut LuaDocParser) -> ParseResult {
+fn parse_fun_return_type(p: &mut LuaDocParser) -> DocParseResult {
     let m = p.mark(LuaSyntaxKind::DocNamedReturnType);
     let cm = parse_type(p)?;
     if cm.kind == LuaSyntaxKind::TypeName && p.current_token() == LuaTokenKind::TkColon {
@@ -314,7 +314,7 @@ fn parse_fun_return_type(p: &mut LuaDocParser) -> ParseResult {
 // ... : <type>
 // <name>
 // ...
-fn parse_typed_param(p: &mut LuaDocParser) -> ParseResult {
+fn parse_typed_param(p: &mut LuaDocParser) -> DocParseResult {
     let m = p.mark(LuaSyntaxKind::DocTypedParameter);
     match p.current_token() {
         LuaTokenKind::TkName => {
@@ -342,14 +342,14 @@ fn parse_typed_param(p: &mut LuaDocParser) -> ParseResult {
 }
 
 // <name type>
-fn parse_name_type(p: &mut LuaDocParser) -> ParseResult {
+fn parse_name_type(p: &mut LuaDocParser) -> DocParseResult {
     let m = p.mark(LuaSyntaxKind::TypeName);
     p.bump();
     Ok(m.complete(p))
 }
 
 // `<name type>`
-fn parse_string_template_type(p: &mut LuaDocParser) -> ParseResult {
+fn parse_string_template_type(p: &mut LuaDocParser) -> DocParseResult {
     let m = p.mark(LuaSyntaxKind::TypeStringTemplate);
     p.bump();
     Ok(m.complete(p))
@@ -357,7 +357,7 @@ fn parse_string_template_type(p: &mut LuaDocParser) -> ParseResult {
 
 // just compact luals, trivia type
 // ...<name type>
-fn parse_vararg_type(p: &mut LuaDocParser) -> ParseResult {
+fn parse_vararg_type(p: &mut LuaDocParser) -> DocParseResult {
     let m = p.mark(LuaSyntaxKind::TypeName);
     p.bump();
     parse_name_type(p)?;
@@ -368,7 +368,7 @@ fn parse_vararg_type(p: &mut LuaDocParser) -> ParseResult {
 // <name type> < <type_list> >
 // <name type> ...
 // <prefix name type>`T`
-fn parse_suffixed_type(p: &mut LuaDocParser, cm: CompleteMarker) -> ParseResult {
+fn parse_suffixed_type(p: &mut LuaDocParser, cm: CompleteMarker) -> DocParseResult {
     let mut only_continue_array = false;
     let mut cm = cm;
     loop {
@@ -419,7 +419,7 @@ fn parse_suffixed_type(p: &mut LuaDocParser, cm: CompleteMarker) -> ParseResult 
     }
 }
 
-fn parse_multi_line_union_type(p: &mut LuaDocParser) -> ParseResult {
+fn parse_multi_line_union_type(p: &mut LuaDocParser) -> DocParseResult {
     let m = p.mark(LuaSyntaxKind::TypeMultiLineUnion);
 
     while p.current_token() == LuaTokenKind::TkDocContinueOr {
@@ -430,7 +430,7 @@ fn parse_multi_line_union_type(p: &mut LuaDocParser) -> ParseResult {
     Ok(m.complete(p))
 }
 
-fn parse_one_line_type(p: &mut LuaDocParser) -> ParseResult {
+fn parse_one_line_type(p: &mut LuaDocParser) -> DocParseResult {
     let m = p.mark(LuaSyntaxKind::DocOneLineField);
 
     parse_simple_type(p)?;
