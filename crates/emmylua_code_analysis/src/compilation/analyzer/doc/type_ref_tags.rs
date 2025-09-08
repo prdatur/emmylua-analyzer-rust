@@ -142,8 +142,16 @@ pub fn analyze_type(analyzer: &mut DocAnalyzer, tag: LuaDocTagType) -> Option<()
                 }
             }
         }
-        LuaAst::LuaReturnStat(_) => {
-            // ignore
+        LuaAst::LuaReturnStat(return_stat) => {
+            if let Some(first_type) = type_list.get(0) {
+                let file_id = analyzer.file_id;
+                let syntax_id = return_stat.get_syntax_id();
+                let in_file_syntax_id = InFiled::new(file_id, syntax_id);
+                analyzer.db.get_type_index_mut().bind_type(
+                    in_file_syntax_id.into(),
+                    LuaTypeCache::DocType(first_type.clone()),
+                );
+            }
         }
         _ => {
             report_orphan_tag(analyzer, &tag);

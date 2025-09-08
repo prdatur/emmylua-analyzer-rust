@@ -2,12 +2,12 @@ use std::{ops::Deref, sync::Arc};
 
 use emmylua_parser::{
     LuaAssignStat, LuaAst, LuaAstNode, LuaCallArgList, LuaCallExpr, LuaExpr, LuaIndexMemberExpr,
-    LuaLiteralToken, LuaLocalStat, LuaTableExpr, LuaTableField,
+    LuaLiteralToken, LuaLocalStat, LuaReturnStat, LuaTableExpr, LuaTableField,
 };
 
 use crate::{
-    InferGuard, LuaArrayType, LuaDeclId, LuaInferCache, LuaMemberId, LuaTupleStatus, LuaTupleType,
-    LuaUnionType, TypeOps, VariadicType, check_type_compact,
+    InFiled, InferGuard, LuaArrayType, LuaDeclId, LuaInferCache, LuaMemberId, LuaTupleStatus,
+    LuaTupleType, LuaUnionType, TypeOps, VariadicType, check_type_compact,
     db_index::{DbIndex, LuaType},
     infer_call_expr_func, infer_expr,
 };
@@ -173,6 +173,9 @@ pub fn infer_table_should_be(
         LuaAst::LuaLocalStat(local) => infer_table_type_by_local(db, cache, local, table),
         LuaAst::LuaAssignStat(assign_stat) => {
             infer_table_type_by_assign_stat(db, cache, assign_stat, table)
+        }
+        LuaAst::LuaReturnStat(return_stat) => {
+            infer_table_type_by_return_stat(db, cache, return_stat, table)
         }
         _ => Err(InferFailReason::None),
     }
@@ -405,4 +408,24 @@ fn infer_table_type_by_assign_stat(
             LuaExpr::cast(name.syntax().clone()).ok_or(InferFailReason::None)?,
         )
     }
+}
+
+fn infer_table_type_by_return_stat(
+    db: &DbIndex,
+    cache: &mut LuaInferCache,
+    return_stat: LuaReturnStat,
+    table_expr: LuaTableExpr,
+) -> InferResult {
+    let in_file_syntax_id = InFiled::new(cache.get_file_id(), return_stat.get_syntax_id());
+    let cache_type = match db
+        .get_type_index()
+        .get_type_cache(&in_file_syntax_id.into())
+    {
+        Some(cache) => cache,
+        None => {
+            let in_file_range = InFiled::new(cache.get_file_id(), table_expr.get_range());
+            return Ok(LuaType::TableConst(in_file_range));
+        }
+    };
+    Ok(cache_type.as_type().clone())
 }
