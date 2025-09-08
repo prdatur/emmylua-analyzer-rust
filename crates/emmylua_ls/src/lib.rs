@@ -11,7 +11,7 @@ use crate::handlers::{
 pub use clap::Parser;
 pub use cmd_args::*;
 use handlers::server_capabilities;
-use lsp_server::{Connection, Message};
+use lsp_server::{Connection, Message, Response};
 use lsp_types::InitializeParams;
 use std::sync::Arc;
 use std::{env, error::Error};
@@ -68,15 +68,52 @@ impl AsyncConnection {
     }
 
     /// Handle shutdown request
-    pub fn handle_shutdown(
-        &self,
+    pub async fn handle_shutdown(
+        &mut self,
         req: &lsp_server::Request,
     ) -> Result<bool, Box<dyn Error + Send + Sync>> {
-        self.connection
-            .handle_shutdown(req)
-            .map_err(|e| Box::new(e) as Box<dyn Error + Send + Sync>)
+        if req.method != "shutdown" {
+            return Ok(false);
+        }
+        let resp = Response::new_ok(req.id.clone(), ());
+        let _ = self.connection.sender.send(resp.into());
+        match tokio::time::timeout(std::time::Duration::from_secs(30), self.receiver.recv()).await {
+            Ok(Some(Message::Notification(n))) if n.method == "exit" => (),
+            Ok(Some(msg)) => {
+                return Err(Box::new(ExitError(format!(
+                    "unexpected message during shutdown: {msg:?}"
+                ))));
+            }
+            Ok(None) => {
+                return Err(Box::new(ExitError(
+                    "channel closed while waiting for exit notification".to_owned(),
+                )));
+            }
+            Err(_) => {
+                return Err(Box::new(ExitError(
+                    "timed out waiting for exit notification".to_owned(),
+                )));
+            }
+        }
+        Ok(true)
     }
 }
+
+pub struct ExitError(pub String);
+
+impl std::fmt::Debug for ExitError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "ExitError: {}", self.0)
+    }
+}
+
+impl std::fmt::Display for ExitError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl Error for ExitError {}
 
 /// Server initialization and message processing state
 struct ServerMessageProcessor {
@@ -115,7 +152,7 @@ impl ServerMessageProcessor {
     async fn process_message(
         &mut self,
         msg: Message,
-        connection: &AsyncConnection,
+        connection: &mut AsyncConnection,
         server_context: &mut context::ServerContext,
     ) -> Result<bool, Box<dyn Error + Sync + Send>> {
         // During normal operation, process all messages
@@ -146,7 +183,7 @@ impl ServerMessageProcessor {
     /// Process all pending messages after initialization
     async fn process_pending_messages(
         &mut self,
-        connection: &AsyncConnection,
+        connection: &mut AsyncConnection,
         server_context: &mut context::ServerContext,
     ) -> Result<bool, Box<dyn Error + Sync + Send>> {
         let messages = std::mem::take(&mut self.pending_messages);
@@ -162,12 +199,12 @@ impl ServerMessageProcessor {
     async fn handle_message(
         &self,
         msg: Message,
-        connection: &AsyncConnection,
+        connection: &mut AsyncConnection,
         server_context: &mut context::ServerContext,
     ) -> Result<bool, Box<dyn Error + Sync + Send>> {
         match msg {
             Message::Request(req) => {
-                if connection.handle_shutdown(&req)? {
+                if connection.handle_shutdown(&req).await? {
                     server_context.close().await;
                     return Ok(true); // Shutdown requested
                 }
@@ -255,7 +292,7 @@ impl LspServer {
         // Process all pending messages after initialization
         if self
             .processor
-            .process_pending_messages(&self.connection, &mut self.server_context)
+            .process_pending_messages(&mut self.connection, &mut self.server_context)
             .await?
         {
             self.server_context.close().await;
@@ -266,7 +303,7 @@ impl LspServer {
         while let Some(msg) = self.connection.recv().await {
             if self
                 .processor
-                .process_message(msg, &self.connection, &mut self.server_context)
+                .process_message(msg, &mut self.connection, &mut self.server_context)
                 .await?
             {
                 break; // Shutdown requested
@@ -296,7 +333,7 @@ impl LspServer {
                     // Process message if allowed during initialization, otherwise queue it
                     if self.processor.can_process_during_init(&msg) {
                         self.processor
-                            .handle_message(msg, &self.connection, &mut self.server_context)
+                            .handle_message(msg, &mut self.connection, &mut self.server_context)
                             .await?;
                     } else {
                         self.processor.pending_messages.push(msg);
