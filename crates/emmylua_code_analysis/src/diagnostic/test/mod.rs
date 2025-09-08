@@ -28,3 +28,4 @@ mod undefined_global_test;
 mod unknown_doc_tag;
 mod unnecessary_assert_test;
 mod unnecessary_if_test;
+mod unused_test;
