@@ -314,6 +314,8 @@ fn infer_table_field_type_by_parent(
             }
             typ => return Ok(typ.clone()),
         }
+    } else if field.is_value_field() {
+        return infer_table_field_value_should_be(db, cache, field);
     } else {
         return Err(InferFailReason::UnResolveMemberType(member_id));
     }
