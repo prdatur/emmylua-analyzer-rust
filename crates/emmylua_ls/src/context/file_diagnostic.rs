@@ -5,7 +5,7 @@ use log::{debug, info};
 use tokio::sync::{Mutex, RwLock};
 use tokio_util::sync::CancellationToken;
 
-use super::{ClientId, ClientProxy, ProgressTask, StatusBar};
+use super::{ClientProxy, ProgressTask, StatusBar};
 
 pub struct FileDiagnostic {
     analysis: Arc<RwLock<EmmyLuaAnalysis>>,
@@ -94,12 +94,7 @@ impl FileDiagnostic {
         self.client.publish_diagnostics(diagnostic_param);
     }
 
-    pub async fn add_workspace_diagnostic_task(
-        &self,
-        client_id: ClientId,
-        interval: u64,
-        silent: bool,
-    ) {
+    pub async fn add_workspace_diagnostic_task(&self, interval: u64, silent: bool) {
         let mut token = self.workspace_diagnostic_token.lock().await;
         if let Some(token) = token.as_ref() {
             token.cancel();
@@ -116,7 +111,7 @@ impl FileDiagnostic {
         tokio::spawn(async move {
             tokio::select! {
                 _ = tokio::time::sleep(Duration::from_millis(interval)) => {
-                    workspace_diagnostic(analysis, client_proxy, client_id, status_bar, silent, cancel_token).await
+                    workspace_diagnostic(analysis, client_proxy, status_bar, silent, cancel_token).await
                 }
                 _ = cancel_token.cancelled() => {
                     log::info!("cancel workspace diagnostic");
@@ -138,7 +133,6 @@ impl FileDiagnostic {
 async fn workspace_diagnostic(
     analysis: Arc<RwLock<EmmyLuaAnalysis>>,
     client_proxy: Arc<ClientProxy>,
-    client_id: ClientId,
     status_bar: Arc<StatusBar>,
     silent: bool,
     cancel_token: CancellationToken,
@@ -186,7 +180,7 @@ async fn workspace_diagnostic(
         } else {
             let text = format!("diagnose {} files", valid_file_count);
             let _p = Profile::new(text.as_str());
-            status_bar.create_progress_task(client_id, ProgressTask::DiagnoseWorkspace);
+            status_bar.create_progress_task(ProgressTask::DiagnoseWorkspace);
             let mut last_percentage = 0;
             while let Some(_) = rx.recv().await {
                 count += 1;
@@ -195,7 +189,6 @@ async fn workspace_diagnostic(
                     last_percentage = percentage_done;
                     let message = format!("diagnostic {}%", percentage_done);
                     status_bar.update_progress_task(
-                        client_id,
                         ProgressTask::DiagnoseWorkspace,
                         Some(percentage_done),
                         Some(message),
@@ -203,7 +196,6 @@ async fn workspace_diagnostic(
                 }
                 if count == valid_file_count {
                     status_bar.finish_progress_task(
-                        client_id,
                         ProgressTask::DiagnoseWorkspace,
                         Some("Diagnosis complete".to_string()),
                     );

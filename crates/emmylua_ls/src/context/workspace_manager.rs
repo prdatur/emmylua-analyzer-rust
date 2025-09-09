@@ -78,7 +78,6 @@ impl WorkspaceManager {
         let config_update_token = self.update_token.clone();
         let client_config = self.client_config.clone();
         let status_bar = self.status_bar.clone();
-        let client_id = client_config.client_id;
         let file_diagnostic = self.file_diagnostic.clone();
         tokio::spawn(async move {
             cancel_token.wait_for_reindex().await;
@@ -93,7 +92,6 @@ impl WorkspaceManager {
                 &file_diagnostic,
                 workspace_folders,
                 emmyrc,
-                client_id,
             )
             .await;
             // After completion, remove from HashMap
@@ -125,7 +123,6 @@ impl WorkspaceManager {
         let analysis = self.analysis.clone();
         let workspace_folders = self.workspace_folders.clone();
         let status_bar = self.status_bar.clone();
-        let client_id = self.client_config.client_id;
         let file_diagnostic = self.file_diagnostic.clone();
         init_analysis(
             &analysis,
@@ -133,7 +130,6 @@ impl WorkspaceManager {
             &file_diagnostic,
             workspace_folders,
             emmyrc,
-            client_id,
         )
         .await;
 
@@ -162,8 +158,6 @@ impl WorkspaceManager {
         drop(update_token);
         let analysis = self.analysis.clone();
         let file_diagnostic = self.file_diagnostic.clone();
-        let client_id = self.client_config.client_id;
-
         tokio::spawn(async move {
             cancel_token.wait_for_reindex().await;
             if cancel_token.is_cancelled() {
@@ -177,7 +171,7 @@ impl WorkspaceManager {
 
             analysis.reindex();
             file_diagnostic
-                .add_workspace_diagnostic_task(client_id, 500, true)
+                .add_workspace_diagnostic_task(500, true)
                 .await;
         });
 

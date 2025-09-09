@@ -8,8 +8,8 @@ use std::{path::PathBuf, str::FromStr, sync::Arc};
 use crate::{
     cmd_args::CmdArgs,
     context::{
-        ClientId, FileDiagnostic, ProgressTask, ServerContextSnapshot, StatusBar,
-        WorkspaceFileMatcher, get_client_id, load_emmy_config,
+        FileDiagnostic, ProgressTask, ServerContextSnapshot, StatusBar, WorkspaceFileMatcher,
+        get_client_id, load_emmy_config,
     },
     handlers::{
         initialized::collect_files::calculate_include_and_exclude,
@@ -86,7 +86,6 @@ pub async fn initialized_handler(
         context.file_diagnostic(),
         workspace_folders,
         emmyrc.clone(),
-        client_id,
     )
     .await;
     {
@@ -108,7 +107,6 @@ pub async fn init_analysis(
     file_diagnostic: &FileDiagnostic,
     workspace_folders: Vec<PathBuf>,
     emmyrc: Arc<Emmyrc>,
-    client_id: ClientId,
 ) {
     let mut mut_analysis = analysis.write().await;
 
@@ -119,9 +117,8 @@ pub async fn init_analysis(
         log::info!("current config : {}", emmyrc_json);
     }
 
-    status_bar.create_progress_task(client_id, ProgressTask::LoadWorkspace);
+    status_bar.create_progress_task(ProgressTask::LoadWorkspace);
     status_bar.update_progress_task(
-        client_id,
         ProgressTask::LoadWorkspace,
         None,
         Some("Loading workspace files".to_string()),
@@ -145,7 +142,6 @@ pub async fn init_analysis(
     }
 
     status_bar.update_progress_task(
-        client_id,
         ProgressTask::LoadWorkspace,
         None,
         Some(String::from("Collecting files")),
@@ -158,7 +154,6 @@ pub async fn init_analysis(
     let file_count = files.len();
     if file_count != 0 {
         status_bar.update_progress_task(
-            client_id,
             ProgressTask::LoadWorkspace,
             None,
             Some(format!("Indexing {} files", file_count)),
@@ -168,13 +163,11 @@ pub async fn init_analysis(
     }
 
     status_bar.update_progress_task(
-        client_id,
         ProgressTask::LoadWorkspace,
         None,
         Some(String::from("Finished loading workspace files")),
     );
     status_bar.finish_progress_task(
-        client_id,
         ProgressTask::LoadWorkspace,
         Some("Indexing complete".to_string()),
     );
@@ -182,7 +175,7 @@ pub async fn init_analysis(
     drop(mut_analysis);
 
     file_diagnostic
-        .add_workspace_diagnostic_task(client_id, 0, false)
+        .add_workspace_diagnostic_task(0, false)
         .await;
 }
 

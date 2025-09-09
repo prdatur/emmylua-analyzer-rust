@@ -151,4 +151,9 @@ impl ClientProxy {
             .await?;
         serde_json::from_value(r.result?).ok()
     }
+
+    pub fn send_request_no_response(&self, method: &str, params: impl serde::Serialize) {
+        let request_id = self.next_id();
+        self.send_request_no_wait(request_id, method, params);
+    }
 }
