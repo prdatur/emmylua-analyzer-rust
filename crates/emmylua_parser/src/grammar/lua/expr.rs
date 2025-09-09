@@ -1,6 +1,6 @@
 use crate::{
     SpecialFunction,
-    grammar::{ParseFailReason, ParseResult},
+    grammar::{ParseFailReason, ParseResult, lua::is_statement_start_token},
     kind::{BinaryOperator, LuaOpKind, LuaSyntaxKind, LuaTokenKind, UNARY_PRIORITY, UnaryOperator},
     parser::{LuaParser, MarkerEventContainer},
     parser_error::LuaParseError,
@@ -29,8 +29,6 @@ fn parse_sub_expr(p: &mut LuaParser, limit: i32) -> ParseResult {
                     ),
                     op_range,
                 ));
-                // Try to recover: skip to next possible expression start position
-                recover_to_next_expr_start(p);
                 return Err(err);
             }
         }
@@ -55,8 +53,6 @@ fn parse_sub_expr(p: &mut LuaParser, limit: i32) -> ParseResult {
                     ),
                     op_range,
                 ));
-                // Try to recover: skip to next possible expression start position
-                recover_to_next_expr_start(p);
                 return Err(err);
             }
         }
@@ -66,34 +62,6 @@ fn parse_sub_expr(p: &mut LuaParser, limit: i32) -> ParseResult {
     }
 
     Ok(cm)
-}
-
-// Recover to the next possible expression start position
-fn recover_to_next_expr_start(p: &mut LuaParser) {
-    while !matches!(
-        p.current_token(),
-        LuaTokenKind::TkName
-            | LuaTokenKind::TkLeftParen
-            | LuaTokenKind::TkInt
-            | LuaTokenKind::TkFloat
-            | LuaTokenKind::TkString
-            | LuaTokenKind::TkLongString
-            | LuaTokenKind::TkTrue
-            | LuaTokenKind::TkFalse
-            | LuaTokenKind::TkNil
-            | LuaTokenKind::TkLeftBrace
-            | LuaTokenKind::TkFunction
-            | LuaTokenKind::TkDots
-            | LuaTokenKind::TkComma
-            | LuaTokenKind::TkSemicolon
-            | LuaTokenKind::TkRightParen
-            | LuaTokenKind::TkRightBrace
-            | LuaTokenKind::TkRightBracket
-            | LuaTokenKind::TkEnd
-            | LuaTokenKind::TkEof
-    ) {
-        p.bump();
-    }
 }
 
 fn parse_simple_expr(p: &mut LuaParser) -> ParseResult {
@@ -149,32 +117,7 @@ pub fn parse_closure_expr(p: &mut LuaParser) -> ParseResult {
 
     if_token_bump(p, LuaTokenKind::TkFunction);
 
-    match parse_param_list(p) {
-        Ok(_) => {}
-        Err(_) => {
-            p.push_error(LuaParseError::syntax_error_from(
-                &t!("invalid parameter list in function definition"),
-                p.current_token_range(),
-            ));
-            // Try to recover to function body or 'end'
-            while !matches!(
-                p.current_token(),
-                LuaTokenKind::TkLocal
-                    | LuaTokenKind::TkFunction
-                    | LuaTokenKind::TkIf
-                    | LuaTokenKind::TkFor
-                    | LuaTokenKind::TkWhile
-                    | LuaTokenKind::TkDo
-                    | LuaTokenKind::TkName
-                    | LuaTokenKind::TkReturn
-                    | LuaTokenKind::TkBreak
-                    | LuaTokenKind::TkEnd
-                    | LuaTokenKind::TkEof
-            ) {
-                p.bump();
-            }
-        }
-    }
+    parse_param_list(p)?;
 
     if p.current_token() != LuaTokenKind::TkEnd {
         parse_block(p)?;
@@ -216,8 +159,12 @@ fn parse_param_list(p: &mut LuaParser) -> ParseResult {
                     // Try to recover to next comma or right parenthesis
                     while !matches!(
                         p.current_token(),
-                        LuaTokenKind::TkComma | LuaTokenKind::TkRightParen | LuaTokenKind::TkEof
-                    ) {
+                        LuaTokenKind::TkComma
+                            | LuaTokenKind::TkRightParen
+                            | LuaTokenKind::TkEof
+                            | LuaTokenKind::TkEnd
+                    ) && !is_statement_start_token(p.current_token())
+                    {
                         p.bump();
                     }
                 }
@@ -516,23 +463,15 @@ fn parse_suffixed_expr(p: &mut LuaParser) -> ParseResult {
         LuaTokenKind::TkName => parse_name_or_special_function(p)?,
         LuaTokenKind::TkLeftParen => {
             let m = p.mark(LuaSyntaxKind::ParenExpr);
+            let paren_range = p.current_token_range();
             p.bump();
             match parse_expr(p) {
                 Ok(_) => {}
                 Err(err) => {
                     p.push_error(LuaParseError::syntax_error_from(
                         &t!("expected expression inside parentheses"),
-                        p.current_token_range(),
+                        paren_range,
                     ));
-                    // 尝试找到闭合括号
-                    while p.current_token() != LuaTokenKind::TkRightParen
-                        && p.current_token() != LuaTokenKind::TkEof
-                    {
-                        p.bump();
-                    }
-                    if p.current_token() == LuaTokenKind::TkRightParen {
-                        p.bump();
-                    }
                     return Err(err);
                 }
             }
@@ -541,7 +480,7 @@ fn parse_suffixed_expr(p: &mut LuaParser) -> ParseResult {
             } else {
                 p.push_error(LuaParseError::syntax_error_from(
                     &t!("expected ')' to close parentheses"),
-                    p.current_token_range(),
+                    paren_range,
                 ));
             }
             m.complete(p)
@@ -559,28 +498,7 @@ fn parse_suffixed_expr(p: &mut LuaParser) -> ParseResult {
         match p.current_token() {
             LuaTokenKind::TkDot | LuaTokenKind::TkColon | LuaTokenKind::TkLeftBracket => {
                 let m = cm.precede(p, LuaSyntaxKind::IndexExpr);
-                if let Err(_) = parse_index_struct(p) {
-                    // 恢复策略：跳到下一个有效的索引或调用
-                    while !matches!(
-                        p.current_token(),
-                        LuaTokenKind::TkDot
-                            | LuaTokenKind::TkColon
-                            | LuaTokenKind::TkLeftBracket
-                            | LuaTokenKind::TkLeftParen
-                            | LuaTokenKind::TkString
-                            | LuaTokenKind::TkLongString
-                            | LuaTokenKind::TkLeftBrace
-                            | LuaTokenKind::TkComma
-                            | LuaTokenKind::TkSemicolon
-                            | LuaTokenKind::TkRightParen
-                            | LuaTokenKind::TkRightBrace
-                            | LuaTokenKind::TkRightBracket
-                            | LuaTokenKind::TkEnd
-                            | LuaTokenKind::TkEof
-                    ) {
-                        p.bump();
-                    }
-                }
+                parse_index_struct(p)?;
                 cm = m.complete(p);
             }
             LuaTokenKind::TkLeftParen
@@ -588,28 +506,7 @@ fn parse_suffixed_expr(p: &mut LuaParser) -> ParseResult {
             | LuaTokenKind::TkString
             | LuaTokenKind::TkLeftBrace => {
                 let m = cm.precede(p, LuaSyntaxKind::CallExpr);
-                if let Err(_) = parse_args(p) {
-                    // 恢复策略：跳到下一个可能的调用或表达式结束
-                    while !matches!(
-                        p.current_token(),
-                        LuaTokenKind::TkLeftParen
-                            | LuaTokenKind::TkString
-                            | LuaTokenKind::TkLongString
-                            | LuaTokenKind::TkLeftBrace
-                            | LuaTokenKind::TkDot
-                            | LuaTokenKind::TkColon
-                            | LuaTokenKind::TkLeftBracket
-                            | LuaTokenKind::TkComma
-                            | LuaTokenKind::TkSemicolon
-                            | LuaTokenKind::TkRightParen
-                            | LuaTokenKind::TkRightBrace
-                            | LuaTokenKind::TkRightBracket
-                            | LuaTokenKind::TkEnd
-                            | LuaTokenKind::TkEof
-                    ) {
-                        p.bump();
-                    }
-                }
+                parse_args(p)?;
                 cm = m.complete(p);
             }
             _ => {
@@ -651,16 +548,26 @@ fn parse_name_or_special_function(p: &mut LuaParser) -> ParseResult {
 }
 
 fn parse_index_struct(p: &mut LuaParser) -> Result<(), ParseFailReason> {
+    let index_op_range = p.current_token_range();
     match p.current_token() {
         LuaTokenKind::TkLeftBracket => {
             p.bump();
-            parse_expr(p)?;
+            match parse_expr(p) {
+                Ok(_) => {}
+                Err(err) => {
+                    p.push_error(LuaParseError::syntax_error_from(
+                        &t!("expected expression inside table index brackets"),
+                        index_op_range,
+                    ));
+                    return Err(err);
+                }
+            }
             match expect_token(p, LuaTokenKind::TkRightBracket) {
                 Ok(_) => {}
                 Err(err) => {
                     p.push_error(LuaParseError::syntax_error_from(
                         &t!("expected ']' to close table index"),
-                        p.current_token_range(),
+                        index_op_range,
                     ));
                     return Err(err);
                 }
@@ -673,7 +580,7 @@ fn parse_index_struct(p: &mut LuaParser) -> Result<(), ParseFailReason> {
                 Err(err) => {
                     p.push_error(LuaParseError::syntax_error_from(
                         &t!("expected field name after '.'"),
-                        p.current_token_range(),
+                        index_op_range,
                     ));
                     return Err(err);
                 }
@@ -681,12 +588,13 @@ fn parse_index_struct(p: &mut LuaParser) -> Result<(), ParseFailReason> {
         }
         LuaTokenKind::TkColon => {
             p.bump();
+            let name_token_range = p.current_token_range();
             match expect_token(p, LuaTokenKind::TkName) {
                 Ok(_) => {}
                 Err(err) => {
                     p.push_error(LuaParseError::syntax_error_from(
                         &t!("expected method name after ':'"),
-                        p.current_token_range(),
+                        index_op_range,
                     ));
                     return Err(err);
                 }
@@ -702,7 +610,7 @@ fn parse_index_struct(p: &mut LuaParser) -> Result<(), ParseFailReason> {
                     &t!(
                         "colon accessor must be followed by a function call or table constructor or string literal"
                     ),
-                    p.current_token_range(),
+                    name_token_range,
                 ));
 
                 return Err(ParseFailReason::UnexpectedToken);
@@ -741,7 +649,8 @@ fn parse_args(p: &mut LuaParser) -> ParseResult {
                                 LuaTokenKind::TkComma
                                     | LuaTokenKind::TkRightParen
                                     | LuaTokenKind::TkEof
-                            ) {
+                            ) && !is_statement_start_token(p.current_token())
+                            {
                                 p.bump();
                             }
 

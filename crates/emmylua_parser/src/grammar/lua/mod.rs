@@ -102,3 +102,19 @@ fn if_token_bump(p: &mut LuaParser, token: LuaTokenKind) -> bool {
         false
     }
 }
+
+/// Check if a token is a statement start token
+fn is_statement_start_token(token: LuaTokenKind) -> bool {
+    matches!(
+        token,
+        LuaTokenKind::TkLocal
+            | LuaTokenKind::TkFunction
+            | LuaTokenKind::TkIf
+            | LuaTokenKind::TkFor
+            | LuaTokenKind::TkWhile
+            | LuaTokenKind::TkDo
+            | LuaTokenKind::TkName
+            | LuaTokenKind::TkReturn
+            | LuaTokenKind::TkBreak
+    )
+}

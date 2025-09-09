@@ -1,6 +1,6 @@
 use crate::{
     LuaLanguageLevel,
-    grammar::{ParseFailReason, ParseResult},
+    grammar::{ParseFailReason, ParseResult, lua::is_statement_start_token},
     kind::{LuaSyntaxKind, LuaTokenKind},
     parser::{CompleteMarker, LuaParser, MarkerEventContainer},
     parser_error::LuaParseError,
@@ -11,27 +11,6 @@ use super::{
     expr::{parse_closure_expr, parse_expr},
     if_token_bump, parse_block,
 };
-
-/// Check if a token is a statement start token
-fn is_statement_start_token(token: LuaTokenKind) -> bool {
-    matches!(
-        token,
-        LuaTokenKind::TkLocal
-            | LuaTokenKind::TkFunction
-            | LuaTokenKind::TkIf
-            | LuaTokenKind::TkFor
-            | LuaTokenKind::TkWhile
-            | LuaTokenKind::TkDo
-            | LuaTokenKind::TkName
-            | LuaTokenKind::TkReturn
-            | LuaTokenKind::TkBreak
-    )
-}
-
-/// Try to parse an expression, return error if failed
-fn try_parse_expr(p: &mut LuaParser) -> Result<(), ()> {
-    parse_expr(p).map(|_| ()).map_err(|_| ())
-}
 
 /// Push expression parsing error with lazy error message generation
 fn push_expr_error_lazy<F>(p: &mut LuaParser, error_msg_fn: F)
@@ -234,7 +213,7 @@ fn parse_if(p: &mut LuaParser) -> ParseResult {
     p.bump(); // consume 'if'
 
     // Parse condition expression
-    if try_parse_expr(p).is_err() {
+    if parse_expr(p).is_err() {
         push_expr_error_lazy(p, || t!("expected condition expression after 'if'"));
         // 尝试恢复到 'then' 或语句开始
         recover_to_keywords(p, &[LuaTokenKind::TkThen, LuaTokenKind::TkEnd]);
@@ -284,7 +263,7 @@ fn parse_elseif_clause(p: &mut LuaParser) -> ParseResult {
     let m = p.mark(LuaSyntaxKind::ElseIfClauseStat);
     p.bump();
 
-    if try_parse_expr(p).is_err() {
+    if parse_expr(p).is_err() {
         push_expr_error_lazy(p, || t!("expected condition expression after 'elseif'"));
     }
 
@@ -311,7 +290,7 @@ fn parse_while(p: &mut LuaParser) -> ParseResult {
     p.bump(); // consume 'while'
 
     // Parse condition expression
-    if try_parse_expr(p).is_err() {
+    if parse_expr(p).is_err() {
         push_expr_error_lazy(p, || t!("expected condition expression after 'while'"));
         recover_to_keywords(p, &[LuaTokenKind::TkDo, LuaTokenKind::TkEnd]);
     }
@@ -381,7 +360,7 @@ fn parse_for(p: &mut LuaParser) -> ParseResult {
             // Numeric for loop
             p.bump();
             // Start value
-            if try_parse_expr(p).is_err() {
+            if parse_expr(p).is_err() {
                 push_expr_error_lazy(p, || {
                     t!("expected start value expression in numeric for loop")
                 });
@@ -397,7 +376,7 @@ fn parse_for(p: &mut LuaParser) -> ParseResult {
             }
 
             // End value
-            if try_parse_expr(p).is_err() {
+            if parse_expr(p).is_err() {
                 push_expr_error_lazy(p, || {
                     t!("expected end value expression in numeric for loop")
                 });
@@ -406,7 +385,7 @@ fn parse_for(p: &mut LuaParser) -> ParseResult {
             // Optional step value
             if p.current_token() == LuaTokenKind::TkComma {
                 p.bump();
-                if try_parse_expr(p).is_err() {
+                if parse_expr(p).is_err() {
                     push_expr_error_lazy(p, || {
                         t!("expected step value expression in numeric for loop")
                     });
@@ -707,7 +686,7 @@ fn parse_repeat(p: &mut LuaParser) -> ParseResult {
             ));
         }
     }
-    if try_parse_expr(p).is_err() {
+    if parse_expr(p).is_err() {
         push_expr_error_lazy(p, || t!("expected condition expression after 'until'"));
     }
     if_token_bump(p, LuaTokenKind::TkSemicolon);

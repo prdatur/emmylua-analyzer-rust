@@ -114,6 +114,28 @@ impl<'a> LuaParser<'a> {
         self.tokens[self.token_index].range
     }
 
+    pub fn previous_token_range(&self) -> SourceRange {
+        if self.token_index == 0 || self.tokens.is_empty() {
+            return SourceRange::EMPTY;
+        }
+
+        // Find the previous non-trivia token
+        let mut prev_index = self.token_index - 1;
+        while prev_index > 0 && is_trivia_kind(self.tokens[prev_index].kind) {
+            prev_index -= 1;
+        }
+
+        // If we found a non-trivia token or reached the first token
+        if prev_index < self.tokens.len() && !is_trivia_kind(self.tokens[prev_index].kind) {
+            self.tokens[prev_index].range
+        } else if prev_index == 0 {
+            // If the first token is also trivia, return its range anyway
+            self.tokens[0].range
+        } else {
+            SourceRange::EMPTY
+        }
+    }
+
     pub fn current_token_text(&self) -> &str {
         let range = &self.tokens[self.token_index].range;
         &self.text[range.start_offset..range.end_offset()]
