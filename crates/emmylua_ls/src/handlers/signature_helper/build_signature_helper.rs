@@ -1,6 +1,7 @@
 use emmylua_code_analysis::{
-    DbIndex, InFiled, LuaCompilation, LuaFunctionType, LuaInstanceType, LuaOperatorMetaMethod,
-    LuaOperatorOwner, LuaSignatureId, LuaType, LuaTypeDeclId, RenderLevel, SemanticModel,
+    DbIndex, InFiled, LuaCompilation, LuaFunctionType, LuaGenericType, LuaInstanceType,
+    LuaOperatorMetaMethod, LuaOperatorOwner, LuaSignatureId, LuaType, LuaTypeDeclId, RenderLevel,
+    SemanticModel, TypeSubstitutor,
 };
 use emmylua_parser::{LuaAstNode, LuaCallExpr, LuaSyntaxToken, LuaTokenKind};
 use lsp_types::{
@@ -49,6 +50,9 @@ pub fn build_signature_helper(
             colon_call,
             current_idx,
         ),
+        LuaType::Generic(generic) => {
+            build_generic_signature_help(&builder, &generic, colon_call, current_idx)
+        }
         _ => None,
     };
 
@@ -271,6 +275,14 @@ fn build_type_signature_help(
     current_idx: usize,
 ) -> Option<SignatureHelp> {
     let db = builder.semantic_model.get_db();
+    if let Some(type_decl) = db.get_type_index().get_type_decl(type_decl_id) {
+        if let Some(origin) = type_decl.get_alias_origin(db, None) {
+            if let LuaType::DocFunction(f) = origin {
+                return build_doc_function_signature_help(builder, &f, colon_call, current_idx);
+            }
+        }
+    }
+
     let operator_ids = db
         .get_operator_index()
         .get_operators(&type_decl_id.clone().into(), LuaOperatorMetaMethod::Call)?;
@@ -511,4 +523,54 @@ fn process_best_call_params_info(
     // 将匹配的签名放在前面，不匹配的放在后面
     signatures.extend(matched);
     signatures.extend(unmatched);
+}
+
+fn build_generic_signature_help(
+    builder: &SignatureHelperBuilder,
+    generic: &LuaGenericType,
+    colon_call: bool,
+    current_idx: usize,
+) -> Option<SignatureHelp> {
+    let db = builder.semantic_model.get_db();
+    let generic_params = generic.get_params();
+    let type_decl_id = generic.get_base_type_id_ref();
+    if let Some(type_decl) = db.get_type_index().get_type_decl(type_decl_id) {
+        let substitutor = TypeSubstitutor::from_type_array(generic_params.clone());
+        if let Some(origin) = type_decl.get_alias_origin(db, Some(&substitutor)) {
+            if let LuaType::DocFunction(f) = origin {
+                return build_doc_function_signature_help(builder, &f, colon_call, current_idx);
+            }
+        }
+    }
+
+    let operator_ids = db
+        .get_operator_index()
+        .get_operators(&type_decl_id.clone().into(), LuaOperatorMetaMethod::Call)?;
+
+    for operator_id in operator_ids {
+        let operator = db.get_operator_index().get_operator(operator_id)?;
+        let call_type = operator.get_operator_func(db);
+        match call_type {
+            LuaType::DocFunction(func_type) => {
+                return build_doc_function_signature_help(
+                    builder,
+                    &func_type,
+                    colon_call,
+                    current_idx,
+                );
+            }
+            LuaType::Signature(signature_id) => {
+                // todo remove first param
+                return build_sig_id_signature_help(
+                    builder,
+                    signature_id,
+                    colon_call,
+                    current_idx,
+                    true,
+                );
+            }
+            _ => {}
+        }
+    }
+    None
 }
