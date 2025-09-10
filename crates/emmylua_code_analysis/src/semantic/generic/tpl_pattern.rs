@@ -80,10 +80,9 @@ pub fn multi_param_tpl_pattern_match_multi_return(
         VariadicType::Multi(_) => {
             let mut call_arg_types = Vec::new();
             for (i, param) in func_param_types.iter().enumerate() {
-                let return_type = multi_return.get_type(i);
-                if return_type.is_none() {
+                let Some(return_type) = multi_return.get_type(i) else {
                     break;
-                }
+                };
 
                 if param.is_variadic() {
                     call_arg_types.push(LuaType::Variadic(
@@ -91,7 +90,7 @@ pub fn multi_param_tpl_pattern_match_multi_return(
                     ));
                     break;
                 } else {
-                    call_arg_types.push(return_type.unwrap().clone());
+                    call_arg_types.push(return_type.clone());
                 }
             }
 
@@ -485,13 +484,13 @@ fn table_generic_tpl_pattern_member_owner_match(
             });
     }
 
-    let key_type = match keys.len() {
-        0 => return Err(InferFailReason::None),
-        1 => keys.iter().next().cloned().unwrap(),
+    let key_type = match &keys[..] {
+        [] => return Err(InferFailReason::None),
+        [first] => first.clone(),
         _ => LuaType::Union(LuaUnionType::from_vec(keys).into()),
     };
-    let value_type = match values.len() {
-        1 => values.iter().next().cloned().unwrap(),
+    let value_type = match &values[..] {
+        [first] => first.clone(),
         _ => LuaType::Union(LuaUnionType::from_vec(values).into()),
     };
 

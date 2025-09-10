@@ -131,12 +131,10 @@ fn instantiate_select_call(source: &LuaType, index: &LuaType) -> LuaType {
         NumOrLen::Num(i) => match multi_return {
             VariadicType::Base(_) => LuaType::Variadic(multi_return.clone().into()),
             VariadicType::Multi(_) => {
-                let total_len = multi_return.get_min_len();
-                if total_len.is_none() {
+                let Some(total_len) = multi_return.get_min_len() else {
                     return source.clone();
-                }
+                };
 
-                let total_len = total_len.unwrap();
                 let start = if i < 0 { total_len as i64 + i } else { i - 1 };
                 if start < 0 || start >= (total_len as i64) {
                     return source.clone();

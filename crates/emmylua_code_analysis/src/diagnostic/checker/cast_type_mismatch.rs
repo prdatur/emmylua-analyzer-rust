@@ -272,7 +272,13 @@ fn expand_type_recursive(
                         Some(LuaType::Unknown)
                     }
                 }
-                1 => Some(expanded_types.iter().cloned().next().unwrap().into()),
+                1 => Some(
+                    expanded_types
+                        .iter()
+                        .next()
+                        .cloned()
+                        .expect("always one element"),
+                ),
                 _ => Some(LuaType::Union(
                     LuaUnionType::from_set(expanded_types).into(),
                 )),

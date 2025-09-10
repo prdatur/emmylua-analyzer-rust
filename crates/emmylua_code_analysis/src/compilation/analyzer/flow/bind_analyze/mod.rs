@@ -101,7 +101,7 @@ fn bind_node(binder: &mut FlowBinder, node: LuaAst, current: FlowId) -> FlowId {
         | LuaAst::LuaLiteralExpr(_)
         | LuaAst::LuaClosureExpr(_) => bind_expr(
             binder,
-            LuaExpr::cast(node.syntax().clone()).unwrap(),
+            LuaExpr::cast(node.syntax().clone()).expect("cast always succeedss"),
             current,
         ),
 

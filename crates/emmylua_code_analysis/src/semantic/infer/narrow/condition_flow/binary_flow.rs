@@ -282,11 +282,14 @@ fn maybe_type_guard_binary(
         }
     }
 
-    if type_guard_expr.is_none() || literal_string.is_empty() {
+    let Some(type_guard_expr) = type_guard_expr else {
+        return Ok(ResultTypeOrContinue::Continue);
+    };
+    if literal_string.is_empty() {
         return Ok(ResultTypeOrContinue::Continue);
     }
 
-    let Some(arg_list) = type_guard_expr.unwrap().get_args_list() else {
+    let Some(arg_list) = type_guard_expr.get_args_list() else {
         return Ok(ResultTypeOrContinue::Continue);
     };
 

@@ -432,9 +432,9 @@ fn infer_custom_type_member(
                     }
                 }
             }
-            match result_types.len() {
-                0 => {}
-                1 => return Ok(result_types.iter().next().cloned().unwrap()),
+            match &result_types[..] {
+                [] => {}
+                [first] => return Ok(first.clone()),
                 _ => return Ok(LuaType::from_vec(result_types)),
             }
         }

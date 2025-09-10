@@ -86,7 +86,7 @@ impl Vfs {
             let parse_config = self
                 .emmyrc
                 .as_ref()
-                .unwrap()
+                .expect("emmyrc set")
                 .get_parse_config(&mut self.node_cache);
             let tree = LuaParser::parse(&data, parse_config);
             self.tree_map.insert(fid, tree);

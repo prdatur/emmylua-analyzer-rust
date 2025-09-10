@@ -51,7 +51,7 @@ fn to_emmyrc_json(config: &FlattenConfigObject) -> Value {
             } else {
                 current = current
                     .as_object_mut()
-                    .unwrap()
+                    .expect("always an object")
                     .entry(key.to_string())
                     .or_insert(Value::Object(Default::default()));
             }

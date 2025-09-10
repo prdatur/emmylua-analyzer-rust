@@ -2,9 +2,7 @@ use std::path::PathBuf;
 
 pub fn get_best_resources_dir() -> PathBuf {
     if cfg!(debug_assertions) {
-        let exe_path = std::env::current_exe().unwrap();
-        let exe_dir = exe_path.parent().unwrap();
-        return exe_dir.join("resources");
+        return exe_dir().join("resources");
     }
 
     if cfg!(target_os = "windows") {
@@ -15,9 +13,7 @@ pub fn get_best_resources_dir() -> PathBuf {
                 .join("resources")
         } else {
             // Fall back to the directory next to the executable
-            let exe_path = std::env::current_exe().unwrap();
-            let exe_dir = exe_path.parent().unwrap();
-            exe_dir.join("resources")
+            exe_dir().join("resources")
         }
     } else {
         // On non-Windows platforms, try XDG_DATA_HOME first
@@ -35,10 +31,14 @@ pub fn get_best_resources_dir() -> PathBuf {
                     .join("resources")
             } else {
                 // Fall back to the directory next to the executable
-                let exe_path = std::env::current_exe().unwrap();
-                let exe_dir = exe_path.parent().unwrap();
-                exe_dir.join("resources")
+                exe_dir().join("resources")
             }
         }
     }
+}
+
+fn exe_dir() -> PathBuf {
+    let mut exe = std::env::current_exe().expect("executable available");
+    exe.pop();
+    exe
 }
