@@ -845,8 +845,11 @@ fn infer_member_by_index_table(
                     .ok_or(InferFailReason::None)?;
                 let operand = operator.get_operand(db);
                 let return_type = operator.get_result(db)?;
-                let typ = infer_index_metamethod(db, cache, &index_key, &operand, &return_type)?;
-                return Ok(typ);
+                if let Ok(typ) =
+                    infer_index_metamethod(db, cache, &index_key, &operand, &return_type)
+                {
+                    return Ok(typ);
+                }
             }
         }
         None => {

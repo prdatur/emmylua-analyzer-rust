@@ -339,11 +339,14 @@ impl LuaModuleIndex {
     }
 
     fn replace_module_path(&self, module_path: &str) -> String {
+        let mut module_path = module_path.to_owned();
         for (key, value) in &self.module_replace_vec {
-            return key.replace_all(&module_path, value).to_string();
+            if let std::borrow::Cow::Owned(o) = key.replace_all(&module_path, value) {
+                module_path = o;
+            }
         }
 
-        module_path.to_string()
+        module_path
     }
 
     pub fn match_pattern(&self, path: &str) -> Option<String> {
