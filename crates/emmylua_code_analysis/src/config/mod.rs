@@ -7,14 +7,13 @@ use std::{
     path::{Path, PathBuf},
 };
 
-pub use crate::config::configs::{EmmyrcExternalTool, EmmyrcReformat};
 pub use config_loader::{load_configs, load_configs_raw};
-pub use configs::{DocSyntax, EmmyrcFilenameConvention, EmmyrcLuaVersion};
-use configs::{
-    EmmyrcCodeAction, EmmyrcCodeLens, EmmyrcCompletion, EmmyrcDiagnostic, EmmyrcDoc,
-    EmmyrcDocumentColor, EmmyrcHover, EmmyrcInlayHint, EmmyrcInlineValues, EmmyrcReference,
-    EmmyrcResource, EmmyrcRuntime, EmmyrcSemanticToken, EmmyrcSignature, EmmyrcStrict,
-    EmmyrcWorkspace,
+pub use configs::{
+    DiagnosticSeveritySetting, DocSyntax, EmmyrcCodeAction, EmmyrcCodeLens, EmmyrcCompletion,
+    EmmyrcDiagnostic, EmmyrcDoc, EmmyrcDocumentColor, EmmyrcExternalTool, EmmyrcFilenameConvention,
+    EmmyrcHover, EmmyrcInlayHint, EmmyrcInlineValues, EmmyrcLuaVersion, EmmyrcReference,
+    EmmyrcReformat, EmmyrcResource, EmmyrcRuntime, EmmyrcSemanticToken, EmmyrcSignature,
+    EmmyrcStrict, EmmyrcWorkspace, EmmyrcWorkspaceModuleMap,
 };
 use emmylua_parser::{LuaLanguageLevel, LuaNonStdSymbolSet, ParserConfig, SpecialFunction};
 use regex::Regex;
