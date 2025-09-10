@@ -18,13 +18,12 @@ use std::sync::Arc;
 
 use crate::{Emmyrc, FileId, Vfs};
 pub use declaration::*;
-use dependency::LuaDependencyIndex;
+pub use dependency::LuaDependencyIndex;
 pub use diagnostic::{AnalyzeError, DiagnosticAction, DiagnosticActionKind, DiagnosticIndex};
 pub use flow::*;
-pub use global::GlobalId;
-use global::LuaGlobalIndex;
+pub use global::{GlobalId, LuaGlobalIndex};
 pub use member::*;
-use metatable::LuaMetatableIndex;
+pub use metatable::LuaMetatableIndex;
 pub use module::*;
 pub use operators::*;
 pub use property::*;

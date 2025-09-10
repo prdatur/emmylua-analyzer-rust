@@ -6,7 +6,7 @@ mod workspace;
 use emmylua_parser::LuaVersionCondition;
 use log::{error, info};
 pub use module_info::ModuleInfo;
-use module_node::{ModuleNode, ModuleNodeId};
+pub use module_node::{ModuleNode, ModuleNodeId};
 use regex::Regex;
 pub use workspace::{Workspace, WorkspaceId};
 
