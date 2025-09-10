@@ -147,6 +147,12 @@ async fn workspace_diagnostic(
     // diagnostic files
     let (tx, mut rx) = tokio::sync::mpsc::channel::<FileId>(100);
     let valid_file_count = main_workspace_file_ids.len();
+    if !silent {
+        status_bar
+            .create_progress_task(ProgressTask::DiagnoseWorkspace)
+            .await;
+    }
+
     for file_id in main_workspace_file_ids {
         let analysis = analysis.clone();
         let token = cancel_token.clone();
@@ -180,7 +186,6 @@ async fn workspace_diagnostic(
         } else {
             let text = format!("diagnose {} files", valid_file_count);
             let _p = Profile::new(text.as_str());
-            status_bar.create_progress_task(ProgressTask::DiagnoseWorkspace);
             let mut last_percentage = 0;
             while let Some(_) = rx.recv().await {
                 count += 1;

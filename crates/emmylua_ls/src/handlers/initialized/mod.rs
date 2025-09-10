@@ -117,7 +117,9 @@ pub async fn init_analysis(
         log::info!("current config : {}", emmyrc_json);
     }
 
-    status_bar.create_progress_task(ProgressTask::LoadWorkspace);
+    status_bar
+        .create_progress_task(ProgressTask::LoadWorkspace)
+        .await;
     status_bar.update_progress_task(
         ProgressTask::LoadWorkspace,
         None,

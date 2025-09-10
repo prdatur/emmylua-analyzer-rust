@@ -6,13 +6,15 @@ use lsp_types::{
 };
 use serde::{Deserialize, Serialize};
 
+use crate::util::time_cancel_token;
+
 use super::ClientProxy;
 
 pub struct StatusBar {
     client: Arc<ClientProxy>,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub enum ProgressTask {
     LoadWorkspace = 0,
     DiagnoseWorkspace = 1,
@@ -39,13 +41,20 @@ impl StatusBar {
         Self { client }
     }
 
-    pub fn create_progress_task(&self, task: ProgressTask) {
-        self.client.send_request_no_response(
-            "window/workDoneProgress/create",
-            WorkDoneProgressCreateParams {
-                token: NumberOrString::Number(task.as_i32()),
-            },
-        );
+    pub async fn create_progress_task(&self, task: ProgressTask) {
+        let request_id = self.client.next_id();
+        let cancel_token = time_cancel_token(std::time::Duration::from_secs(5));
+        let _ = self
+            .client
+            .send_request(
+                request_id,
+                "window/workDoneProgress/create",
+                WorkDoneProgressCreateParams {
+                    token: NumberOrString::Number(task.as_i32()),
+                },
+                cancel_token,
+            )
+            .await;
         self.client.send_notification(
             "$/progress",
             ProgressParams {

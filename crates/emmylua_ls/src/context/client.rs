@@ -39,7 +39,7 @@ impl ClientProxy {
         }));
     }
 
-    async fn send_request(
+    pub async fn send_request(
         &self,
         id: RequestId,
         method: &str,
@@ -78,7 +78,7 @@ impl ClientProxy {
         Some(())
     }
 
-    fn next_id(&self) -> RequestId {
+    pub fn next_id(&self) -> RequestId {
         let id = self
             .id_counter
             .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
