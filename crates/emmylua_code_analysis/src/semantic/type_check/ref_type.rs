@@ -256,7 +256,8 @@ fn check_ref_type_compact_table(
                 let table_member = member_index
                     .get_member(table_member_id)
                     .ok_or(TypeCheckFailReason::TypeNotMatch)?;
-                let table_member_type = db
+                let table_member_type = context
+                    .db
                     .get_type_index()
                     .get_type_cache(&table_member.get_id().into())
                     .unwrap_or(&LuaTypeCache::InferType(LuaType::Any))
@@ -291,7 +292,7 @@ fn check_ref_type_compact_table(
     }
 
     // 检查超类型
-    if let Some(supers) = db.get_type_index().get_super_types(source_type_id) {
+    if let Some(supers) = context.db.get_type_index().get_super_types(source_type_id) {
         let table_type = LuaType::TableConst(
             table_owner
                 .get_element_range()
@@ -299,7 +300,12 @@ fn check_ref_type_compact_table(
                 .clone(),
         );
         for super_type in supers {
-            check_general_type_compact(db, &super_type, &table_type, check_guard.next_level()?)?;
+            check_general_type_compact(
+                context,
+                &super_type,
+                &table_type,
+                check_guard.next_level()?,
+            )?;
         }
     }
 
@@ -313,7 +319,8 @@ fn check_ref_type_compact_object(
     check_guard: TypeCheckGuard,
 ) -> TypeCheckResult {
     // ref 可能继承自其他类型, 所以需要使用 infer_members 来获取所有成员
-    let Some(source_type_members) = find_members(db, &LuaType::Ref(source_type_id.clone())) else {
+    let Some(source_type_members) = find_members(context.db, &LuaType::Ref(source_type_id.clone()))
+    else {
         return Ok(());
     };
 
@@ -333,8 +340,9 @@ fn check_ref_type_compact_object(
                         t!(
                             "member %{name} type not match, expect %{expect}, got %{got}",
                             name = key.to_path(),
-                            expect = humanize_type(db, &source_member_type, RenderLevel::Simple),
-                            got = humanize_type(db, field_type, RenderLevel::Simple)
+                            expect =
+                                humanize_type(context.db, &source_member_type, RenderLevel::Simple),
+                            got = humanize_type(context.db, field_type, RenderLevel::Simple)
                         )
                         .to_string(),
                     ));
@@ -374,7 +382,8 @@ fn check_ref_type_compact_tuple(
     source_type_id: &LuaTypeDeclId,
     check_guard: TypeCheckGuard,
 ) -> TypeCheckResult {
-    let Some(source_type_members) = find_members(db, &LuaType::Ref(source_type_id.clone())) else {
+    let Some(source_type_members) = find_members(context.db, &LuaType::Ref(source_type_id.clone()))
+    else {
         return Ok(());
     };
 

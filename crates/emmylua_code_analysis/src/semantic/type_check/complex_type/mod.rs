@@ -10,7 +10,7 @@ use object_type_check::check_object_type_compact;
 use table_generic_check::check_table_generic_type_compact;
 use tuple_type_check::check_tuple_type_compact;
 
-use crate::{DbIndex, LuaType, LuaUnionType};
+use crate::{semantic::type_check::type_check_context::TypeCheckContext, LuaType, LuaUnionType};
 
 use super::{
     TypeCheckResult, check_general_type_compact, type_check_fail_reason::TypeCheckFailReason,
@@ -19,7 +19,7 @@ use super::{
 
 // all is duck typing
 pub fn check_complex_type_compact(
-    db: &DbIndex,
+    context: &TypeCheckContext,
     source: &LuaType,
     compact_type: &LuaType,
     check_guard: TypeCheckGuard,
@@ -27,7 +27,7 @@ pub fn check_complex_type_compact(
     match source {
         LuaType::Array(source_array_type) => {
             match check_array_type_compact(
-                db,
+                context,
                 source_array_type.get_base(),
                 compact_type,
                 check_guard,
@@ -37,20 +37,20 @@ pub fn check_complex_type_compact(
             }
         }
         LuaType::Tuple(tuple) => {
-            match check_tuple_type_compact(db, &tuple, compact_type, check_guard) {
+            match check_tuple_type_compact(context, &tuple, compact_type, check_guard) {
                 Err(TypeCheckFailReason::DonotCheck) => {}
                 result => return result,
             }
         }
         LuaType::Object(source_object) => {
-            match check_object_type_compact(db, source_object, compact_type, check_guard) {
+            match check_object_type_compact(context, source_object, compact_type, check_guard) {
                 Err(TypeCheckFailReason::DonotCheck) => {}
                 result => return result,
             }
         }
         LuaType::TableGeneric(source_generic_param) => {
             match check_table_generic_type_compact(
-                db,
+                context,
                 source_generic_param,
                 compact_type,
                 check_guard,
@@ -61,7 +61,7 @@ pub fn check_complex_type_compact(
         }
         LuaType::Intersection(source_intersection) => {
             match check_intersection_type_compact(
-                db,
+                context,
                 source_intersection,
                 compact_type,
                 check_guard,
@@ -74,7 +74,7 @@ pub fn check_complex_type_compact(
             match compact_type {
                 LuaType::Union(compact_union) => {
                     return check_union_type_compact_union(
-                        db,
+                        context,
                         source,
                         compact_union,
                         check_guard.next_level()?,
@@ -84,7 +84,7 @@ pub fn check_complex_type_compact(
             }
             for sub_type in union_type.into_vec() {
                 match check_general_type_compact(
-                    db,
+                    context,
                     &sub_type,
                     compact_type,
                     check_guard.next_level()?,
@@ -104,7 +104,7 @@ pub fn check_complex_type_compact(
         LuaType::MultiLineUnion(multi_union) => {
             let union = multi_union.to_union();
             return check_complex_type_compact(
-                db,
+                context,
                 &union,
                 &compact_type,
                 check_guard.next_level()?,
@@ -115,7 +115,7 @@ pub fn check_complex_type_compact(
     // Do I need to check union types?
     if let LuaType::Union(union) = compact_type {
         for sub_compact in union.into_vec() {
-            match check_complex_type_compact(db, source, &sub_compact, check_guard.next_level()?) {
+            match check_complex_type_compact(context, source, &sub_compact, check_guard.next_level()?) {
                 Ok(_) => {}
                 Err(e) => return Err(e),
             }
@@ -129,14 +129,14 @@ pub fn check_complex_type_compact(
 
 // too complex
 fn check_union_type_compact_union(
-    db: &DbIndex,
+    context: &TypeCheckContext,
     source: &LuaType,
     compact_union: &LuaUnionType,
     check_guard: TypeCheckGuard,
 ) -> TypeCheckResult {
     let compact_types = compact_union.into_vec();
     for compact_sub_type in compact_types {
-        check_general_type_compact(db, source, &compact_sub_type, check_guard.next_level()?)?;
+        check_general_type_compact(context, source, &compact_sub_type, check_guard.next_level()?)?;
     }
 
     Ok(())

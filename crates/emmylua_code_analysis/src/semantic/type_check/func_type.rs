@@ -1,35 +1,39 @@
-use crate::db_index::{
-    DbIndex, LuaFunctionType, LuaOperatorMetaMethod, LuaSignatureId, LuaType, LuaTypeDeclId,
+use crate::{
+    db_index::{LuaFunctionType, LuaOperatorMetaMethod, LuaSignatureId, LuaType, LuaTypeDeclId},
+    semantic::type_check::type_check_context::TypeCheckContext,
 };
 
 use super::{
-    TypeCheckResult, check_general_type_compact, check_type_compact,
-    type_check_fail_reason::TypeCheckFailReason, type_check_guard::TypeCheckGuard,
+    TypeCheckResult, check_general_type_compact, type_check_fail_reason::TypeCheckFailReason,
+    type_check_guard::TypeCheckGuard,
 };
 
 pub fn check_doc_func_type_compact(
-    db: &DbIndex,
+    context: &TypeCheckContext,
     source_func: &LuaFunctionType,
     compact_type: &LuaType,
     check_guard: TypeCheckGuard,
 ) -> TypeCheckResult {
     match compact_type {
         LuaType::DocFunction(compact_func) => {
-            check_doc_func_type_compact_for_params(db, source_func, compact_func, check_guard)
+            check_doc_func_type_compact_for_params(context, source_func, compact_func, check_guard)
         }
-        LuaType::Signature(signature_id) => {
-            check_doc_func_type_compact_for_signature(db, source_func, signature_id, check_guard)
-        }
+        LuaType::Signature(signature_id) => check_doc_func_type_compact_for_signature(
+            context,
+            source_func,
+            signature_id,
+            check_guard,
+        ),
         LuaType::Ref(type_id) => {
-            check_doc_func_type_compact_for_custom_type(db, source_func, type_id, check_guard)
+            check_doc_func_type_compact_for_custom_type(context, source_func, type_id, check_guard)
         }
         LuaType::Def(type_id) => {
-            check_doc_func_type_compact_for_custom_type(db, source_func, type_id, check_guard)
+            check_doc_func_type_compact_for_custom_type(context, source_func, type_id, check_guard)
         }
         LuaType::Union(union) => {
             for union_type in union.into_vec() {
                 check_doc_func_type_compact(
-                    db,
+                    context,
                     source_func,
                     &union_type,
                     check_guard.next_level()?,
@@ -44,7 +48,7 @@ pub fn check_doc_func_type_compact(
 }
 
 fn check_doc_func_type_compact_for_params(
-    db: &DbIndex,
+    context: &TypeCheckContext,
     source_func: &LuaFunctionType,
     compact_func: &LuaFunctionType,
     check_guard: TypeCheckGuard,
@@ -71,7 +75,12 @@ fn check_doc_func_type_compact_for_params(
         let source_param_type = &source_param.1;
         // too many complex session to handle varargs
         if source_param.0 == "..." {
-            check_doc_func_type_compact_for_varargs(db, source_param_type, &compact_params[i..])?;
+            check_doc_func_type_compact_for_varargs(
+                context,
+                source_param_type,
+                &compact_params[i..],
+                check_guard.next_level()?,
+            )?;
         }
 
         if compact_param.0 == "..." {
@@ -83,7 +92,7 @@ fn check_doc_func_type_compact_for_params(
         match (source_param_type, compact_param_type) {
             (Some(source_type), Some(compact_type)) => {
                 match check_general_type_compact(
-                    db,
+                    context,
                     source_type,
                     compact_type,
                     check_guard.next_level()?,
@@ -111,9 +120,10 @@ fn check_doc_func_type_compact_for_params(
 }
 
 fn check_doc_func_type_compact_for_varargs(
-    db: &DbIndex,
+    context: &TypeCheckContext,
     varargs: &Option<LuaType>,
     compact_params: &[(String, Option<LuaType>)],
+    check_guard: TypeCheckGuard,
 ) -> TypeCheckResult {
     if let Some(varargs) = varargs {
         let varargs_len = compact_params.len();
@@ -122,7 +132,12 @@ fn check_doc_func_type_compact_for_varargs(
             let compact_param = &compact_params[i];
             let compact_param_type = &compact_param.1;
             if let Some(compact_param_type) = compact_param_type {
-                check_type_compact(db, varargs_type, compact_param_type)?;
+                check_general_type_compact(
+                    context,
+                    varargs_type,
+                    compact_param_type,
+                    check_guard.next_level()?,
+                )?;
             }
         }
     }
@@ -131,12 +146,13 @@ fn check_doc_func_type_compact_for_varargs(
 }
 
 fn check_doc_func_type_compact_for_signature(
-    db: &DbIndex,
+    context: &TypeCheckContext,
     source_func: &LuaFunctionType,
     signature_id: &LuaSignatureId,
     check_guard: TypeCheckGuard,
 ) -> TypeCheckResult {
-    let signature = db
+    let signature = context
+        .db
         .get_signature_index()
         .get(signature_id)
         .ok_or(TypeCheckFailReason::TypeNotMatch)?;
@@ -148,7 +164,7 @@ fn check_doc_func_type_compact_for_signature(
 
     for overload_func in &signature.overloads {
         match check_doc_func_type_compact_for_params(
-            db,
+            context,
             source_func,
             overload_func,
             check_guard.next_level()?,
@@ -169,7 +185,7 @@ fn check_doc_func_type_compact_for_signature(
     let fake_doc_func = signature.to_doc_func_type();
 
     check_doc_func_type_compact_for_params(
-        db,
+        context,
         &source_func,
         &fake_doc_func,
         check_guard.next_level()?,
@@ -178,31 +194,34 @@ fn check_doc_func_type_compact_for_signature(
 
 // check type is callable
 fn check_doc_func_type_compact_for_custom_type(
-    db: &DbIndex,
+    context: &TypeCheckContext,
     source_func: &LuaFunctionType,
     custom_type_id: &LuaTypeDeclId,
     check_guard: TypeCheckGuard,
 ) -> TypeCheckResult {
-    let type_decl = db
+    let type_decl = context
+        .db
         .get_type_index()
         .get_type_decl(custom_type_id)
         .ok_or(TypeCheckFailReason::TypeNotMatch)?;
 
     if type_decl.is_class() {
-        let call_operators = db
+        let call_operators = context
+            .db
             .get_operator_index()
             .get_operators(&custom_type_id.clone().into(), LuaOperatorMetaMethod::Call)
             .ok_or(TypeCheckFailReason::TypeNotMatch)?;
         for operator_id in call_operators {
-            let operator = db
+            let operator = context
+                .db
                 .get_operator_index()
                 .get_operator(operator_id)
                 .ok_or(TypeCheckFailReason::TypeNotMatch)?;
-            let call_type = operator.get_operator_func(db);
+            let call_type = operator.get_operator_func(context.db);
             match call_type {
                 LuaType::DocFunction(doc_func) => {
                     match check_doc_func_type_compact_for_params(
-                        db,
+                        context,
                         source_func,
                         &doc_func,
                         check_guard.next_level()?,
@@ -213,13 +232,14 @@ fn check_doc_func_type_compact_for_custom_type(
                     }
                 }
                 LuaType::Signature(signature_id) => {
-                    let signature = db
+                    let signature = context
+                        .db
                         .get_signature_index()
                         .get(&signature_id)
                         .ok_or(TypeCheckFailReason::TypeNotMatch)?;
                     let doc_f = signature.to_call_operator_func_type();
                     match check_doc_func_type_compact_for_params(
-                        db,
+                        context,
                         source_func,
                         &doc_f,
                         check_guard.next_level()?,
@@ -238,12 +258,13 @@ fn check_doc_func_type_compact_for_custom_type(
 }
 
 pub fn check_sig_type_compact(
-    db: &DbIndex,
+    context: &TypeCheckContext,
     sig_id: &LuaSignatureId,
     compact_type: &LuaType,
     check_guard: TypeCheckGuard,
 ) -> TypeCheckResult {
-    let signature = db
+    let signature = context
+        .db
         .get_signature_index()
         .get(sig_id)
         .ok_or(TypeCheckFailReason::TypeNotMatch)?;
@@ -255,5 +276,10 @@ pub fn check_sig_type_compact(
 
     let fake_doc_func = signature.to_doc_func_type();
 
-    check_doc_func_type_compact(db, &fake_doc_func, compact_type, check_guard.next_level()?)
+    check_doc_func_type_compact(
+        context,
+        &fake_doc_func,
+        compact_type,
+        check_guard.next_level()?,
+    )
 }

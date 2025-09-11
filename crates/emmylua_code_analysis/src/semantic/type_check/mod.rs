@@ -111,7 +111,7 @@ fn check_general_type_compact(
         | LuaType::Intersection(_)
         | LuaType::TableGeneric(_)
         | LuaType::MultiLineUnion(_) => {
-            check_complex_type_compact(dcontext, source, compact_type, check_guard)
+            check_complex_type_compact(context, source, compact_type, check_guard)
         }
 
         // need think how to do that
