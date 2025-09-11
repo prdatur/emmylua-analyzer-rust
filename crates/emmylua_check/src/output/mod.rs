@@ -1,4 +1,5 @@
 mod json_output_writer;
+mod sarif_output_writer;
 mod text_output_writer;
 
 use std::path::PathBuf;
@@ -25,6 +26,7 @@ pub async fn output_result(
         OutputFormat::Text => {
             Box::new(text_output_writer::TextOutputWriter::new(workspace.clone()))
         }
+        OutputFormat::Sarif => Box::new(sarif_output_writer::SarifOutputWriter::new(output)),
     };
 
     let terminal_display = TerminalDisplay::new(workspace);
