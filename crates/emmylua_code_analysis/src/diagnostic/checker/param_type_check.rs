@@ -87,7 +87,7 @@ fn check_call_expr(
                     check_type = result;
                 }
             }
-            let result = semantic_model.type_check(&check_type, arg_type);
+            let result = semantic_model.type_check_detail(&check_type, arg_type);
             if !result.is_ok() {
                 // 这里执行了`AssignTypeMismatch`的检查
                 if arg_type.is_table() {
@@ -141,7 +141,7 @@ fn check_variadic_param_match_args(
     arg_ranges: &[TextRange],
 ) {
     for (arg_type, arg_range) in arg_types.iter().zip(arg_ranges.iter()) {
-        let result = semantic_model.type_check(variadic_type, arg_type);
+        let result = semantic_model.type_check_detail(variadic_type, arg_type);
         if !result.is_ok() {
             try_add_diagnostic(
                 context,

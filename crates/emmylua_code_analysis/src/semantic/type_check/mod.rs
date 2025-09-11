@@ -33,6 +33,7 @@ pub fn check_type_compact(
     check_general_type_compact(&context, source, compact_type, TypeCheckGuard::new())
 }
 
+#[allow(unused)]
 pub fn check_type_compact_detail(
     db: &DbIndex,
     source: &LuaType,

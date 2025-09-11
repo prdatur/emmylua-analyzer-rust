@@ -54,7 +54,7 @@ fn check_doc_tag_type(
             .get_generic_params(&generic_type.get_base_type_id())?;
         for (i, param_type) in generic_type.get_params().iter().enumerate() {
             let extend_type = generic_params.get(i)?.type_constraint.clone()?;
-            let result = semantic_model.type_check(&extend_type, &param_type);
+            let result = semantic_model.type_check_detail(&extend_type, &param_type);
             if !result.is_ok() {
                 add_type_check_diagnostic(
                     context,
@@ -261,7 +261,7 @@ fn check_str_tpl_ref(
                 if let Some(type_decl) = founded_type_decl {
                     let type_id = type_decl.get_id();
                     let ref_type = LuaType::Ref(type_id);
-                    let result = semantic_model.type_check(&extend_type, &ref_type);
+                    let result = semantic_model.type_check_detail(&extend_type, &ref_type);
                     if result.is_err() {
                         add_type_check_diagnostic(
                             context,
@@ -296,7 +296,7 @@ fn check_tpl_ref(
 ) -> Option<()> {
     let extend_type = extend_type.clone()?;
     let arg_info = arg_info?;
-    let result = semantic_model.type_check(&extend_type, &arg_info.0);
+    let result = semantic_model.type_check_detail(&extend_type, &arg_info.0);
     if !result.is_ok() {
         add_type_check_diagnostic(
             context,

@@ -22,9 +22,13 @@ pub fn check_ref_type_compact(
         .get_type_index()
         .get_type_decl(source_id)
         // unreachable!
-        .ok_or(TypeCheckFailReason::TypeNotMatchWithReason(
-            t!("type `%{name}` not found.", name = source_id.get_name()).to_string(),
-        ))?;
+        .ok_or(if context.detail {
+            TypeCheckFailReason::TypeNotMatchWithReason(
+                t!("type `%{name}` not found.", name = source_id.get_name()).to_string(),
+            )
+        } else {
+            TypeCheckFailReason::TypeNotMatch
+        })?;
 
     if type_decl.is_alias() {
         if let Some(origin_type) = type_decl.get_alias_origin(context.db, None) {
@@ -263,12 +267,17 @@ fn check_ref_type_compact_table(
                     .unwrap_or(&LuaTypeCache::InferType(LuaType::Any))
                     .as_type();
 
-                if let Err(TypeCheckFailReason::TypeNotMatch) = check_general_type_compact(
+                if let Err(err) = check_general_type_compact(
                     context,
                     &source_member_type,
                     &table_member_type,
                     check_guard.next_level()?,
-                ) {
+                ) && err.is_type_not_match()
+                {
+                    if !context.detail {
+                        return Err(TypeCheckFailReason::TypeNotMatch);
+                    }
+
                     return Err(TypeCheckFailReason::TypeNotMatchWithReason(
                         t!(
                             "member %{name} type not match, expect %{expect}, got %{got}",
@@ -283,6 +292,10 @@ fn check_ref_type_compact_table(
                 }
             }
             None if !source_member_type.is_optional() => {
+                if !context.detail {
+                    return Err(TypeCheckFailReason::TypeNotMatch);
+                }
+
                 return Err(TypeCheckFailReason::TypeNotMatchWithReason(
                     t!("missing member %{name}, in table", name = key.to_path()).to_string(),
                 ));
@@ -330,12 +343,17 @@ fn check_ref_type_compact_object(
 
         match get_object_field_type(object_type, &key) {
             Some(field_type) => {
-                if let Err(TypeCheckFailReason::TypeNotMatch) = check_general_type_compact(
+                if let Err(err) = check_general_type_compact(
                     context,
                     &source_member_type,
                     field_type,
                     check_guard.next_level()?,
-                ) {
+                ) && err.is_type_not_match()
+                {
+                    if !context.detail {
+                        return Err(TypeCheckFailReason::TypeNotMatch);
+                    }
+
                     return Err(TypeCheckFailReason::TypeNotMatchWithReason(
                         t!(
                             "member %{name} type not match, expect %{expect}, got %{got}",
@@ -349,6 +367,9 @@ fn check_ref_type_compact_object(
                 }
             }
             None if !source_member_type.is_optional() => {
+                if !context.detail {
+                    return Err(TypeCheckFailReason::TypeNotMatch);
+                }
                 return Err(TypeCheckFailReason::TypeNotMatchWithReason(
                     t!("missing member %{name}, in table", name = key.to_path()).to_string(),
                 ));

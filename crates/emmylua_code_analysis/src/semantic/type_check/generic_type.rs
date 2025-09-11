@@ -146,12 +146,16 @@ fn check_generic_type_compact_table(
                     .unwrap_or(&LuaTypeCache::InferType(LuaType::Any))
                     .as_type();
 
-                if let Err(TypeCheckFailReason::TypeNotMatch) = check_general_type_compact(
+                if let Err(err) = check_general_type_compact(
                     context,
                     &source_member_type,
                     &table_member_type,
                     next_guard,
-                ) {
+                ) && err.is_type_not_match()
+                {
+                    if !context.detail {
+                        return Err(TypeCheckFailReason::TypeNotMatch);
+                    }
                     return Err(TypeCheckFailReason::TypeNotMatchWithReason(
                         t!(
                             "member %{name} type not match, expect %{expect}, got %{got}",
@@ -166,6 +170,10 @@ fn check_generic_type_compact_table(
                 }
             }
             None if !source_member_type.is_optional() => {
+                if !context.detail {
+                    return Err(TypeCheckFailReason::TypeNotMatch);
+                }
+
                 return Err(TypeCheckFailReason::TypeNotMatchWithReason(
                     t!("missing member %{name}, in table", name = key.to_path()).to_string(),
                 ));

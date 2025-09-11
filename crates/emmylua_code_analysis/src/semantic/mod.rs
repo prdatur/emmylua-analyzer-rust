@@ -40,6 +40,7 @@ pub use visibility::check_export_visibility;
 use visibility::check_visibility;
 
 use crate::semantic::member::find_members_with_key;
+use crate::semantic::type_check::check_type_compact_detail;
 use crate::{Emmyrc, LuaDocument, LuaSemanticDeclId, ModuleInfo, db_index::LuaTypeDeclId};
 use crate::{
     FileId,
@@ -146,6 +147,10 @@ impl<'a> SemanticModel<'a> {
 
     pub fn type_check(&self, source: &LuaType, compact_type: &LuaType) -> TypeCheckResult {
         check_type_compact(self.db, source, compact_type)
+    }
+
+    pub fn type_check_detail(&self, source: &LuaType, compact_type: &LuaType) -> TypeCheckResult {
+        check_type_compact_detail(self.db, source, compact_type)
     }
 
     pub fn infer_call_expr_func(
