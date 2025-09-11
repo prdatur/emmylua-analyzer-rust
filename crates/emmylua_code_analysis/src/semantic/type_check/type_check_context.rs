@@ -8,9 +8,6 @@ pub struct TypeCheckContext<'db> {
 
 impl<'db> TypeCheckContext<'db> {
     pub fn new(db: &'db DbIndex, detail: bool) -> Self {
-        Self {
-            detail,
-            db,
-        }
+        Self { detail, db }
     }
 }

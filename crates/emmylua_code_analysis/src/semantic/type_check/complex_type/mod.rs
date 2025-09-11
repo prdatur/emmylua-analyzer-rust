@@ -10,7 +10,7 @@ use object_type_check::check_object_type_compact;
 use table_generic_check::check_table_generic_type_compact;
 use tuple_type_check::check_tuple_type_compact;
 
-use crate::{semantic::type_check::type_check_context::TypeCheckContext, LuaType, LuaUnionType};
+use crate::{LuaType, LuaUnionType, semantic::type_check::type_check_context::TypeCheckContext};
 
 use super::{
     TypeCheckResult, check_general_type_compact, type_check_fail_reason::TypeCheckFailReason,
@@ -115,7 +115,12 @@ pub fn check_complex_type_compact(
     // Do I need to check union types?
     if let LuaType::Union(union) = compact_type {
         for sub_compact in union.into_vec() {
-            match check_complex_type_compact(context, source, &sub_compact, check_guard.next_level()?) {
+            match check_complex_type_compact(
+                context,
+                source,
+                &sub_compact,
+                check_guard.next_level()?,
+            ) {
                 Ok(_) => {}
                 Err(e) => return Err(e),
             }
@@ -136,7 +141,12 @@ fn check_union_type_compact_union(
 ) -> TypeCheckResult {
     let compact_types = compact_union.into_vec();
     for compact_sub_type in compact_types {
-        check_general_type_compact(context, source, &compact_sub_type, check_guard.next_level()?)?;
+        check_general_type_compact(
+            context,
+            source,
+            &compact_sub_type,
+            check_guard.next_level()?,
+        )?;
     }
 
     Ok(())

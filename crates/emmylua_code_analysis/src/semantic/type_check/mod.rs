@@ -54,7 +54,12 @@ fn check_general_type_compact(
     }
 
     if let Some(origin_type) = escape_type(&context.db, compact_type) {
-        return check_general_type_compact(context, source, &origin_type, check_guard.next_level()?);
+        return check_general_type_compact(
+            context,
+            source,
+            &origin_type,
+            check_guard.next_level()?,
+        );
     }
 
     match source {
@@ -84,7 +89,9 @@ fn check_general_type_compact(
         | LuaType::ConstTplRef(_)
         | LuaType::Namespace(_)
         | LuaType::Variadic(_)
-        | LuaType::Language(_) => check_simple_type_compact(context, source, compact_type, check_guard),
+        | LuaType::Language(_) => {
+            check_simple_type_compact(context, source, compact_type, check_guard)
+        }
 
         // type ref
         LuaType::Ref(type_decl_id) => {
@@ -101,7 +108,9 @@ fn check_general_type_compact(
             check_doc_func_type_compact(context, doc_func, compact_type, check_guard)
         }
         // signature type
-        LuaType::Signature(sig_id) => check_sig_type_compact(context, sig_id, compact_type, check_guard),
+        LuaType::Signature(sig_id) => {
+            check_sig_type_compact(context, sig_id, compact_type, check_guard)
+        }
 
         // complex type
         LuaType::Array(_)

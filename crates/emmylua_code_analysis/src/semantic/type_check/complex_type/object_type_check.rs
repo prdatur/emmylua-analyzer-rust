@@ -122,7 +122,12 @@ fn check_object_type_compact_member_owner(
             }
         };
 
-        match check_general_type_compact(context, source_type, &member_type, check_guard.next_level()?) {
+        match check_general_type_compact(
+            context,
+            source_type,
+            &member_type,
+            check_guard.next_level()?,
+        ) {
             Ok(_) => {}
             Err(TypeCheckFailReason::TypeNotMatch) => {
                 return Err(TypeCheckFailReason::TypeNotMatchWithReason(
