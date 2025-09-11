@@ -84,7 +84,10 @@ impl<'a> SemanticModel<'a> {
     }
 
     pub fn get_document(&'_ self) -> LuaDocument<'_> {
-        self.db.get_vfs().get_document(&self.file_id).unwrap()
+        self.db
+            .get_vfs()
+            .get_document(&self.file_id)
+            .expect("always exists")
     }
 
     pub fn get_module(&self) -> Option<&ModuleInfo> {

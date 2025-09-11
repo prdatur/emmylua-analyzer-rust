@@ -146,9 +146,9 @@ pub fn infer_for_range_iter_expr_func(
         _ => return Err(InferFailReason::None),
     };
 
-    if status_param.is_none() {
+    let Some(status_param) = status_param else {
         return Ok(doc_function.get_variadic_ret());
-    }
+    };
     let mut substitutor = TypeSubstitutor::new();
     let mut context = TplContext {
         db,
@@ -163,7 +163,7 @@ pub fn infer_for_range_iter_expr_func(
         .map(|(_, opt_ty)| opt_ty.clone().unwrap_or(LuaType::Any))
         .collect::<Vec<_>>();
 
-    tpl_pattern_match_args(&mut context, &params, &vec![status_param.clone().unwrap()])?;
+    tpl_pattern_match_args(&mut context, &params, &[status_param])?;
 
     let instantiate_func = if let LuaType::DocFunction(f) =
         instantiate_doc_function(db, &doc_function, &substitutor)

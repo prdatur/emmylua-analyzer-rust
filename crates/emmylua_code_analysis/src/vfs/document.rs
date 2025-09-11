@@ -38,7 +38,7 @@ impl<'a> LuaDocument<'a> {
     }
 
     pub fn get_uri(&self) -> Uri {
-        file_path_to_uri(self.path).unwrap()
+        file_path_to_uri(self.path).expect("path is always absolute")
     }
 
     pub fn get_file_path(&self) -> &PathBuf {

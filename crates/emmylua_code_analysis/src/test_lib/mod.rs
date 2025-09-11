@@ -18,7 +18,7 @@ pub struct VirtualWorkspace {
     id_counter: u32,
 }
 
-#[allow(unused)]
+#[allow(unused, clippy::unwrap_used)]
 impl VirtualWorkspace {
     pub fn new() -> Self {
         let generator = VirtualUrlGenerator::new();

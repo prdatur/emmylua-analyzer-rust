@@ -40,7 +40,11 @@ pub fn load_resource_std(
         .into_iter()
         .filter_map(|file| {
             if file.path.ends_with(".lua") {
-                let path = resoucres_dir.join(&file.path).to_str().unwrap().to_string();
+                let path = resoucres_dir
+                    .join(&file.path)
+                    .to_str()
+                    .expect("UTF-8 paths")
+                    .to_string();
                 Some(LuaFileInfo {
                     path,
                     content: file.content,
@@ -77,7 +81,7 @@ fn load_resource_from_file_system(resources_dir: &Path) -> Option<Vec<LuaFileInf
         let files = load_resource_from_include_dir();
         for file in &files {
             let path = resources_dir.join(&file.path);
-            let parent = path.parent().unwrap();
+            let parent = path.parent().expect("resources not top-level dir");
             if !parent.exists() {
                 match std::fs::create_dir_all(parent) {
                     Ok(_) => {}
@@ -134,7 +138,9 @@ fn check_need_dump_to_file_system() -> bool {
         return true;
     }
 
-    let content = std::fs::read_to_string(&version_path).unwrap();
+    let Ok(content) = std::fs::read_to_string(&version_path) else {
+        return true;
+    };
     let version = content.trim();
     if version != VERSION {
         return true;
@@ -154,10 +160,10 @@ fn walk_resource_dir(dir: &Dir, files: &mut Vec<LuaFileInfo>) {
         match entry {
             DirEntry::File(file) => {
                 let path = file.path();
-                let content = file.contents_utf8().unwrap();
+                let content = file.contents_utf8().expect("UTF-8 paths");
 
                 files.push(LuaFileInfo {
-                    path: path.to_str().unwrap().to_string(),
+                    path: path.to_str().expect("UTF-8 paths").to_string(),
                     content: content.to_string(),
                 });
             }

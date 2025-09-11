@@ -1,8 +1,11 @@
-#![deny(
-    clippy::unwrap_used,
-    clippy::unwrap_in_result,
-    clippy::panic,
-    clippy::panic_in_result_fn
+#![cfg_attr(
+    not(test),
+    deny(
+        clippy::unwrap_used,
+        clippy::unwrap_in_result,
+        clippy::panic,
+        clippy::panic_in_result_fn
+    )
 )]
 
 mod compilation;
