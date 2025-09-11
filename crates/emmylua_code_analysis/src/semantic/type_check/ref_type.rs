@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 
 use crate::{
-    DbIndex, LuaMemberKey, LuaMemberOwner, LuaObjectType, LuaTupleType, LuaType, LuaTypeCache,
-    LuaTypeDecl, LuaTypeDeclId, RenderLevel, humanize_type, semantic::member::find_members,
+    LuaMemberKey, LuaMemberOwner, LuaObjectType, LuaTupleType, LuaType, LuaTypeCache, LuaTypeDecl,
+    LuaTypeDeclId, RenderLevel, humanize_type,
+    semantic::{member::find_members, type_check::type_check_context::TypeCheckContext},
 };
 
 use super::{
@@ -11,12 +12,13 @@ use super::{
 };
 
 pub fn check_ref_type_compact(
-    db: &DbIndex,
+    context: &TypeCheckContext,
     source_id: &LuaTypeDeclId,
     compact_type: &LuaType,
     check_guard: TypeCheckGuard,
 ) -> TypeCheckResult {
-    let type_decl = db
+    let type_decl = context
+        .db
         .get_type_index()
         .get_type_decl(source_id)
         // unreachable!
@@ -25,15 +27,15 @@ pub fn check_ref_type_compact(
         ))?;
 
     if type_decl.is_alias() {
-        if let Some(origin_type) = type_decl.get_alias_origin(db, None) {
+        if let Some(origin_type) = type_decl.get_alias_origin(context.db, None) {
             let result = check_general_type_compact(
-                db,
+                context,
                 &origin_type,
                 compact_type,
                 check_guard.next_level()?,
             );
             if result.is_err() && origin_type.is_function() {
-                return check_ref_class(db, source_id, compact_type, check_guard);
+                return check_ref_class(context, source_id, compact_type, check_guard);
             }
             return result;
         }
@@ -42,14 +44,14 @@ pub fn check_ref_type_compact(
     }
 
     if type_decl.is_enum() {
-        check_ref_enum(db, source_id, compact_type, check_guard, &type_decl)
+        check_ref_enum(context, source_id, compact_type, check_guard, &type_decl)
     } else {
-        check_ref_class(db, source_id, compact_type, check_guard)
+        check_ref_class(context, source_id, compact_type, check_guard)
     }
 }
 
 fn check_ref_enum(
-    db: &DbIndex,
+    context: &TypeCheckContext,
     source_id: &LuaTypeDeclId,
     compact_type: &LuaType,
     check_guard: TypeCheckGuard,
@@ -61,7 +63,7 @@ fn check_ref_enum(
     }
 
     let enum_fields = type_decl
-        .get_enum_field_type(db)
+        .get_enum_field_type(context.db)
         .ok_or(TypeCheckFailReason::TypeNotMatch)?;
 
     // 移除掉枚举类型本身
@@ -78,11 +80,12 @@ fn check_ref_enum(
             LuaType::from_vec(new_types)
         }
         LuaType::Ref(compact_id) => {
-            if let Some(compact_decl) = db.get_type_index().get_type_decl(compact_id) {
+            if let Some(compact_decl) = context.db.get_type_index().get_type_decl(compact_id) {
                 if compact_decl.is_enum() {
-                    if let Some(compact_enum_fields) = compact_decl.get_enum_field_type(db) {
+                    if let Some(compact_enum_fields) = compact_decl.get_enum_field_type(context.db)
+                    {
                         return check_general_type_compact(
-                            db,
+                            context,
                             &enum_fields,
                             &compact_enum_fields,
                             check_guard.next_level()?,
@@ -110,11 +113,16 @@ fn check_ref_enum(
         }
     }
 
-    check_general_type_compact(db, &enum_fields, &compact_type, check_guard.next_level()?)
+    check_general_type_compact(
+        context,
+        &enum_fields,
+        &compact_type,
+        check_guard.next_level()?,
+    )
 }
 
 fn check_ref_class(
-    db: &DbIndex,
+    context: &TypeCheckContext,
     source_id: &LuaTypeDeclId,
     compact_type: &LuaType,
     check_guard: TypeCheckGuard,
@@ -126,23 +134,24 @@ fn check_ref_class(
             }
 
             // 检查子类型关系
-            if is_sub_type_of(db, id, source_id) {
+            if is_sub_type_of(context.db, id, source_id) {
                 return Ok(());
             }
             // 这不是正确的逻辑. 但不假设超类会自动转换为子类, 则会过于严格
-            if is_sub_type_of(db, source_id, id) {
+            if is_sub_type_of(context.db, source_id, id) {
                 return Ok(());
             }
 
             // `compact`为枚举时的额外处理
-            if let Some(compact_decl) = db.get_type_index().get_type_decl(id) {
+            if let Some(compact_decl) = context.db.get_type_index().get_type_decl(id) {
                 if compact_decl.is_enum() {
-                    if let Some(LuaType::Union(enum_fields)) = compact_decl.get_enum_field_type(db)
+                    if let Some(LuaType::Union(enum_fields)) =
+                        compact_decl.get_enum_field_type(context.db)
                     {
                         let source = LuaType::Ref(source_id.clone());
                         for field in enum_fields.into_vec() {
                             check_general_type_compact(
-                                db,
+                                context,
                                 &source,
                                 &field,
                                 check_guard.next_level()?,
@@ -156,19 +165,22 @@ fn check_ref_class(
             Err(TypeCheckFailReason::TypeNotMatch)
         }
         LuaType::TableConst(range) => check_ref_type_compact_table(
-            db,
+            context,
             source_id,
             LuaMemberOwner::Element(range.clone()),
             check_guard.next_level()?,
         ),
-        LuaType::Object(object_type) => {
-            check_ref_type_compact_object(db, object_type, source_id, check_guard.next_level()?)
-        }
+        LuaType::Object(object_type) => check_ref_type_compact_object(
+            context,
+            object_type,
+            source_id,
+            check_guard.next_level()?,
+        ),
         LuaType::Table => Ok(()),
         LuaType::Union(union_type) => {
             for typ in union_type.into_vec() {
                 check_general_type_compact(
-                    db,
+                    context,
                     &LuaType::Ref(source_id.clone()),
                     &typ,
                     check_guard.next_level()?,
@@ -177,13 +189,13 @@ fn check_ref_class(
             Ok(())
         }
         LuaType::Tuple(tuple_type) => {
-            check_ref_type_compact_tuple(db, tuple_type, source_id, check_guard.next_level()?)
+            check_ref_type_compact_tuple(context, tuple_type, source_id, check_guard.next_level()?)
         }
         LuaType::Generic(generic) => {
             let base_type_id = generic.get_base_type_id();
             if source_id == &base_type_id
-                || is_sub_type_of(db, &base_type_id, source_id)
-                || is_sub_type_of(db, source_id, &base_type_id)
+                || is_sub_type_of(context.db, &base_type_id, source_id)
+                || is_sub_type_of(context.db, source_id, &base_type_id)
             {
                 Ok(())
             } else {
@@ -193,8 +205,8 @@ fn check_ref_class(
         _ => {
             if let Some(base_type_id) = get_base_type_id(compact_type) {
                 if source_id == &base_type_id
-                    || is_sub_type_of(db, &base_type_id, source_id)
-                    || is_sub_type_of(db, source_id, &base_type_id)
+                    || is_sub_type_of(context.db, &base_type_id, source_id)
+                    || is_sub_type_of(context.db, source_id, &base_type_id)
                 {
                     Ok(())
                 } else {
@@ -208,12 +220,12 @@ fn check_ref_class(
 }
 
 fn check_ref_type_compact_table(
-    db: &DbIndex,
+    context: &TypeCheckContext,
     source_type_id: &LuaTypeDeclId,
     table_owner: LuaMemberOwner,
     check_guard: TypeCheckGuard,
 ) -> TypeCheckResult {
-    let member_index = db.get_member_index();
+    let member_index = context.db.get_member_index();
     let table_member_map: HashMap<_, _> = member_index
         .get_members(&table_owner)
         .map(|members| {
@@ -231,7 +243,8 @@ fn check_ref_type_compact_table(
     };
 
     for source_member in source_type_members {
-        let source_member_type = db
+        let source_member_type = context
+            .db
             .get_type_index()
             .get_type_cache(&source_member.get_id().into())
             .unwrap_or(&LuaTypeCache::InferType(LuaType::Any))
@@ -250,7 +263,7 @@ fn check_ref_type_compact_table(
                     .as_type();
 
                 if let Err(TypeCheckFailReason::TypeNotMatch) = check_general_type_compact(
-                    db,
+                    context,
                     &source_member_type,
                     &table_member_type,
                     check_guard.next_level()?,
@@ -259,8 +272,10 @@ fn check_ref_type_compact_table(
                         t!(
                             "member %{name} type not match, expect %{expect}, got %{got}",
                             name = key.to_path(),
-                            expect = humanize_type(db, &source_member_type, RenderLevel::Simple),
-                            got = humanize_type(db, &table_member_type, RenderLevel::Simple)
+                            expect =
+                                humanize_type(context.db, &source_member_type, RenderLevel::Simple),
+                            got =
+                                humanize_type(context.db, &table_member_type, RenderLevel::Simple)
                         )
                         .to_string(),
                     ));
@@ -292,7 +307,7 @@ fn check_ref_type_compact_table(
 }
 
 fn check_ref_type_compact_object(
-    db: &DbIndex,
+    context: &TypeCheckContext,
     object_type: &LuaObjectType,
     source_type_id: &LuaTypeDeclId,
     check_guard: TypeCheckGuard,
@@ -309,7 +324,7 @@ fn check_ref_type_compact_object(
         match get_object_field_type(object_type, &key) {
             Some(field_type) => {
                 if let Err(TypeCheckFailReason::TypeNotMatch) = check_general_type_compact(
-                    db,
+                    context,
                     &source_member_type,
                     field_type,
                     check_guard.next_level()?,
@@ -354,7 +369,7 @@ fn get_object_field_type<'a>(
 }
 
 fn check_ref_type_compact_tuple(
-    db: &DbIndex,
+    context: &TypeCheckContext,
     tuple_type: &LuaTupleType,
     source_type_id: &LuaTypeDeclId,
     check_guard: TypeCheckGuard,
@@ -375,7 +390,12 @@ fn check_ref_type_compact_tuple(
                 return Err(TypeCheckFailReason::TypeNotMatch);
             };
 
-            check_general_type_compact(db, &member.typ, tuple_type, check_guard.next_level()?)?;
+            check_general_type_compact(
+                context,
+                &member.typ,
+                tuple_type,
+                check_guard.next_level()?,
+            )?;
         } else {
             return Err(TypeCheckFailReason::TypeNotMatch);
         }
