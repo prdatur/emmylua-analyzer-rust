@@ -56,7 +56,15 @@ fn build_hover_without_property(
     token: LuaSyntaxToken,
     typ: LuaType,
 ) -> Option<Hover> {
-    let hover = humanize_type(db, &typ, RenderLevel::Detailed);
+    let render_level = db
+        .get_emmyrc()
+        .hover
+        .custom_detail
+        .map_or(RenderLevel::Detailed, |custom_detail| {
+            RenderLevel::CustomDetailed(custom_detail)
+        });
+
+    let hover = humanize_type(db, &typ, render_level);
     Some(Hover {
         contents: HoverContents::Markup(MarkupContent {
             kind: lsp_types::MarkupKind::Markdown,
@@ -177,7 +185,7 @@ fn build_decl_hover(
             let decl_hover_type =
                 get_hover_type(builder, builder.semantic_model).unwrap_or(typ.clone());
             let type_humanize_text =
-                hover_humanize_type(builder, &decl_hover_type, Some(RenderLevel::Detailed));
+                hover_humanize_type(builder, &decl_hover_type, Some(builder.detail_render_level));
             let prefix = if decl.is_local() {
                 "local "
             } else {
@@ -289,7 +297,7 @@ fn build_type_decl_hover(
     let type_decl = db.get_type_index().get_type_decl(&type_decl_id)?;
     let type_description = if type_decl.is_alias() {
         if let Some(origin) = type_decl.get_alias_origin(db, None) {
-            let origin_type = humanize_type(db, &origin, RenderLevel::Detailed);
+            let origin_type = humanize_type(db, &origin, builder.detail_render_level);
             format!("(alias) {} = {}", type_decl.get_name(), origin_type)
         } else {
             "".to_string()
@@ -300,7 +308,7 @@ fn build_type_decl_hover(
         let humanize_text = humanize_type(
             db,
             &LuaType::Def(type_decl_id.clone()),
-            RenderLevel::Detailed,
+            builder.detail_render_level,
         );
         format!("(class) {}", humanize_text)
     };

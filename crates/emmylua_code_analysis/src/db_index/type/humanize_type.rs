@@ -14,6 +14,8 @@ use super::{LuaAliasCallKind, LuaMultiLineUnion};
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RenderLevel {
     Documentation,
+    // donot more than 255
+    CustomDetailed(u8),
     Detailed,
     Simple,
     Normal,
@@ -25,6 +27,7 @@ impl RenderLevel {
     pub fn next_level(self) -> RenderLevel {
         match self {
             RenderLevel::Documentation => RenderLevel::Simple,
+            RenderLevel::CustomDetailed(_) => RenderLevel::Simple,
             RenderLevel::Detailed => RenderLevel::Simple,
             RenderLevel::Simple => RenderLevel::Normal,
             RenderLevel::Normal => RenderLevel::Brief,
@@ -143,10 +146,12 @@ fn humanize_simple_type(
     name: &str,
     level: RenderLevel,
 ) -> Option<String> {
-    if !matches!(level, RenderLevel::Detailed | RenderLevel::Documentation) {
-        return Some(name.to_string());
-    }
-    let max_display_count = 12;
+    let max_display_count = match level {
+        RenderLevel::Documentation => 500,
+        RenderLevel::CustomDetailed(n) => n as usize,
+        RenderLevel::Detailed => 12,
+        _ => return Some(name.to_string()),
+    };
 
     let member_owner = LuaMemberOwner::Type(id.clone());
     let member_index = db.get_member_index();
@@ -227,6 +232,7 @@ where
     let types = union.into_vec();
     let num = match level {
         RenderLevel::Documentation => 500,
+        RenderLevel::CustomDetailed(n) => n as usize,
         RenderLevel::Detailed => 8,
         RenderLevel::Simple => 6,
         RenderLevel::Normal => 4,
@@ -273,6 +279,7 @@ fn humanize_multi_line_union_type(
     let members = multi_union.get_unions();
     let num = match level {
         RenderLevel::Documentation => 500,
+        RenderLevel::CustomDetailed(n) => n as usize,
         RenderLevel::Detailed => 10,
         RenderLevel::Simple => 8,
         RenderLevel::Normal => 4,
@@ -313,6 +320,7 @@ fn humanize_tuple_type(db: &DbIndex, tuple: &LuaTupleType, level: RenderLevel) -
     let types = tuple.get_types();
     let num = match level {
         RenderLevel::Documentation => 500,
+        RenderLevel::CustomDetailed(n) => n as usize,
         RenderLevel::Detailed => 10,
         RenderLevel::Simple => 8,
         RenderLevel::Normal => 4,
@@ -407,6 +415,7 @@ fn humanize_doc_function_type(
 fn humanize_object_type(db: &DbIndex, object: &LuaObjectType, level: RenderLevel) -> String {
     let num = match level {
         RenderLevel::Documentation => 500,
+        RenderLevel::CustomDetailed(n) => n as usize,
         RenderLevel::Detailed => 10,
         RenderLevel::Simple => 8,
         RenderLevel::Normal => 4,
@@ -466,6 +475,7 @@ fn humanize_intersect_type(
 ) -> String {
     let num = match level {
         RenderLevel::Documentation => 500,
+        RenderLevel::CustomDetailed(n) => n as usize,
         RenderLevel::Detailed => 10,
         RenderLevel::Simple => 8,
         RenderLevel::Normal => 4,
@@ -598,6 +608,7 @@ fn humanize_table_generic_type(
 ) -> String {
     let num = match level {
         RenderLevel::Documentation => 500,
+        RenderLevel::CustomDetailed(n) => n as usize,
         RenderLevel::Detailed => 10,
         RenderLevel::Simple => 8,
         RenderLevel::Normal => 4,
@@ -649,6 +660,7 @@ fn humanize_variadic_type(db: &DbIndex, multi: &VariadicType, level: RenderLevel
         VariadicType::Multi(types) => {
             let max_num = match level {
                 RenderLevel::Documentation => 500,
+                RenderLevel::CustomDetailed(n) => n as usize,
                 RenderLevel::Detailed => 10,
                 RenderLevel::Simple => 8,
                 RenderLevel::Normal => 4,

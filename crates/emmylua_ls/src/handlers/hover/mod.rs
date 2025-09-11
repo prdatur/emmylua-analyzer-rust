@@ -135,6 +135,7 @@ pub fn hover(analysis: &EmmyLuaAnalysis, file_id: FileId, position: Position) ->
             let db = semantic_model.get_db();
             let document = semantic_model.get_document();
             let range = token.text_range();
+
             build_semantic_info_hover(
                 &analysis.compilation,
                 &semantic_model,

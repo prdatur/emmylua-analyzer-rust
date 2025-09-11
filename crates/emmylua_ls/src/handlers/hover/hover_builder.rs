@@ -1,6 +1,6 @@
 use emmylua_code_analysis::{
     LuaCompilation, LuaFunctionType, LuaMember, LuaMemberOwner, LuaSemanticDeclId, LuaType,
-    SemanticModel,
+    RenderLevel, SemanticModel,
 };
 use emmylua_parser::{LuaAstNode, LuaCallExpr, LuaSyntaxToken};
 use lsp_types::{Hover, HoverContents, MarkedString, MarkupContent};
@@ -30,6 +30,7 @@ pub struct HoverBuilder<'a> {
     trigger_token: Option<LuaSyntaxToken>,
     pub semantic_model: &'a SemanticModel<'a>,
     pub compilation: &'a LuaCompilation,
+    pub detail_render_level: RenderLevel,
 }
 
 impl<'a> HoverBuilder<'a> {
@@ -39,6 +40,13 @@ impl<'a> HoverBuilder<'a> {
         token: Option<LuaSyntaxToken>,
         is_completion: bool,
     ) -> Self {
+        let detail_render_level =
+            if let Some(custom_detail) = semantic_model.get_emmyrc().hover.custom_detail {
+                RenderLevel::CustomDetailed(custom_detail)
+            } else {
+                RenderLevel::Detailed
+            };
+
         Self {
             compilation,
             semantic_model,
@@ -50,6 +58,7 @@ impl<'a> HoverBuilder<'a> {
             trigger_token: token,
             type_expansion: None,
             tag_content: None,
+            detail_render_level,
         }
     }
 
