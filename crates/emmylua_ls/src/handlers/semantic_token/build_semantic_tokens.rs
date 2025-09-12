@@ -184,7 +184,10 @@ fn build_tokens_semantic_token(
                 SemanticTokenModifier::DOCUMENTATION,
             );
         }
-        LuaTokenKind::TkDocDetail | LuaTokenKind::TkNormalStart => {
+        LuaTokenKind::TkNormalStart | LuaTokenKind::TKNonStdComment => {
+            builder.push(token, SemanticTokenType::COMMENT);
+        }
+        LuaTokenKind::TkDocDetail => {
             // We're rendering a description. If description parsing is enabled,
             // this token will be handled by the corresponding description parser.
             let rendering_description = token

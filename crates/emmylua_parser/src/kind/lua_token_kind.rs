@@ -100,6 +100,7 @@ pub enum LuaTokenKind {
     TKDocTriviaStart,   // --------------
     TkDocTrivia,        // other can not parsed
     TkLongCommentEnd,   // ]] or ]===]
+    TKNonStdComment,    // // comment, non-standard lua comment
 
     // tag
     TkTagClass,     // class

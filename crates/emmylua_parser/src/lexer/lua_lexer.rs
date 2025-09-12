@@ -300,6 +300,7 @@ impl<'a> LuaLexer<'a> {
                     _ if self.support_non_std_symbol(LuaNonStdSymbol::DoubleSlash) => {
                         // "//" is a short comment
                         self.reader.bump();
+                        self.reader.eat_while(|ch| ch != '\n' && ch != '\r');
                         return LuaTokenKind::TkShortComment;
                     }
                     _ => {
@@ -382,10 +383,6 @@ impl<'a> LuaLexer<'a> {
                 LuaTokenKind::TkNot
             }
             '&' => {
-                if !self.lexer_config.support_integer_operation() {
-                    self.error(|| t!("bitwise operation is not supported"));
-                }
-
                 self.reader.bump();
                 if self.reader.current_char() == '&'
                     && self.support_non_std_symbol(LuaNonStdSymbol::DoubleAmp)
@@ -399,13 +396,13 @@ impl<'a> LuaLexer<'a> {
                     self.reader.bump();
                     return LuaTokenKind::TkAmpAssign;
                 }
-                LuaTokenKind::TkBitAnd
-            }
-            '|' => {
+
                 if !self.lexer_config.support_integer_operation() {
                     self.error(|| t!("bitwise operation is not supported"));
                 }
-
+                LuaTokenKind::TkBitAnd
+            }
+            '|' => {
                 self.reader.bump();
                 if self.reader.current_char() == '|'
                     && self.support_non_std_symbol(LuaNonStdSymbol::DoublePipe)
@@ -413,11 +410,16 @@ impl<'a> LuaLexer<'a> {
                     self.reader.bump();
                     return LuaTokenKind::TkOr;
                 }
+
                 if self.reader.current_char() == '='
                     && self.support_non_std_symbol(LuaNonStdSymbol::PipeAssign)
                 {
                     self.reader.bump();
                     return LuaTokenKind::TkPipeAssign;
+                }
+
+                if !self.lexer_config.support_integer_operation() {
+                    self.error(|| t!("bitwise operation is not supported"));
                 }
                 LuaTokenKind::TkBitOr
             }

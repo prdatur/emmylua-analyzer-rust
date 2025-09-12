@@ -119,6 +119,15 @@ impl LuaDocLexer<'_> {
                     }
                 }
             }
+            '/' if reader.is_start_of_line() => {
+                let count = reader.consume_char_n_times('/', 3);
+                if count >= 2 {
+                    // "//" is a non-standard lua comment
+                    return LuaTokenKind::TkNormalStart;
+                }
+
+                LuaTokenKind::TKNonStdComment
+            }
             _ => {
                 reader.eat_while(|_| true);
                 LuaTokenKind::TkDocTrivia
@@ -536,6 +545,15 @@ impl LuaDocLexer<'_> {
                         LuaTokenKind::TKDocTriviaStart
                     }
                 }
+            }
+            '/' if reader.is_start_of_line() => {
+                let count = reader.consume_char_n_times('/', 3);
+                if count >= 2 {
+                    // "//" is a non-standard lua comment
+                    return LuaTokenKind::TkNormalStart;
+                }
+
+                LuaTokenKind::TKNonStdComment
             }
             _ => {
                 reader.eat_while(|_| true);
