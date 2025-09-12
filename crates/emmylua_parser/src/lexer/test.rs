@@ -1155,9 +1155,7 @@ LuaTokenData { kind: TkWhitespace, range: SourceRange { start_offset: 2036, leng
 LuaTokenData { kind: TkShebang, range: SourceRange { start_offset: 0, length: 19 } }
 LuaTokenData { kind: TkEndOfLine, range: SourceRange { start_offset: 19, length: 1 } }
 LuaTokenData { kind: TkWhitespace, range: SourceRange { start_offset: 20, length: 8 } }
-LuaTokenData { kind: TkShortComment, range: SourceRange { start_offset: 28, length: 2 } }
-LuaTokenData { kind: TkWhitespace, range: SourceRange { start_offset: 30, length: 1 } }
-LuaTokenData { kind: TkName, range: SourceRange { start_offset: 31, length: 5 } }
+LuaTokenData { kind: TkShortComment, range: SourceRange { start_offset: 28, length: 8 } }
 LuaTokenData { kind: TkEndOfLine, range: SourceRange { start_offset: 36, length: 1 } }
 LuaTokenData { kind: TkWhitespace, range: SourceRange { start_offset: 37, length: 8 } }
 LuaTokenData { kind: TkLongComment, range: SourceRange { start_offset: 45, length: 28 } }
@@ -1212,10 +1210,7 @@ LuaTokenData { kind: TkEndOfLine, range: SourceRange { start_offset: 177, length
 LuaTokenData { kind: TkWhitespace, range: SourceRange { start_offset: 178, length: 8 } }
 LuaTokenData { kind: TkName, range: SourceRange { start_offset: 186, length: 1 } }
 LuaTokenData { kind: TkWhitespace, range: SourceRange { start_offset: 187, length: 1 } }
-LuaTokenData { kind: TkShortComment, range: SourceRange { start_offset: 188, length: 2 } }
-LuaTokenData { kind: TkAssign, range: SourceRange { start_offset: 190, length: 1 } }
-LuaTokenData { kind: TkWhitespace, range: SourceRange { start_offset: 191, length: 1 } }
-LuaTokenData { kind: TkInt, range: SourceRange { start_offset: 192, length: 1 } }
+LuaTokenData { kind: TkShortComment, range: SourceRange { start_offset: 188, length: 5 } }
 LuaTokenData { kind: TkEndOfLine, range: SourceRange { start_offset: 193, length: 1 } }
 LuaTokenData { kind: TkWhitespace, range: SourceRange { start_offset: 194, length: 8 } }
 LuaTokenData { kind: TkName, range: SourceRange { start_offset: 202, length: 1 } }
