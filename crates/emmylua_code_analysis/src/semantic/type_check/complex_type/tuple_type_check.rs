@@ -1,13 +1,16 @@
 use std::ops::Deref;
 
 use crate::{
-    DbIndex, LuaMemberKey, LuaMemberOwner, LuaObjectType, LuaTupleType, LuaType, RenderLevel,
+    LuaMemberKey, LuaMemberOwner, LuaObjectType, LuaTupleType, LuaType, RenderLevel,
     TypeCheckFailReason, TypeCheckResult, VariadicType, humanize_type,
-    semantic::type_check::{check_general_type_compact, type_check_guard::TypeCheckGuard},
+    semantic::type_check::{
+        check_general_type_compact, type_check_context::TypeCheckContext,
+        type_check_guard::TypeCheckGuard,
+    },
 };
 
 pub fn check_tuple_type_compact(
-    db: &DbIndex,
+    context: &TypeCheckContext,
     tuple: &LuaTupleType,
     compact_type: &LuaType,
     check_guard: TypeCheckGuard,
@@ -15,7 +18,7 @@ pub fn check_tuple_type_compact(
     match compact_type {
         LuaType::Tuple(compact_tuple) => {
             return check_tuple_type_compact_tuple(
-                db,
+                context,
                 tuple,
                 compact_tuple,
                 check_guard.next_level()?,
@@ -24,7 +27,7 @@ pub fn check_tuple_type_compact(
         LuaType::Array(array_type) => {
             for source_type in tuple.get_types() {
                 check_general_type_compact(
-                    db,
+                    context,
                     array_type.get_base(),
                     source_type,
                     check_guard.next_level()?,
@@ -36,7 +39,7 @@ pub fn check_tuple_type_compact(
         LuaType::TableConst(inst) => {
             let table_member_owner = LuaMemberOwner::Element(inst.clone());
             return check_tuple_type_compact_table(
-                db,
+                context,
                 tuple,
                 table_member_owner,
                 check_guard.next_level()?,
@@ -44,7 +47,7 @@ pub fn check_tuple_type_compact(
         }
         LuaType::Object(object) => {
             return check_tuple_type_compact_object_type(
-                db,
+                context,
                 tuple,
                 object,
                 check_guard.next_level()?,
@@ -59,7 +62,7 @@ pub fn check_tuple_type_compact(
 }
 
 fn check_tuple_type_compact_tuple(
-    db: &DbIndex,
+    context: &TypeCheckContext,
     source_tuple: &LuaTupleType,
     compact_tuple: &LuaTupleType,
     check_guard: TypeCheckGuard,
@@ -68,7 +71,7 @@ fn check_tuple_type_compact_tuple(
     let compact_tuple_members = compact_tuple.get_types();
 
     check_tuple_types_compact_tuple_types(
-        db,
+        context,
         0,
         source_tuple_members,
         compact_tuple_members,
@@ -77,7 +80,7 @@ fn check_tuple_type_compact_tuple(
 }
 
 fn check_tuple_types_compact_tuple_types(
-    db: &DbIndex,
+    context: &TypeCheckContext,
     source_start: usize,
     sources: &[LuaType],
     compacts: &[LuaType],
@@ -110,7 +113,7 @@ fn check_tuple_types_compact_tuple_types(
                         new_source_types.push(inner.clone());
                     }
                     return check_tuple_types_compact_tuple_types(
-                        db,
+                        context,
                         i,
                         &new_source_types,
                         &compacts[i..],
@@ -129,7 +132,7 @@ fn check_tuple_types_compact_tuple_types(
                         new_compact_types.push(compact_inner.clone());
                     }
                     return check_tuple_types_compact_tuple_types(
-                        db,
+                        context,
                         i,
                         &sources[i..],
                         &new_compact_types,
@@ -139,7 +142,7 @@ fn check_tuple_types_compact_tuple_types(
             }
             _ => {
                 match check_general_type_compact(
-                    db,
+                    context,
                     source_tuple_member_type,
                     compact_tuple_member_type,
                     check_guard.next_level()?,
@@ -151,12 +154,12 @@ fn check_tuple_types_compact_tuple_types(
                                 "tuple member %{idx} not match, expect %{typ}, but got %{got}",
                                 idx = i + source_start + 1,
                                 typ = humanize_type(
-                                    db,
+                                    context.db,
                                     source_tuple_member_type,
                                     RenderLevel::Simple
                                 ),
                                 got = humanize_type(
-                                    db,
+                                    context.db,
                                     compact_tuple_member_type,
                                     RenderLevel::Simple
                                 )
@@ -176,12 +179,12 @@ fn check_tuple_types_compact_tuple_types(
 }
 
 fn check_tuple_type_compact_table(
-    db: &DbIndex,
+    context: &TypeCheckContext,
     source_tuple: &LuaTupleType,
     table_owner: LuaMemberOwner,
     check_guard: TypeCheckGuard,
 ) -> TypeCheckResult {
-    let member_index = db.get_member_index();
+    let member_index = context.db.get_member_index();
     let tuple_members = source_tuple.get_types();
     let size = tuple_members.len();
     for i in 0..size {
@@ -189,10 +192,10 @@ fn check_tuple_type_compact_table(
         let key = LuaMemberKey::Integer((i + 1) as i64);
         if let Some(member_item) = member_index.get_member_item(&table_owner, &key) {
             let member_type = member_item
-                .resolve_type(db)
+                .resolve_type(context.db)
                 .map_err(|_| TypeCheckFailReason::TypeNotMatch)?;
             match check_general_type_compact(
-                db,
+                context,
                 source_tuple_member_type,
                 &member_type,
                 check_guard.next_level()?,
@@ -203,8 +206,12 @@ fn check_tuple_type_compact_table(
                         t!(
                             "tuple member %{idx} not match, expect %{typ}, but got %{got}",
                             idx = i + 1,
-                            typ = humanize_type(db, source_tuple_member_type, RenderLevel::Simple),
-                            got = humanize_type(db, &member_type, RenderLevel::Simple)
+                            typ = humanize_type(
+                                context.db,
+                                source_tuple_member_type,
+                                RenderLevel::Simple
+                            ),
+                            got = humanize_type(context.db, &member_type, RenderLevel::Simple)
                         )
                         .to_string(),
                     ));
@@ -226,7 +233,7 @@ fn check_tuple_type_compact_table(
 }
 
 fn check_tuple_type_compact_object_type(
-    db: &DbIndex,
+    context: &TypeCheckContext,
     source_tuple: &LuaTupleType,
     object_type: &LuaObjectType,
     check_guard: TypeCheckGuard,
@@ -240,7 +247,7 @@ fn check_tuple_type_compact_object_type(
         let key = LuaMemberKey::Integer((i + 1) as i64);
         if let Some(object_member_type) = object_members.get(&key) {
             match check_general_type_compact(
-                db,
+                context,
                 source_tuple_member_type,
                 object_member_type,
                 check_guard.next_level()?,
@@ -251,8 +258,13 @@ fn check_tuple_type_compact_object_type(
                         t!(
                             "tuple member %{idx} not match, expect %{typ}, but got %{got}",
                             idx = i + 1,
-                            typ = humanize_type(db, source_tuple_member_type, RenderLevel::Simple),
-                            got = humanize_type(db, object_member_type, RenderLevel::Simple)
+                            typ = humanize_type(
+                                context.db,
+                                source_tuple_member_type,
+                                RenderLevel::Simple
+                            ),
+                            got =
+                                humanize_type(context.db, object_member_type, RenderLevel::Simple)
                         )
                         .to_string(),
                     ));
@@ -272,16 +284,3 @@ fn check_tuple_type_compact_object_type(
 
     Ok(())
 }
-
-// #[derive(Debug)]
-// pub struct TypeListCheckErr(TypeCheckFailReason, usize);
-
-// pub fn check_type_list_compact(
-//     db: &DbIndex,
-//     source_types: &[LuaType],
-//     compact_types: &[LuaType],
-//     check_guard: TypeCheckGuard,
-// ) -> Result<(), TypeListCheckErr> {
-
-//     Ok(())
-// }

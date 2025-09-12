@@ -200,7 +200,7 @@ fn cast_type_check(
                 }
             }
 
-            semantic_model.type_check(target_type, origin_type)
+            semantic_model.type_check_detail(target_type, origin_type)
         }
     }
 }

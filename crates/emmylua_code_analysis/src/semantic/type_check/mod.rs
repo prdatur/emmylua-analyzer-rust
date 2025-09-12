@@ -5,6 +5,7 @@ mod ref_type;
 mod simple_type;
 mod sub_type;
 mod test;
+mod type_check_context;
 mod type_check_fail_reason;
 mod type_check_guard;
 
@@ -16,7 +17,10 @@ use simple_type::check_simple_type_compact;
 pub use type_check_fail_reason::TypeCheckFailReason;
 use type_check_guard::TypeCheckGuard;
 
-use crate::db_index::{DbIndex, LuaType};
+use crate::{
+    db_index::{DbIndex, LuaType},
+    semantic::type_check::type_check_context::TypeCheckContext,
+};
 pub use sub_type::is_sub_type_of;
 pub type TypeCheckResult = Result<(), TypeCheckFailReason>;
 
@@ -25,11 +29,23 @@ pub fn check_type_compact(
     source: &LuaType,
     compact_type: &LuaType,
 ) -> TypeCheckResult {
-    check_general_type_compact(db, source, compact_type, TypeCheckGuard::new())
+    let context = TypeCheckContext::new(db, false);
+    check_general_type_compact(&context, source, compact_type, TypeCheckGuard::new())
+}
+
+#[allow(unused)]
+pub fn check_type_compact_detail(
+    db: &DbIndex,
+    source: &LuaType,
+    compact_type: &LuaType,
+) -> TypeCheckResult {
+    let guard = TypeCheckGuard::new();
+    let context = TypeCheckContext::new(db, true);
+    check_general_type_compact(&context, source, compact_type, guard)
 }
 
 fn check_general_type_compact(
-    db: &DbIndex,
+    context: &TypeCheckContext,
     source: &LuaType,
     compact_type: &LuaType,
     check_guard: TypeCheckGuard,
@@ -38,8 +54,13 @@ fn check_general_type_compact(
         return Ok(());
     }
 
-    if let Some(origin_type) = escape_type(db, compact_type) {
-        return check_general_type_compact(db, source, &origin_type, check_guard.next_level()?);
+    if let Some(origin_type) = escape_type(&context.db, compact_type) {
+        return check_general_type_compact(
+            context,
+            source,
+            &origin_type,
+            check_guard.next_level()?,
+        );
     }
 
     match source {
@@ -69,24 +90,28 @@ fn check_general_type_compact(
         | LuaType::ConstTplRef(_)
         | LuaType::Namespace(_)
         | LuaType::Variadic(_)
-        | LuaType::Language(_) => check_simple_type_compact(db, source, compact_type, check_guard),
+        | LuaType::Language(_) => {
+            check_simple_type_compact(context, source, compact_type, check_guard)
+        }
 
         // type ref
         LuaType::Ref(type_decl_id) => {
-            check_ref_type_compact(db, type_decl_id, compact_type, check_guard)
+            check_ref_type_compact(context, type_decl_id, compact_type, check_guard)
         }
         LuaType::Def(type_decl_id) => {
-            check_ref_type_compact(db, type_decl_id, compact_type, check_guard)
+            check_ref_type_compact(context, type_decl_id, compact_type, check_guard)
         }
         // invaliad source type
         // LuaType::Module(arc_intern) => todo!(),
 
         // function type
         LuaType::DocFunction(doc_func) => {
-            check_doc_func_type_compact(db, doc_func, compact_type, check_guard)
+            check_doc_func_type_compact(context, doc_func, compact_type, check_guard)
         }
         // signature type
-        LuaType::Signature(sig_id) => check_sig_type_compact(db, sig_id, compact_type, check_guard),
+        LuaType::Signature(sig_id) => {
+            check_sig_type_compact(context, sig_id, compact_type, check_guard)
+        }
 
         // complex type
         LuaType::Array(_)
@@ -96,7 +121,7 @@ fn check_general_type_compact(
         | LuaType::Intersection(_)
         | LuaType::TableGeneric(_)
         | LuaType::MultiLineUnion(_) => {
-            check_complex_type_compact(db, source, compact_type, check_guard)
+            check_complex_type_compact(context, source, compact_type, check_guard)
         }
 
         // need think how to do that
@@ -104,12 +129,12 @@ fn check_general_type_compact(
 
         // generic type
         LuaType::Generic(generic) => {
-            check_generic_type_compact(db, generic, compact_type, check_guard)
+            check_generic_type_compact(context, generic, compact_type, check_guard)
         }
         // invalid source type
         // LuaType::MemberPathExist(_) |
         LuaType::Instance(instantiate) => check_general_type_compact(
-            db,
+            context,
             instantiate.get_base(),
             compact_type,
             check_guard.next_level()?,
@@ -127,7 +152,11 @@ fn check_general_type_compact(
 fn is_like_any(ty: &LuaType) -> bool {
     matches!(
         ty,
-        LuaType::Any | LuaType::Unknown | LuaType::TplRef(_) | LuaType::StrTplRef(_)
+        LuaType::Any
+            | LuaType::Unknown
+            | LuaType::TplRef(_)
+            | LuaType::StrTplRef(_)
+            | LuaType::ConstTplRef(_)
     )
 }
 

@@ -391,7 +391,7 @@ fn check_assign_type_mismatch(
         _ => {}
     }
 
-    let result = semantic_model.type_check(&source_type, &value_type);
+    let result = semantic_model.type_check_detail(&source_type, &value_type);
     if !result.is_ok() {
         add_type_check_diagnostic(
             context,

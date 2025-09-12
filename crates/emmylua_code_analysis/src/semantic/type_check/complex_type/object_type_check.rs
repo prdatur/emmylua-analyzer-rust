@@ -1,11 +1,14 @@
 use crate::{
-    DbIndex, LuaMemberKey, LuaMemberOwner, LuaObjectType, LuaTupleType, LuaType, RenderLevel,
+    LuaMemberKey, LuaMemberOwner, LuaObjectType, LuaTupleType, LuaType, RenderLevel,
     TypeCheckFailReason, TypeCheckResult, humanize_type,
-    semantic::type_check::{check_general_type_compact, type_check_guard::TypeCheckGuard},
+    semantic::type_check::{
+        check_general_type_compact, type_check_context::TypeCheckContext,
+        type_check_guard::TypeCheckGuard,
+    },
 };
 
 pub fn check_object_type_compact(
-    db: &DbIndex,
+    context: &TypeCheckContext,
     source_object: &LuaObjectType,
     compact_type: &LuaType,
     check_guard: TypeCheckGuard,
@@ -13,7 +16,7 @@ pub fn check_object_type_compact(
     match compact_type {
         LuaType::Object(compact_object) => {
             return check_object_type_compact_object_type(
-                db,
+                context,
                 source_object,
                 compact_object,
                 check_guard.next_level()?,
@@ -22,7 +25,7 @@ pub fn check_object_type_compact(
         LuaType::TableConst(inst) => {
             let table_member_owner = LuaMemberOwner::Element(inst.clone());
             return check_object_type_compact_member_owner(
-                db,
+                context,
                 source_object,
                 table_member_owner,
                 check_guard.next_level()?,
@@ -31,7 +34,7 @@ pub fn check_object_type_compact(
         LuaType::Ref(type_id) => {
             let member_owner = LuaMemberOwner::Type(type_id.clone());
             return check_object_type_compact_member_owner(
-                db,
+                context,
                 source_object,
                 member_owner,
                 check_guard.next_level()?,
@@ -39,7 +42,7 @@ pub fn check_object_type_compact(
         }
         LuaType::Tuple(compact_tuple) => {
             return check_object_type_compact_tuple(
-                db,
+                context,
                 source_object,
                 compact_tuple,
                 check_guard.next_level()?,
@@ -47,7 +50,7 @@ pub fn check_object_type_compact(
         }
         LuaType::Array(array_type) => {
             return check_object_type_compact_array(
-                db,
+                context,
                 source_object,
                 array_type.get_base(),
                 check_guard.next_level()?,
@@ -61,7 +64,7 @@ pub fn check_object_type_compact(
 }
 
 fn check_object_type_compact_object_type(
-    db: &DbIndex,
+    context: &TypeCheckContext,
     source_object: &LuaObjectType,
     compact_object: &LuaObjectType,
     check_guard: TypeCheckGuard,
@@ -80,19 +83,24 @@ fn check_object_type_compact_object_type(
                 }
             }
         };
-        check_general_type_compact(db, source_type, compact_type, check_guard.next_level()?)?;
+        check_general_type_compact(
+            context,
+            source_type,
+            compact_type,
+            check_guard.next_level()?,
+        )?;
     }
 
     Ok(())
 }
 
 fn check_object_type_compact_member_owner(
-    db: &DbIndex,
+    context: &TypeCheckContext,
     source_object: &LuaObjectType,
     member_owner: LuaMemberOwner,
     check_guard: TypeCheckGuard,
 ) -> TypeCheckResult {
-    let member_index = db.get_member_index();
+    let member_index = context.db.get_member_index();
 
     for (key, source_type) in source_object.get_fields() {
         let member_item = match member_index.get_member_item(&member_owner, key) {
@@ -107,22 +115,27 @@ fn check_object_type_compact_member_owner(
                 }
             }
         };
-        let member_type = match member_item.resolve_type(db) {
+        let member_type = match member_item.resolve_type(context.db) {
             Ok(t) => t,
             _ => {
                 continue;
             }
         };
 
-        match check_general_type_compact(db, source_type, &member_type, check_guard.next_level()?) {
+        match check_general_type_compact(
+            context,
+            source_type,
+            &member_type,
+            check_guard.next_level()?,
+        ) {
             Ok(_) => {}
             Err(TypeCheckFailReason::TypeNotMatch) => {
                 return Err(TypeCheckFailReason::TypeNotMatchWithReason(
                     t!(
                         "member %{key} not match, expect %{typ}, but got %{got}",
                         key = key.to_path().to_string(),
-                        typ = humanize_type(db, source_type, RenderLevel::Simple),
-                        got = humanize_type(db, &member_type, RenderLevel::Simple)
+                        typ = humanize_type(context.db, source_type, RenderLevel::Simple),
+                        got = humanize_type(context.db, &member_type, RenderLevel::Simple)
                     )
                     .to_string(),
                 ));
@@ -137,7 +150,7 @@ fn check_object_type_compact_member_owner(
 }
 
 fn check_object_type_compact_tuple(
-    db: &DbIndex,
+    context: &TypeCheckContext,
     source_object: &LuaObjectType,
     tuple_type: &LuaTupleType,
     check_guard: TypeCheckGuard,
@@ -172,7 +185,7 @@ fn check_object_type_compact_tuple(
         };
 
         check_general_type_compact(
-            db,
+            context,
             source_type,
             tuple_member_type,
             check_guard.next_level()?,
@@ -183,7 +196,7 @@ fn check_object_type_compact_tuple(
 }
 
 fn check_object_type_compact_array(
-    db: &DbIndex,
+    context: &TypeCheckContext,
     source_object: &LuaObjectType,
     array: &LuaType,
     check_guard: TypeCheckGuard,
@@ -196,7 +209,7 @@ fn check_object_type_compact_array(
         if !key.is_integer() {
             continue;
         }
-        match check_general_type_compact(db, source_type, array, check_guard.next_level()?) {
+        match check_general_type_compact(context, source_type, array, check_guard.next_level()?) {
             Ok(_) => {
                 return Ok(());
             }
