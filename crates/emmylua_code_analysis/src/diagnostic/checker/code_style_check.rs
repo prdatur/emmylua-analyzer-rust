@@ -14,7 +14,7 @@ impl Checker for CodeStyleCheckChecker {
         let document = semantic_model.get_document();
         let file_path = document.get_file_path();
         let text = document.get_text();
-        let result = check_code_style(&file_path.to_string_lossy().to_string(), text);
+        let result = check_code_style(file_path.to_string_lossy().as_ref(), text);
         for diagnostic in result {
             let (Some(start), Some(end)) = (
                 document.get_offset(

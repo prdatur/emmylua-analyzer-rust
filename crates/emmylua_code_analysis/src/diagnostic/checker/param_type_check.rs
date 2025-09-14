@@ -21,11 +21,8 @@ impl Checker for ParamTypeCheckChecker {
     fn check(context: &mut DiagnosticContext, semantic_model: &SemanticModel) {
         let root = semantic_model.get_root().clone();
         for node in root.descendants::<LuaAst>() {
-            match node {
-                LuaAst::LuaCallExpr(call_expr) => {
-                    check_call_expr(context, semantic_model, call_expr);
-                }
-                _ => {}
+            if let LuaAst::LuaCallExpr(call_expr) = node {
+                check_call_expr(context, semantic_model, call_expr);
             }
         }
     }
@@ -82,13 +79,14 @@ fn check_call_expr(
             let arg_type = arg_types.get(idx).unwrap_or(&LuaType::Any);
             let mut check_type = param_type.clone();
             // 对于第一个参数, 他有可能是`:`调用, 所以需要特殊处理
-            if idx == 0 && param_type.is_self_infer() {
-                if let Some(result) = get_call_source_type(semantic_model, &call_expr) {
-                    check_type = result;
-                }
+            if idx == 0
+                && param_type.is_self_infer()
+                && let Some(result) = get_call_source_type(semantic_model, &call_expr)
+            {
+                check_type = result;
             }
             let result = semantic_model.type_check_detail(&check_type, arg_type);
-            if !result.is_ok() {
+            if result.is_err() {
                 // 这里执行了`AssignTypeMismatch`的检查
                 if arg_type.is_table() {
                     let arg_expr_idx = match (colon_call, colon_define) {
@@ -102,19 +100,18 @@ fn check_call_expr(
                         _ => idx,
                     };
 
-                    if let Some(arg_expr) = arg_exprs.get(arg_expr_idx) {
-                        // 表字段已经报错了, 则不添加参数不匹配的诊断避免干扰
-                        if let Some(add_diagnostic) = check_table_expr(
+                    // 表字段已经报错了, 则不添加参数不匹配的诊断避免干扰
+                    if let Some(arg_expr) = arg_exprs.get(arg_expr_idx)
+                        && let Some(add_diagnostic) = check_table_expr(
                             context,
                             semantic_model,
                             arg_expr,
                             Some(&param_type),
                             Some(arg_type),
-                        ) {
-                            if add_diagnostic {
-                                continue;
-                            }
-                        }
+                        )
+                        && add_diagnostic
+                    {
+                        continue;
                     }
                 }
 
@@ -142,7 +139,7 @@ fn check_variadic_param_match_args(
 ) {
     for (arg_type, arg_range) in arg_types.iter().zip(arg_ranges.iter()) {
         let result = semantic_model.type_check_detail(variadic_type, arg_type);
-        if !result.is_ok() {
+        if result.is_err() {
             try_add_diagnostic(
                 context,
                 semantic_model,
@@ -163,13 +160,10 @@ fn try_add_diagnostic(
     expr_type: &LuaType,
     result: TypeCheckResult,
 ) {
-    match (param_type, expr_type) {
-        (LuaType::Integer, LuaType::FloatConst(f)) => {
-            if f.fract() == 0.0 {
-                return;
-            }
-        }
-        _ => {}
+    if let (LuaType::Integer, LuaType::FloatConst(f)) = (param_type, expr_type)
+        && f.fract() == 0.0
+    {
+        return;
     }
 
     add_type_check_diagnostic(
@@ -192,7 +186,7 @@ fn add_type_check_diagnostic(
 ) {
     let db = semantic_model.get_db();
     match result {
-        Ok(_) => return,
+        Ok(_) => (),
         Err(reason) => {
             let reason_message = match reason {
                 TypeCheckFailReason::TypeNotMatchWithReason(reason) => reason,
@@ -206,8 +200,8 @@ fn add_type_check_diagnostic(
                 range,
                 t!(
                     "expected `%{source}` but found `%{found}`. %{reason}",
-                    source = humanize_type(db, &param_type, RenderLevel::Simple),
-                    found = humanize_type(db, &expr_type, RenderLevel::Simple),
+                    source = humanize_type(db, param_type, RenderLevel::Simple),
+                    found = humanize_type(db, expr_type, RenderLevel::Simple),
                     reason = reason_message
                 )
                 .to_string(),
@@ -228,24 +222,23 @@ pub fn get_call_source_type(
                 SemanticDeclLevel::default(),
             )?;
 
-            if let LuaSemanticDeclId::Member(member_id) = decl {
-                if let Some(LuaSemanticDeclId::Member(member_id)) =
+            if let LuaSemanticDeclId::Member(member_id) = decl
+                && let Some(LuaSemanticDeclId::Member(member_id)) =
                     semantic_model.get_member_origin_owner(member_id)
-                {
-                    let root = semantic_model
-                        .get_db()
-                        .get_vfs()
-                        .get_syntax_tree(&member_id.file_id)?
-                        .get_red_root();
-                    let cur_node = member_id.get_syntax_id().to_node_from_root(&root)?;
-                    let index_expr = LuaIndexExpr::cast(cur_node)?;
+            {
+                let root = semantic_model
+                    .get_db()
+                    .get_vfs()
+                    .get_syntax_tree(&member_id.file_id)?
+                    .get_red_root();
+                let cur_node = member_id.get_syntax_id().to_node_from_root(&root)?;
+                let index_expr = LuaIndexExpr::cast(cur_node)?;
 
-                    return index_expr.get_prefix_expr().map(|prefix_expr| {
-                        semantic_model
-                            .infer_expr(prefix_expr.clone())
-                            .unwrap_or(LuaType::SelfInfer)
-                    });
-                }
+                return index_expr.get_prefix_expr().map(|prefix_expr| {
+                    semantic_model
+                        .infer_expr(prefix_expr.clone())
+                        .unwrap_or(LuaType::SelfInfer)
+                });
             }
 
             return if let Some(prefix_expr) = index_expr.get_prefix_expr() {

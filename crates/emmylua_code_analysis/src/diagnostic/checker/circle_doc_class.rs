@@ -50,23 +50,20 @@ fn check_doc_tag_class(
         let super_types = type_index.get_super_types(&current_id);
         if let Some(super_types) = super_types {
             for super_type in super_types {
-                match &super_type {
-                    LuaType::Ref(super_type_id) => {
-                        if super_type_id.get_name() == name {
-                            context.add_diagnostic(
-                                DiagnosticCode::CircleDocClass,
-                                get_lint_range(tag).unwrap_or(tag.get_range()),
-                                t!("Circularly inherited classes.").to_string(),
-                                None,
-                            );
-                            return Some(());
-                        }
-
-                        if !visited.contains(super_type_id) {
-                            queue.push(super_type_id.clone());
-                        }
+                if let LuaType::Ref(super_type_id) = &super_type {
+                    if super_type_id.get_name() == name {
+                        context.add_diagnostic(
+                            DiagnosticCode::CircleDocClass,
+                            get_lint_range(tag).unwrap_or(tag.get_range()),
+                            t!("Circularly inherited classes.").to_string(),
+                            None,
+                        );
+                        return Some(());
                     }
-                    _ => {}
+
+                    if !visited.contains(super_type_id) {
+                        queue.push(super_type_id.clone());
+                    }
                 }
             }
         }

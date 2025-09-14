@@ -31,15 +31,15 @@ fn check_tag(
     tag_other: &LuaDocTagOther,
     known_tags: &HashSet<&str>,
 ) -> Option<()> {
-    if let Some(token) = tag_other.token_by_kind(LuaTokenKind::TkTagOther) {
-        if !known_tags.contains(token.get_text()) {
-            context.add_diagnostic(
-                DiagnosticCode::UnknownDocTag,
-                token.get_range(),
-                t!("Unknown doc tag: `%{name}`", name = token.get_text()).to_string(),
-                Some(Value::String(token.get_text().to_string())),
-            );
-        }
+    if let Some(token) = tag_other.token_by_kind(LuaTokenKind::TkTagOther)
+        && !known_tags.contains(token.get_text())
+    {
+        context.add_diagnostic(
+            DiagnosticCode::UnknownDocTag,
+            token.get_range(),
+            t!("Unknown doc tag: `%{name}`", name = token.get_text()).to_string(),
+            Some(Value::String(token.get_text().to_string())),
+        );
     }
     Some(())
 }

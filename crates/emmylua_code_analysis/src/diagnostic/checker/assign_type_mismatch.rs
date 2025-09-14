@@ -49,7 +49,7 @@ fn check_assign_stat(
                     context,
                     semantic_model,
                     index_expr,
-                    exprs.get(idx).map(|expr| expr.clone()),
+                    exprs.get(idx).cloned(),
                     value_types.get(idx)?.0.clone(),
                 );
             }
@@ -58,7 +58,7 @@ fn check_assign_stat(
                     context,
                     semantic_model,
                     name_expr,
-                    exprs.get(idx).map(|expr| expr.clone()),
+                    exprs.get(idx).cloned(),
                     value_types.get(idx)?.0.clone(),
                 );
             }
@@ -191,11 +191,11 @@ fn check_local_stat(
             &value_type,
             false,
         );
-        if let Some(expr) = value_exprs.get(idx).map(|expr| expr) {
+        if let Some(expr) = value_exprs.get(idx) {
             check_table_expr(
                 context,
                 semantic_model,
-                &expr,
+                expr,
                 Some(&var_type),
                 Some(&value_type),
             );
@@ -253,23 +253,21 @@ fn check_table_expr_content(
             .unwrap_or(LuaType::Any);
 
         // 位于的最后的 TableFieldValue 允许接受函数调用返回的多值, 而且返回的值必然会从下标 1 开始覆盖掉所有索引字段.
-        if field.is_value_field() && idx == fields.len() - 1 {
-            match &expr_type {
-                LuaType::Variadic(variadic) => {
-                    if let Some(result) = check_table_last_variadic_type(
-                        context,
-                        semantic_model,
-                        table_type,
-                        idx,
-                        &variadic,
-                        field.get_range(),
-                    ) {
-                        has_diagnostic = has_diagnostic || result;
-                    }
-                    continue;
-                }
-                _ => {}
+        if field.is_value_field()
+            && idx == fields.len() - 1
+            && let LuaType::Variadic(variadic) = &expr_type
+        {
+            if let Some(result) = check_table_last_variadic_type(
+                context,
+                semantic_model,
+                table_type,
+                idx,
+                variadic,
+                field.get_range(),
+            ) {
+                has_diagnostic = has_diagnostic || result;
             }
+            continue;
         }
 
         let Some(field_key) = field.get_field_key() else {
@@ -278,29 +276,26 @@ fn check_table_expr_content(
         let Some(member_key) = semantic_model.get_member_key(&field_key) else {
             continue;
         };
-        let source_type = match semantic_model.infer_member_type(&table_type, &member_key) {
+        let source_type = match semantic_model.infer_member_type(table_type, &member_key) {
             Ok(typ) => typ,
             Err(_) => {
                 continue;
             }
         };
 
-        if source_type.is_table() || source_type.is_custom_type() {
-            if let Some(table_expr) = LuaTableExpr::cast(value_expr.syntax().clone()) {
-                // 检查子表
-                if let Some(result) =
-                    check_table_expr_content(context, semantic_model, &source_type, &table_expr)
-                {
-                    has_diagnostic = has_diagnostic || result;
-                }
-                continue;
+        if (source_type.is_table() || source_type.is_custom_type())
+            && let Some(table_expr) = LuaTableExpr::cast(value_expr.syntax().clone())
+        {
+            // 检查子表
+            if let Some(result) =
+                check_table_expr_content(context, semantic_model, &source_type, &table_expr)
+            {
+                has_diagnostic = has_diagnostic || result;
             }
+            continue;
         }
 
-        let allow_nil = match table_type {
-            LuaType::Array(_) => true,
-            _ => false,
-        };
+        let allow_nil = matches!(table_type, LuaType::Array(_));
 
         if let Some(result) = check_assign_type_mismatch(
             context,
@@ -329,7 +324,7 @@ fn check_table_last_variadic_type(
     for offset in idx..(idx + 10) {
         let member_key = LuaMemberKey::Integer((idx + offset) as i64 + 1);
         let source_type = semantic_model
-            .infer_member_type(&table_type, &member_key)
+            .infer_member_type(table_type, &member_key)
             .ok()?;
         match source_type {
             LuaType::Variadic(source_variadic) => {
@@ -343,12 +338,11 @@ fn check_table_last_variadic_type(
                     semantic_model,
                     range,
                     Some(&source_type),
-                    &expr_type,
+                    expr_type,
                     false,
-                ) {
-                    if result {
-                        return Some(true);
-                    }
+                ) && result
+                {
+                    return Some(true);
                 }
             }
         }
@@ -391,14 +385,14 @@ fn check_assign_type_mismatch(
         _ => {}
     }
 
-    let result = semantic_model.type_check_detail(&source_type, &value_type);
-    if !result.is_ok() {
+    let result = semantic_model.type_check_detail(source_type, value_type);
+    if result.is_err() {
         add_type_check_diagnostic(
             context,
             semantic_model,
             range,
-            &source_type,
-            &value_type,
+            source_type,
+            value_type,
             result,
         );
         return Some(true);
@@ -416,7 +410,7 @@ fn add_type_check_diagnostic(
 ) {
     let db = semantic_model.get_db();
     match result {
-        Ok(_) => return,
+        Ok(_) => (),
         Err(reason) => {
             let reason_message = match reason {
                 TypeCheckFailReason::TypeNotMatchWithReason(reason) => reason,
@@ -429,8 +423,8 @@ fn add_type_check_diagnostic(
                 range,
                 t!(
                     "Cannot assign `%{value}` to `%{source}`. %{reason}",
-                    value = humanize_lint_type(db, &value_type),
-                    source = humanize_lint_type(db, &source_type),
+                    value = humanize_lint_type(db, value_type),
+                    source = humanize_lint_type(db, source_type),
                     reason = reason_message
                 )
                 .to_string(),

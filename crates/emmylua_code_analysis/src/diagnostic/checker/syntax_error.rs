@@ -92,7 +92,7 @@ fn check_normal_string_error(string_token: &LuaSyntaxToken) -> Result<(), String
                             // Hexadecimal escape sequence
                             let hex = chars.by_ref().take(2).collect::<String>();
                             if hex.len() == 2 && hex.chars().all(|c| c.is_ascii_hexdigit()) {
-                                if let Err(_) = u8::from_str_radix(&hex, 16) {
+                                if u8::from_str_radix(&hex, 16).is_err() {
                                     return Err(t!(
                                         "Invalid hex escape sequence '\\x%{hex}'",
                                         hex = hex
@@ -112,14 +112,14 @@ fn check_normal_string_error(string_token: &LuaSyntaxToken) -> Result<(), String
                             if let Some('{') = chars.next() {
                                 let unicode_hex =
                                     chars.by_ref().take_while(|c| *c != '}').collect::<String>();
-                                if let Ok(code_point) = u32::from_str_radix(&unicode_hex, 16) {
-                                    if std::char::from_u32(code_point).is_none() {
-                                        return Err(t!(
-                                                "Invalid unicode escape sequence '\\u{{%{unicode_hex}}}'",
-                                                unicode_hex = unicode_hex
-                                            ).to_string(),
-                                        );
-                                    }
+                                if let Ok(code_point) = u32::from_str_radix(&unicode_hex, 16)
+                                    && std::char::from_u32(code_point).is_none()
+                                {
+                                    return Err(t!(
+                                        "Invalid unicode escape sequence '\\u{{%{unicode_hex}}}'",
+                                        unicode_hex = unicode_hex
+                                    )
+                                    .to_string());
                                 }
                             }
                         }
@@ -127,7 +127,7 @@ fn check_normal_string_error(string_token: &LuaSyntaxToken) -> Result<(), String
                             // Decimal escape sequence
                             for _ in 0..2 {
                                 if let Some(digit) = chars.peek() {
-                                    if !digit.is_digit(10) {
+                                    if !digit.is_ascii_digit() {
                                         break;
                                     }
                                     chars.next();

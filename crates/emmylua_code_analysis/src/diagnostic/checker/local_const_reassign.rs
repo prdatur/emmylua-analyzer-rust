@@ -20,15 +20,12 @@ impl Checker for LocalConstReassignChecker {
             return;
         };
         for (decl_id, decl) in decl_tree.get_decls() {
-            match &decl.extra {
-                LuaDeclExtra::Local { attrib, .. } => {
-                    if let Some(attrib) = attrib {
-                        if matches!(attrib, LocalAttribute::Const | LocalAttribute::IterConst) {
-                            check_local_const_reassign(context, semantic_model, decl_id, &attrib);
-                        }
-                    }
-                }
-                _ => {}
+            if let LuaDeclExtra::Local {
+                attrib: Some(attrib @ (LocalAttribute::Const | LocalAttribute::IterConst)),
+                ..
+            } = &decl.extra
+            {
+                check_local_const_reassign(context, semantic_model, decl_id, attrib);
             }
         }
     }
@@ -50,7 +47,7 @@ fn check_local_const_reassign(
                 LocalAttribute::Const => {
                     context.add_diagnostic(
                         DiagnosticCode::LocalConstReassign,
-                        decl_ref.range.clone(),
+                        decl_ref.range,
                         t!("Cannot reassign to a constant variable").to_string(),
                         None,
                     );
@@ -58,7 +55,7 @@ fn check_local_const_reassign(
                 LocalAttribute::IterConst => {
                     context.add_diagnostic(
                         DiagnosticCode::IterVariableReassign,
-                        decl_ref.range.clone(),
+                        decl_ref.range,
                         t!("Should not reassign to iter variable").to_string(),
                         None,
                     );

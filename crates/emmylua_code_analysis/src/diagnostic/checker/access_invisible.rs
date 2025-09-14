@@ -40,16 +40,16 @@ fn check_name_expr(
     )?;
 
     let decl_id = LuaDeclId::new(semantic_model.get_file_id(), name_expr.get_position());
-    if let LuaSemanticDeclId::LuaDecl(id) = &semantic_decl {
-        if *id == decl_id {
-            return Some(());
-        }
+    if let LuaSemanticDeclId::LuaDecl(id) = &semantic_decl
+        && *id == decl_id
+    {
+        return Some(());
     }
 
     let name_token = name_expr.get_name_token()?;
     if !semantic_model.is_semantic_visible(name_token.syntax().clone(), semantic_decl.clone()) {
         let emmyrc = semantic_model.get_emmyrc();
-        report_reason(context, &emmyrc, name_token.get_range(), semantic_decl);
+        report_reason(context, emmyrc, name_token.get_range(), semantic_decl);
     }
     Some(())
 }
@@ -64,16 +64,16 @@ fn check_index_expr(
         SemanticDeclLevel::default(),
     )?;
     let member_id = LuaMemberId::new(index_expr.get_syntax_id(), semantic_model.get_file_id());
-    if let LuaSemanticDeclId::Member(id) = &semantic_decl {
-        if *id == member_id {
-            return Some(());
-        }
+    if let LuaSemanticDeclId::Member(id) = &semantic_decl
+        && *id == member_id
+    {
+        return Some(());
     }
 
     let index_token = index_expr.get_index_name_token()?;
     if !semantic_model.is_semantic_visible(index_token.clone(), semantic_decl.clone()) {
         let emmyrc = semantic_model.get_emmyrc();
-        report_reason(context, &emmyrc, index_token.text_range(), semantic_decl);
+        report_reason(context, emmyrc, index_token.text_range(), semantic_decl);
     }
 
     Some(())

@@ -55,15 +55,15 @@ fn check_unbalanced_assignment(
         None => return Some(()),
     };
 
-    if check_last_expr(semantic_model, &last_value_expr).unwrap_or(false) {
+    if check_last_expr(semantic_model, last_value_expr).unwrap_or(false) {
         return Some(());
     }
 
     let value_types = semantic_model.infer_expr_list_types(value_exprs, Some(vars.len()));
-    if let Some(last_type) = value_types.last() {
-        if check_last(&last_type.0) {
-            return Some(());
-        }
+    if let Some(last_type) = value_types.last()
+        && check_last(&last_type.0)
+    {
+        return Some(());
     }
 
     let value_len = value_types.len();
@@ -85,7 +85,7 @@ fn check_unbalanced_assignment(
 
 fn check_last(last_type: &LuaType) -> bool {
     match last_type {
-        LuaType::Instance(instance) => check_last(&instance.get_base()),
+        LuaType::Instance(instance) => check_last(instance.get_base()),
         _ => false,
     }
 }
@@ -95,7 +95,7 @@ fn check_last_expr(semantic_model: &SemanticModel, last_expr: &LuaExpr) -> Optio
     match last_expr {
         // TODO: 为 signature 建立独立规则
         LuaExpr::CallExpr(call_expr) => {
-            return Some(true);
+            Some(true)
             // 目前仅允许 pcall 和 xpcall 禁用检查, 或许我们应该禁用所有函数调用的检查?
             // let decl_id = semantic_model.find_decl(
             //     call_expr.get_prefix_expr()?.syntax().clone().into(),

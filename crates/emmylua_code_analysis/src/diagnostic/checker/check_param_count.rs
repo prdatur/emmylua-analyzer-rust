@@ -43,7 +43,7 @@ fn check_closure_expr(
         .get_signature_index()
         .get(&LuaSignatureId::from_closure(
             semantic_model.get_file_id(),
-            &closure_expr,
+            closure_expr,
         ))?;
 
     let source_typ = semantic_model.infer_bind_value_type(closure_expr.clone().into())?;
@@ -54,7 +54,7 @@ fn check_closure_expr(
             get_params_len(params)
         }
         LuaType::Signature(signature_id) => {
-            let signature = context.db.get_signature_index().get(&signature_id)?;
+            let signature = context.db.get_signature_index().get(signature_id)?;
             let params = signature.get_type_params();
             get_params_len(&params)
         }
@@ -113,27 +113,25 @@ fn check_call_expr(
     if call_args_count < fake_params.len() {
         // 调用参数包含 `...`
         for arg in call_args.iter() {
-            if let LuaExpr::LiteralExpr(literal_expr) = arg {
-                if let Some(literal_token) = literal_expr.get_literal() {
-                    if let LuaLiteralToken::Dots(_) = literal_token {
-                        return Some(());
-                    }
-                }
+            if let LuaExpr::LiteralExpr(literal_expr) = arg
+                && let Some(LuaLiteralToken::Dots(_)) = literal_expr.get_literal()
+            {
+                return Some(());
             }
         }
         // 对调用参数的最后一个参数进行特殊处理
-        if let Some(last_arg) = call_args.last() {
-            if let Ok(LuaType::Variadic(variadic)) = semantic_model.infer_expr(last_arg.clone()) {
-                let len = match variadic.get_max_len() {
-                    Some(len) => len,
-                    None => {
-                        return Some(());
-                    }
-                };
-                call_args_count = call_args_count + len as usize - 1;
-                if call_args_count >= fake_params.len() {
+        if let Some(last_arg) = call_args.last()
+            && let Ok(LuaType::Variadic(variadic)) = semantic_model.infer_expr(last_arg.clone())
+        {
+            let len = match variadic.get_max_len() {
+                Some(len) => len,
+                None => {
                     return Some(());
                 }
+            };
+            call_args_count = call_args_count + len - 1;
+            if call_args_count >= fake_params.len() {
+                return Some(());
             }
         }
 
@@ -146,11 +144,10 @@ fn check_call_expr(
             }
 
             let typ = param_info.1.clone();
-            if let Some(typ) = typ {
-                if !is_nullable(context.db, &typ) {
-                    miss_parameter_info
-                        .push(t!("missing parameter: %{name}", name = param_info.0,));
-                }
+            if let Some(typ) = typ
+                && !is_nullable(context.db, &typ)
+            {
+                miss_parameter_info.push(t!("missing parameter: %{name}", name = param_info.0,));
             }
         }
 
@@ -176,13 +173,8 @@ fn check_call_expr(
     // Check for redundant parameters
     else if call_args_count > fake_params.len() {
         // 参数定义中最后一个参数是 `...`
-        if fake_params.last().map_or(false, |(name, typ)| {
-            name == "..."
-                || if let Some(typ) = typ {
-                    typ.is_variadic()
-                } else {
-                    false
-                }
+        if fake_params.last().is_some_and(|(name, typ)| {
+            name == "..." || typ.as_ref().is_some_and(|typ| typ.is_variadic())
         }) {
             return Some(());
         }
@@ -219,13 +211,8 @@ fn check_call_expr(
 fn get_params_len(params: &[(String, Option<LuaType>)]) -> Option<usize> {
     if let Some((name, typ)) = params.last() {
         // 如果最后一个参数是可变参数, 则直接返回, 不需要检查
-        if name == "..." {
+        if name == "..." || typ.as_ref().is_some_and(|typ| typ.is_variadic()) {
             return None;
-        }
-        if let Some(typ) = typ {
-            if typ.is_variadic() {
-                return None;
-            }
         }
     }
     Some(params.len())
@@ -243,12 +230,11 @@ fn is_nullable(db: &DbIndex, typ: &LuaType) -> bool {
         match typ {
             LuaType::Any | LuaType::Unknown | LuaType::Nil => return true,
             LuaType::Ref(decl_id) => {
-                if let Some(decl) = db.get_type_index().get_type_decl(&decl_id) {
-                    if decl.is_alias() {
-                        if let Some(alias_origin) = decl.get_alias_ref() {
-                            stack.push(alias_origin.clone());
-                        }
-                    }
+                if let Some(decl) = db.get_type_index().get_type_decl(&decl_id)
+                    && decl.is_alias()
+                    && let Some(alias_origin) = decl.get_alias_ref()
+                {
+                    stack.push(alias_origin.clone());
                 }
             }
             LuaType::Union(u) => {

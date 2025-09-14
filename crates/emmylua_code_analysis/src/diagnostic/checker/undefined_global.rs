@@ -29,9 +29,9 @@ fn calc_name_expr_ref(
     let file_id = semantic_model.get_file_id();
     let db = semantic_model.get_db();
     let refs_index = db.get_reference_index().get_local_reference(&file_id)?;
-    for (_, decl_refs) in refs_index.get_decl_references_map() {
+    for decl_refs in refs_index.get_decl_references_map().values() {
         for decl_ref in &decl_refs.cells {
-            use_range_set.insert(decl_ref.range.clone());
+            use_range_set.insert(decl_ref.range);
         }
     }
 
@@ -79,10 +79,8 @@ fn check_name_expr(
         return Some(());
     }
 
-    if name_text == "self" {
-        if check_self_name(semantic_model, name_expr).is_some() {
-            return Some(());
-        }
+    if name_text == "self" && check_self_name(semantic_model, name_expr).is_some() {
+        return Some(());
     }
 
     context.add_diagnostic(

@@ -30,13 +30,7 @@ impl Checker for RedefinedLocalChecker {
         let mut diagnostics = HashSet::new();
         let mut root_locals = HashMap::new();
 
-        check_scope_for_redefined_locals(
-            context,
-            &decl_tree,
-            root_scope,
-            &mut root_locals,
-            &mut diagnostics,
-        );
+        check_scope_for_redefined_locals(decl_tree, root_scope, &mut root_locals, &mut diagnostics);
 
         // 添加诊断信息
         for decl_id in diagnostics {
@@ -53,7 +47,6 @@ impl Checker for RedefinedLocalChecker {
 }
 
 fn check_scope_for_redefined_locals(
-    context: &mut DiagnosticContext,
     decl_tree: &LuaDeclarationTree,
     scope: &LuaScope,
     parent_locals: &mut HashMap<String, LuaDeclId>,
@@ -65,42 +58,39 @@ fn check_scope_for_redefined_locals(
 
     // 检查当前作用域中的声明
     for child in scope.get_children() {
-        if let ScopeOrDeclId::Decl(decl_id) = child {
-            if let Some(decl) = decl_tree.get_decl(decl_id) {
-                let name = decl.get_name().to_string();
-                if decl.is_local() && name != "..." && !name.starts_with("_") {
-                    if current_locals.contains_key(&name) {
-                        let old_decl = current_locals
-                            .get(&name)
-                            .and_then(|id| decl_tree.get_decl(id));
-                        if var_name_not_conflicts_with_function_param_name(&decl, old_decl)
-                            .is_some()
-                        {
-                            continue;
-                        }
-
-                        // 发现重定义，记录诊断
-                        diagnostics.insert(*decl_id);
+        if let ScopeOrDeclId::Decl(decl_id) = child
+            && let Some(decl) = decl_tree.get_decl(decl_id)
+        {
+            let name = decl.get_name().to_string();
+            if decl.is_local() && name != "..." && !name.starts_with("_") {
+                if current_locals.contains_key(&name) {
+                    let old_decl = current_locals
+                        .get(&name)
+                        .and_then(|id| decl_tree.get_decl(id));
+                    if var_name_not_conflicts_with_function_param_name(decl, old_decl).is_some() {
+                        continue;
                     }
-                    // 将当前声明加入映射
-                    current_locals.insert(name.clone(), *decl_id);
+
+                    // 发现重定义，记录诊断
+                    diagnostics.insert(*decl_id);
                 }
+                // 将当前声明加入映射
+                current_locals.insert(name.clone(), *decl_id);
             }
         }
     }
 
     // 检查子作用域
     for child in scope.get_children() {
-        if let ScopeOrDeclId::Scope(scope_id) = child {
-            if let Some(child_scope) = decl_tree.get_scope(scope_id) {
-                check_scope_for_redefined_locals(
-                    context,
-                    decl_tree,
-                    child_scope,
-                    &mut current_locals,
-                    diagnostics,
-                );
-            }
+        if let ScopeOrDeclId::Scope(scope_id) = child
+            && let Some(child_scope) = decl_tree.get_scope(scope_id)
+        {
+            check_scope_for_redefined_locals(
+                decl_tree,
+                child_scope,
+                &mut current_locals,
+                diagnostics,
+            );
         }
     }
 
@@ -125,13 +115,10 @@ fn var_name_not_conflicts_with_function_param_name(
         if value_syntax_id.get_kind() != LuaSyntaxKind::ClosureExpr {
             return None;
         }
-        match current_decl.extra {
-            crate::LuaDeclExtra::Param { signature_id, .. } => {
-                if value_syntax_id.get_range().start() == signature_id.get_position() {
-                    return Some(()); // 不冲突
-                }
-            }
-            _ => {}
+        if let crate::LuaDeclExtra::Param { signature_id, .. } = current_decl.extra
+            && value_syntax_id.get_range().start() == signature_id.get_position()
+        {
+            return Some(()); // 不冲突
         }
     }
 

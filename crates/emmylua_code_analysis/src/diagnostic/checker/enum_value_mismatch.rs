@@ -135,16 +135,13 @@ fn get_enum_value_types(
                     }
                     _ => {}
                 }
-            } else {
-                if let Some(type_cache) = context
-                    .db
-                    .get_type_index()
-                    .get_type_cache(&member.get_id().into())
-                {
-                    if let Some(value) = get_constant_type(type_cache.as_type()) {
-                        values.push(value.clone());
-                    }
-                }
+            } else if let Some(type_cache) = context
+                .db
+                .get_type_index()
+                .get_type_cache(&member.get_id().into())
+                && let Some(value) = get_constant_type(type_cache.as_type())
+            {
+                values.push(value.clone());
             }
         }
     }

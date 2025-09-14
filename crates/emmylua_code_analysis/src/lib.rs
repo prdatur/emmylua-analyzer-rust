@@ -127,7 +127,7 @@ impl EmmyLuaAnalysis {
     }
 
     pub fn update_file_by_path(&mut self, path: &PathBuf, text: Option<String>) -> Option<FileId> {
-        let uri = file_path_to_uri(&path)?;
+        let uri = file_path_to_uri(path)?;
         self.update_file_by_uri(&uri, text)
     }
 
@@ -252,12 +252,10 @@ impl EmmyLuaAnalysis {
             {
                 continue;
             }
-            if let Some(path) = vfs.get_file_path(&file_id) {
-                if !path.exists() {
-                    if let Some(uri) = file_path_to_uri(path) {
-                        files_to_remove.push(uri);
-                    }
-                }
+            if let Some(path) = vfs.get_file_path(&file_id).filter(|path| !path.exists())
+                && let Some(uri) = file_path_to_uri(path)
+            {
+                files_to_remove.push(uri);
             }
         }
 

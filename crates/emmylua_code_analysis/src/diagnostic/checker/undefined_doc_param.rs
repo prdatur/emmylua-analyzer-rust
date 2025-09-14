@@ -22,14 +22,14 @@ fn check_doc_param(
     semantic_model: &SemanticModel,
     closure_expr: &LuaClosureExpr,
 ) -> Option<()> {
-    let signature_id = LuaSignatureId::from_closure(semantic_model.get_file_id(), &closure_expr);
+    let signature_id = LuaSignatureId::from_closure(semantic_model.get_file_id(), closure_expr);
     let signature = context.db.get_signature_index().get(&signature_id)?;
 
     get_closure_expr_comment(closure_expr)?
         .children::<LuaDocTagParam>()
         .for_each(|tag| {
             if let Some(name_token) = tag.get_name_token() {
-                let info = signature.get_param_info_by_name(&name_token.get_name_text());
+                let info = signature.get_param_info_by_name(name_token.get_name_text());
                 if info.is_none() {
                     context.add_diagnostic(
                         DiagnosticCode::UndefinedDocParam,

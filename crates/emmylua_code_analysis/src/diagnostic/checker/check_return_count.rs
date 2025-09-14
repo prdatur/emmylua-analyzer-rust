@@ -49,7 +49,7 @@ fn get_function_return_info(
         _ => {}
     };
 
-    let signature_id = LuaSignatureId::from_closure(semantic_model.get_file_id(), &closure_expr);
+    let signature_id = LuaSignatureId::from_closure(semantic_model.get_file_id(), closure_expr);
     let signature = context.db.get_signature_index().get(&signature_id)?;
 
     Some((
@@ -152,10 +152,10 @@ fn check_return_block(
 
     // 检查是否 error() 了
     for call_expr_stat in block.children::<LuaCallExprStat>() {
-        if let Some(call_expr) = call_expr_stat.get_call_expr() {
-            if call_expr.is_error() {
-                return Ok(());
-            }
+        if let Some(call_expr) = call_expr_stat.get_call_expr()
+            && call_expr.is_error()
+        {
+            return Ok(());
         }
     }
 
@@ -194,9 +194,7 @@ fn check_if_stat(
         }
 
         // 检查是否存在`else`分支, 如果存在则上面已经检查过
-        if !has_return && if_stat.get_else_clause().is_none() {
-            has_return = false;
-        } else {
+        if if_stat.get_else_clause().is_some() {
             has_return = true;
         }
     }

@@ -101,7 +101,7 @@ fn check_index_expr(
                 index_key.get_range()?,
                 t!(
                     "Fields cannot be injected into the reference of `%{class}` for `%{field}`. ",
-                    class = humanize_lint_type(&db, &prefix_typ),
+                    class = humanize_lint_type(db, &prefix_typ),
                     field = index_name,
                 )
                 .to_string(),
@@ -172,7 +172,7 @@ fn is_valid_member(
                 match prefix_typ {
                     LuaType::Ref(id) | LuaType::Def(id) => {
                         if let Some(decl) =
-                            semantic_model.get_db().get_type_index().get_type_decl(&id)
+                            semantic_model.get_db().get_type_index().get_type_decl(id)
                         {
                             // enum 仍然需要检查
                             if decl.is_enum() {
@@ -195,22 +195,19 @@ fn is_valid_member(
                 let mut need = info.semantic_decl.is_none();
                 if need {
                     let decl_type = semantic_model.get_index_decl_type(index_expr.clone());
-                    if let Some(typ) = decl_type {
-                        if !typ.is_unknown() {
-                            need = false;
-                        }
-                    }
+                    if decl_type.is_some_and(|typ| !typ.is_unknown()) {
+                        need = false;
+                    };
                 }
 
                 // TODO: 元组类型的检查或许需要独立出来
-                if !need && matches!(code, DiagnosticCode::InjectField) {
+                if !need && code == DiagnosticCode::InjectField {
                     // 前缀是导入的表常量, 检查定义的文件是否与导入的表常量相同, 不同则认为是非法的
-                    if let Some(module_info) = module_info {
-                        if let Some(LuaSemanticDeclId::Member(member_id)) = info.semantic_decl {
-                            if module_info.file_id != member_id.file_id {
-                                return None;
-                            }
-                        }
+                    if let Some(module_info) = module_info
+                        && let Some(LuaSemanticDeclId::Member(member_id)) = info.semantic_decl
+                        && module_info.file_id != member_id.file_id
+                    {
+                        return None;
                     }
                 }
                 need
@@ -295,10 +292,8 @@ fn is_valid_member(
                             {
                                 return Some(());
                             }
-                        } else if typ.is_integer() {
-                            if key_types.iter().any(|typ| typ.is_integer()) {
-                                return Some(());
-                            }
+                        } else if typ.is_integer() && key_types.iter().any(|typ| typ.is_integer()) {
+                            return Some(());
                         }
                     }
                     LuaMemberKey::Name(_) => {
@@ -323,10 +318,8 @@ fn is_valid_member(
                     return Some(());
                 }
             }
-        } else {
-            if check_enum_self_reference(semantic_model, &prefix_type, &key_types).is_some() {
-                return Some(());
-            }
+        } else if check_enum_self_reference(semantic_model, &prefix_type, &key_types).is_some() {
+            return Some(());
         }
     }
 
@@ -339,17 +332,15 @@ fn check_enum_self_reference(
     prefix_type: &LuaType,
     key_types: &HashSet<LuaType>,
 ) -> Option<()> {
-    if let LuaType::Ref(id) | LuaType::Def(id) = prefix_type {
-        if let Some(decl) = semantic_model.get_db().get_type_index().get_type_decl(&id) {
-            if decl.is_enum() {
-                if key_types.iter().any(|typ| match typ {
-                    LuaType::Ref(key_id) | LuaType::Def(key_id) => *id == *key_id,
-                    _ => false,
-                }) {
-                    return Some(());
-                }
-            }
-        }
+    if let LuaType::Ref(id) | LuaType::Def(id) = prefix_type
+        && let Some(decl) = semantic_model.get_db().get_type_index().get_type_decl(id)
+        && decl.is_enum()
+        && key_types.iter().any(|typ| match typ {
+            LuaType::Ref(key_id) | LuaType::Def(key_id) => *id == *key_id,
+            _ => false,
+        })
+    {
+        return Some(());
     }
     None
 }
@@ -432,21 +423,19 @@ fn in_conditional_statement<T: LuaAstNode>(node: &T) -> bool {
     for ancestor in node.syntax().ancestors() {
         match ancestor.kind().into() {
             LuaSyntaxKind::IfStat => {
-                if let Some(if_stat) = LuaIfStat::cast(ancestor) {
-                    if let Some(condition_expr) = if_stat.get_condition_expr() {
-                        if condition_expr.get_range().contains_range(node_range) {
-                            return true;
-                        }
-                    }
+                if let Some(if_stat) = LuaIfStat::cast(ancestor)
+                    && let Some(condition_expr) = if_stat.get_condition_expr()
+                    && condition_expr.get_range().contains_range(node_range)
+                {
+                    return true;
                 }
             }
             LuaSyntaxKind::WhileStat => {
-                if let Some(while_stat) = LuaWhileStat::cast(ancestor) {
-                    if let Some(condition_expr) = while_stat.get_condition_expr() {
-                        if condition_expr.get_range().contains_range(node_range) {
-                            return true;
-                        }
-                    }
+                if let Some(while_stat) = LuaWhileStat::cast(ancestor)
+                    && let Some(condition_expr) = while_stat.get_condition_expr()
+                    && condition_expr.get_range().contains_range(node_range)
+                {
+                    return true;
                 }
             }
             LuaSyntaxKind::ForStat => {
@@ -468,21 +457,19 @@ fn in_conditional_statement<T: LuaAstNode>(node: &T) -> bool {
                 }
             }
             LuaSyntaxKind::RepeatStat => {
-                if let Some(repeat_stat) = LuaRepeatStat::cast(ancestor) {
-                    if let Some(condition_expr) = repeat_stat.get_condition_expr() {
-                        if condition_expr.get_range().contains_range(node_range) {
-                            return true;
-                        }
-                    }
+                if let Some(repeat_stat) = LuaRepeatStat::cast(ancestor)
+                    && let Some(condition_expr) = repeat_stat.get_condition_expr()
+                    && condition_expr.get_range().contains_range(node_range)
+                {
+                    return true;
                 }
             }
             LuaSyntaxKind::ElseIfClauseStat => {
-                if let Some(elseif_clause) = LuaElseIfClauseStat::cast(ancestor) {
-                    if let Some(condition_expr) = elseif_clause.get_condition_expr() {
-                        if condition_expr.get_range().contains_range(node_range) {
-                            return true;
-                        }
-                    }
+                if let Some(elseif_clause) = LuaElseIfClauseStat::cast(ancestor)
+                    && let Some(condition_expr) = elseif_clause.get_condition_expr()
+                    && condition_expr.get_range().contains_range(node_range)
+                {
+                    return true;
                 }
             }
             _ => {}
@@ -532,7 +519,7 @@ fn check_require_table_const_with_export<'a>(
         .get_decl_index()
         .get_decl(&decl_id)?;
 
-    let module_info = parse_require_module_info(semantic_model, &decl)?;
+    let module_info = parse_require_module_info(semantic_model, decl)?;
     if module_info.is_export(semantic_model.get_db()) {
         return Some(module_info);
     }
