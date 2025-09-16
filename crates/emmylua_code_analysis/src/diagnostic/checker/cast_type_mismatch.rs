@@ -223,13 +223,13 @@ fn expand_type_recursive(
     visited.insert(typ.clone());
 
     // 展开类型, 如果具有多种类型将尽量返回 union
-    match get_real_type(db, &typ).unwrap_or(&typ) {
+    match get_real_type(db, typ).unwrap_or(typ) {
         LuaType::Ref(id) | LuaType::Def(id) => {
             let type_decl = db.get_type_index().get_type_decl(id)?;
-            if type_decl.is_enum() {
-                if let Some(typ) = type_decl.get_enum_field_type(db) {
-                    return expand_type_recursive(db, &typ, visited);
-                }
+            if type_decl.is_enum()
+                && let Some(typ) = type_decl.get_enum_field_type(db)
+            {
+                return expand_type_recursive(db, &typ, visited);
             };
         }
         LuaType::Instance(inst) => {

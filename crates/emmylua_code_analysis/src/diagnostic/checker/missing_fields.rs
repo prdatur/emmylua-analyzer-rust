@@ -125,7 +125,7 @@ fn check_table_expr(
             expr.get_range(),
             t!(
                 "Missing required fields in type `%{typ}`: %{fields}",
-                typ = humanize_lint_type(&db, &table_type),
+                typ = humanize_lint_type(db, &table_type),
                 fields = missing_fields
             )
             .to_string(),
@@ -148,14 +148,14 @@ fn get_required_fields(
     for super_type in types {
         match super_type {
             LuaType::Ref(type_decl_id) => process_type_decl_id(
-                &context,
+                context,
                 member_index,
                 &mut required_fields,
                 &mut optional_type,
                 type_decl_id.clone(),
             ),
             LuaType::Generic(generic_type) => process_type_decl_id(
-                &context,
+                context,
                 member_index,
                 &mut required_fields,
                 &mut optional_type,

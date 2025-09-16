@@ -35,10 +35,7 @@ fn check_table_duplicate_index(
     for field in fields {
         let key = field.get_field_key();
         if let Some(key) = key {
-            index_map
-                .entry(key.get_path_part())
-                .or_insert_with(Vec::new)
-                .push(key);
+            index_map.entry(key.get_path_part()).or_default().push(key);
         }
     }
 

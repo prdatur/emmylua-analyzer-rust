@@ -40,7 +40,7 @@ fn check_call_expr(
                 .get_type_cache(&decl_id.into());
             if let Some(type_cache) = type_cache {
                 if let LuaType::Signature(signature_id) = type_cache.as_type() {
-                    signature_id.clone()
+                    *signature_id
                 } else {
                     return Some(());
                 }
@@ -55,7 +55,7 @@ fn check_call_expr(
                 .get_type_cache(&member_id.into());
             if let Some(type_cache) = type_cache {
                 if let LuaType::Signature(signature_id) = type_cache.as_type() {
-                    signature_id.clone()
+                    *signature_id
                 } else {
                     return Some(());
                 }

@@ -26,19 +26,16 @@ fn check_call_in_async(
     let function_type = semantic_model.infer_call_expr_func(call_expr.clone(), None)?;
     let async_state = function_type.get_async_state();
 
-    if async_state == AsyncState::Async {
-        let prefix_expr = call_expr.get_prefix_expr()?;
-        match check_async_func_in_sync_call(semantic_model, call_expr) {
-            Err(_) => {
-                context.add_diagnostic(
-                    DiagnosticCode::AwaitInSync,
-                    prefix_expr.get_range(),
-                    t!("Async function can only be called in async function.").to_string(),
-                    None,
-                );
-            }
-            Ok(()) => {}
-        }
+    if async_state == AsyncState::Async
+        && let Some(prefix_expr) = call_expr.get_prefix_expr()
+        && check_async_func_in_sync_call(semantic_model, call_expr).is_err()
+    {
+        context.add_diagnostic(
+            DiagnosticCode::AwaitInSync,
+            prefix_expr.get_range(),
+            t!("Async function can only be called in async function.").to_string(),
+            None,
+        );
     }
 
     Some(())
@@ -74,25 +71,21 @@ fn check_call_as_arg(
                 let async_state = match &arg_type {
                     LuaType::DocFunction(f) => f.get_async_state(),
                     LuaType::Signature(sig) => {
-                        let signature = semantic_model.get_db().get_signature_index().get(&sig)?;
+                        let signature = semantic_model.get_db().get_signature_index().get(sig)?;
                         signature.async_state
                     }
                     _ => continue,
                 };
 
-                if async_state == AsyncState::Async {
-                    match check_async_func_in_sync_call(semantic_model, call_expr.clone()) {
-                        Err(_) => {
-                            context.add_diagnostic(
-                                DiagnosticCode::AwaitInSync,
-                                arg.get_range(),
-                                t!("Async function can only be called in async function.")
-                                    .to_string(),
-                                None,
-                            );
-                        }
-                        Ok(()) => {}
-                    }
+                if async_state == AsyncState::Async
+                    && check_async_func_in_sync_call(semantic_model, call_expr.clone()).is_err()
+                {
+                    context.add_diagnostic(
+                        DiagnosticCode::AwaitInSync,
+                        arg.get_range(),
+                        t!("Async function can only be called in async function.").to_string(),
+                        None,
+                    );
                 }
             }
         }

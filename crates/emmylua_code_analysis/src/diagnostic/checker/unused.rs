@@ -25,13 +25,11 @@ impl Checker for UnusedChecker {
         let root = semantic_model.get_root();
         let ref_index = semantic_model.get_db().get_reference_index();
         for (_, decl) in decl_tree.get_decls().iter() {
-            if decl.is_global() {
-                continue;
-            } else if decl.is_param() && decl.get_name() == "..." {
+            if decl.is_global() || decl.is_param() && decl.get_name() == "..." {
                 continue;
             }
 
-            if let Err(result) = get_unused_check_result(ref_index, decl, &root) {
+            if let Err(result) = get_unused_check_result(ref_index, decl, root) {
                 let name = decl.get_name();
                 if name.starts_with('_') {
                     continue;

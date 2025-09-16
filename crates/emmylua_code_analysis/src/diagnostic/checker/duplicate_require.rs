@@ -27,7 +27,7 @@ fn check_require_call_expr(
     call_expr: LuaCallExpr,
     require_calls: &mut Vec<(TextRange, String)>,
 ) -> Option<()> {
-    if let Some(_) = call_expr.get_parent::<LuaIndexExpr>() {
+    if call_expr.get_parent::<LuaIndexExpr>().is_some() {
         return Some(());
     }
     let args_list = call_expr.get_args_list()?;
