@@ -298,7 +298,7 @@ impl LuaType {
     pub fn is_always_truthy(&self) -> bool {
         match self {
             LuaType::Nil | LuaType::Boolean | LuaType::Any | LuaType::Unknown => false,
-            LuaType::BooleanConst(boolean) | LuaType::DocBooleanConst(boolean) => boolean.clone(),
+            LuaType::BooleanConst(boolean) | LuaType::DocBooleanConst(boolean) => *boolean,
             LuaType::Union(u) => u.is_always_truthy(),
             LuaType::TypeGuard(_) => false,
             _ => true,
@@ -438,7 +438,7 @@ impl LuaType {
     }
 
     pub fn from_vec(types: Vec<LuaType>) -> Self {
-        return match types.len() {
+        match types.len() {
             0 => LuaType::Nil,
             1 => types[0].clone(),
             _ => {
@@ -456,7 +456,7 @@ impl LuaType {
                     _ => LuaType::Union(LuaUnionType::from_vec(result_types).into()),
                 }
             }
-        };
+        }
     }
 }
 
@@ -539,6 +539,10 @@ impl LuaTupleType {
 
     pub fn len(&self) -> usize {
         self.types.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.types.is_empty()
     }
 
     pub fn contain_tpl(&self) -> bool {
@@ -642,7 +646,7 @@ impl LuaFunctionType {
     pub fn contain_tpl(&self) -> bool {
         self.params
             .iter()
-            .any(|(_, t)| t.as_ref().map_or(false, |t| t.contain_tpl()))
+            .any(|(_, t)| t.as_ref().is_some_and(|t| t.contain_tpl()))
             || self.ret.contain_tpl()
     }
 
@@ -651,7 +655,7 @@ impl LuaFunctionType {
             || self
                 .params
                 .iter()
-                .any(|(name, t)| name == "self" || t.as_ref().map_or(false, |t| t.is_self_infer()))
+                .any(|(name, t)| name == "self" || t.as_ref().is_some_and(|t| t.is_self_infer()))
             || self.ret.is_self_infer()
     }
 
@@ -668,13 +672,10 @@ impl LuaFunctionType {
                     match owner_type {
                         Some(owner_type) => {
                             // 一些类型不应该被视为 method
-                            match (owner_type, t) {
-                                (LuaType::Ref(_) | LuaType::Def(_), _) => {
-                                    if t.is_any() || t.is_table() || t.is_class_tpl() {
-                                        return false;
-                                    }
-                                }
-                                _ => {}
+                            if let (LuaType::Ref(_) | LuaType::Def(_), _) = (owner_type, t)
+                                && (t.is_any() || t.is_table() || t.is_class_tpl())
+                            {
+                                return false;
                             }
 
                             semantic_model.type_check(owner_type, t).is_ok()
@@ -682,9 +683,7 @@ impl LuaFunctionType {
                         None => name == "self",
                     }
                 }
-                None => {
-                    return name == "self";
-                }
+                None => name == "self",
             }
         } else {
             false
@@ -781,7 +780,7 @@ impl LuaObjectType {
     }
 
     pub fn cast_down_array_base(&self, db: &DbIndex) -> Option<LuaType> {
-        if self.index_access.len() != 0 {
+        if !self.index_access.is_empty() {
             let mut ty = None;
             for (key, value_type) in self.index_access.iter() {
                 if matches!(key, LuaType::Integer) {
@@ -866,7 +865,7 @@ impl LuaUnionType {
     pub fn from_vec(types: Vec<LuaType>) -> Self {
         if types.len() == 2 {
             if types.contains(&LuaType::Nil) {
-                let non_nil_type = types.iter().filter(|t| !matches!(t, LuaType::Nil)).next();
+                let non_nil_type = types.iter().find(|t| !matches!(t, LuaType::Nil));
                 if let Some(ty) = non_nil_type {
                     return Self::Nullable(ty.clone());
                 }
@@ -884,7 +883,7 @@ impl LuaUnionType {
         }
     }
 
-    #[allow(unused)]
+    #[allow(unused, clippy::wrong_self_convention)]
     pub(crate) fn into_set(&self) -> HashSet<LuaType> {
         match self {
             LuaUnionType::Nullable(ty) => {
@@ -985,6 +984,7 @@ impl LuaIntersectionType {
         &self.types
     }
 
+    #[allow(clippy::wrong_self_convention)]
     pub(crate) fn into_types(&self) -> Vec<LuaType> {
         self.types.clone()
     }
@@ -1150,7 +1150,7 @@ impl VariadicType {
     pub fn get_new_variadic_from(&self, idx: usize) -> VariadicType {
         match self {
             VariadicType::Multi(types) => {
-                if types.len() == 0 {
+                if types.is_empty() {
                     return VariadicType::Multi(Vec::new());
                 }
 

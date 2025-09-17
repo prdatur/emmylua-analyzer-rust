@@ -242,31 +242,31 @@ impl LuaAstToken for LuaKeywordToken {
     where
         Self: Sized,
     {
-        match kind {
+        matches!(
+            kind,
             LuaTokenKind::TkAnd
-            | LuaTokenKind::TkBreak
-            | LuaTokenKind::TkDo
-            | LuaTokenKind::TkElse
-            | LuaTokenKind::TkElseIf
-            | LuaTokenKind::TkEnd
-            | LuaTokenKind::TkFalse
-            | LuaTokenKind::TkFor
-            | LuaTokenKind::TkFunction
-            | LuaTokenKind::TkGoto
-            | LuaTokenKind::TkIf
-            | LuaTokenKind::TkIn
-            | LuaTokenKind::TkLocal
-            | LuaTokenKind::TkNil
-            | LuaTokenKind::TkNot
-            | LuaTokenKind::TkOr
-            | LuaTokenKind::TkRepeat
-            | LuaTokenKind::TkReturn
-            | LuaTokenKind::TkThen
-            | LuaTokenKind::TkTrue
-            | LuaTokenKind::TkUntil
-            | LuaTokenKind::TkWhile => true,
-            _ => false,
-        }
+                | LuaTokenKind::TkBreak
+                | LuaTokenKind::TkDo
+                | LuaTokenKind::TkElse
+                | LuaTokenKind::TkElseIf
+                | LuaTokenKind::TkEnd
+                | LuaTokenKind::TkFalse
+                | LuaTokenKind::TkFor
+                | LuaTokenKind::TkFunction
+                | LuaTokenKind::TkGoto
+                | LuaTokenKind::TkIf
+                | LuaTokenKind::TkIn
+                | LuaTokenKind::TkLocal
+                | LuaTokenKind::TkNil
+                | LuaTokenKind::TkNot
+                | LuaTokenKind::TkOr
+                | LuaTokenKind::TkRepeat
+                | LuaTokenKind::TkReturn
+                | LuaTokenKind::TkThen
+                | LuaTokenKind::TkTrue
+                | LuaTokenKind::TkUntil
+                | LuaTokenKind::TkWhile
+        )
     }
 
     fn cast(syntax: LuaSyntaxToken) -> Option<Self>
@@ -377,19 +377,19 @@ impl LuaAstToken for LuaLiteralToken {
     where
         Self: Sized,
     {
-        match kind {
+        matches!(
+            kind,
             LuaTokenKind::TkInt
-            | LuaTokenKind::TkFloat
-            | LuaTokenKind::TkComplex
-            | LuaTokenKind::TkNil
-            | LuaTokenKind::TkTrue
-            | LuaTokenKind::TkFalse
-            | LuaTokenKind::TkDots
-            | LuaTokenKind::TkString
-            | LuaTokenKind::TkLongString
-            | LuaTokenKind::TkDocQuestion => true,
-            _ => false,
-        }
+                | LuaTokenKind::TkFloat
+                | LuaTokenKind::TkComplex
+                | LuaTokenKind::TkNil
+                | LuaTokenKind::TkTrue
+                | LuaTokenKind::TkFalse
+                | LuaTokenKind::TkDots
+                | LuaTokenKind::TkString
+                | LuaTokenKind::TkLongString
+                | LuaTokenKind::TkDocQuestion
+        )
     }
 
     fn cast(syntax: LuaSyntaxToken) -> Option<Self>
@@ -430,10 +430,7 @@ impl LuaAstToken for LuaSpaceToken {
     where
         Self: Sized,
     {
-        match kind {
-            LuaTokenKind::TkWhitespace | LuaTokenKind::TkEndOfLine => true,
-            _ => false,
-        }
+        matches!(kind, LuaTokenKind::TkWhitespace | LuaTokenKind::TkEndOfLine)
     }
 
     fn cast(syntax: LuaSyntaxToken) -> Option<Self>

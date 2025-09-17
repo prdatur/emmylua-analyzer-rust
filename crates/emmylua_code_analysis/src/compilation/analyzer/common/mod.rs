@@ -16,13 +16,12 @@ pub fn bind_type(
 
     if decl_type_cache.is_none() {
         // type backward
-        if type_cache.is_infer() {
-            if let LuaTypeOwner::Decl(decl_id) = &type_owner {
-                if let Some(decl_ref) = db
+        if type_cache.is_infer()
+            && let LuaTypeOwner::Decl(decl_id) = &type_owner
+                && let Some(decl_ref) = db
                     .get_reference_index()
                     .get_decl_references(&decl_id.file_id, decl_id)
-                {
-                    if decl_ref.mutable {
+                    && decl_ref.mutable {
                         match &type_cache.as_type() {
                             LuaType::IntegerConst(_) => {
                                 type_cache = LuaTypeCache::InferType(LuaType::Integer)
@@ -39,9 +38,6 @@ pub fn bind_type(
                             _ => {}
                         }
                     }
-                }
-            }
-        }
 
         db.get_type_index_mut()
             .bind_type(type_owner.clone(), type_cache);
@@ -59,19 +55,16 @@ fn merge_def_type(db: &mut DbIndex, decl_type: LuaType, expr_type: LuaType, merg
         return;
     }
 
-    match &decl_type {
-        LuaType::Def(def) => match &expr_type {
-            LuaType::TableConst(in_filed_range) => {
-                merge_def_type_with_table(db, def.clone(), in_filed_range.clone());
-            }
-            LuaType::Instance(instance) => {
-                let base_ref = instance.get_base();
-                merge_def_type(db, base_ref.clone(), expr_type, merge_level + 1);
-            }
-            _ => {}
-        },
+    if let LuaType::Def(def) = &decl_type { match &expr_type {
+        LuaType::TableConst(in_filed_range) => {
+            merge_def_type_with_table(db, def.clone(), in_filed_range.clone());
+        }
+        LuaType::Instance(instance) => {
+            let base_ref = instance.get_base();
+            merge_def_type(db, base_ref.clone(), expr_type, merge_level + 1);
+        }
         _ => {}
-    }
+    } }
 }
 
 fn merge_def_type_with_table(
@@ -104,7 +97,7 @@ pub fn add_member(db: &mut DbIndex, owner: LuaMemberOwner, member_id: LuaMemberI
 }
 
 fn get_owner_id(db: &DbIndex, type_owner: &LuaTypeOwner) -> Option<LuaMemberOwner> {
-    let type_cache = db.get_type_index().get_type_cache(&type_owner)?;
+    let type_cache = db.get_type_index().get_type_cache(type_owner)?;
     match type_cache.as_type() {
         LuaType::Ref(type_id) => Some(LuaMemberOwner::Type(type_id.clone())),
         LuaType::TableConst(id) => Some(LuaMemberOwner::Element(id.clone())),

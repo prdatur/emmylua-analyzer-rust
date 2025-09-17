@@ -2,7 +2,7 @@ use std::cmp;
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-#[derive(Eq, PartialEq, Hash, Debug, Clone, Copy, PartialOrd)]
+#[derive(Eq, PartialEq, Hash, Debug, Clone, Copy)]
 pub struct FileId {
     pub id: u32,
 }
@@ -37,6 +37,12 @@ impl FileId {
 impl From<u32> for FileId {
     fn from(id: u32) -> Self {
         FileId { id }
+    }
+}
+
+impl cmp::PartialOrd for FileId {
+    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
+        Some(self.cmp(other))
     }
 }
 

@@ -155,8 +155,7 @@ pub fn infer_member_by_member_key(
         | LuaType::StringConst(_)
         | LuaType::DocStringConst(_)
         | LuaType::Language(_) => {
-            let decl_id =
-                get_buildin_type_map_type_id(&prefix_type).ok_or(InferFailReason::None)?;
+            let decl_id = get_buildin_type_map_type_id(prefix_type).ok_or(InferFailReason::None)?;
             infer_custom_type_member(db, cache, decl_id, index_expr, infer_guard)
         }
         LuaType::Ref(decl_id) => {
@@ -374,15 +373,11 @@ fn infer_custom_type_member(
             return Err(InferFailReason::FieldNotFound);
         }
     }
-    match &index_expr {
-        LuaIndexMemberExpr::IndexExpr(index_expr) => {
-            if enum_variable_is_param(db, cache, index_expr, &LuaType::Ref(prefix_type_id.clone()))
-                .is_some()
-            {
-                return Err(InferFailReason::None);
-            }
-        }
-        _ => {}
+    if let LuaIndexMemberExpr::IndexExpr(index_expr) = &index_expr
+        && enum_variable_is_param(db, cache, index_expr, &LuaType::Ref(prefix_type_id.clone()))
+            .is_some()
+    {
+        return Err(InferFailReason::None);
     }
 
     let owner = LuaMemberOwner::Type(prefix_type_id.clone());
@@ -393,50 +388,45 @@ fn infer_custom_type_member(
         return member_item.resolve_type(db);
     }
 
-    if type_decl.is_class() {
-        if let Some(super_types) = type_index.get_super_types(&prefix_type_id) {
-            for super_type in super_types {
-                let result = infer_member_by_member_key(
-                    db,
-                    cache,
-                    &super_type,
-                    index_expr.clone(),
-                    infer_guard,
-                );
+    if type_decl.is_class()
+        && let Some(super_types) = type_index.get_super_types(&prefix_type_id)
+    {
+        for super_type in super_types {
+            let result =
+                infer_member_by_member_key(db, cache, &super_type, index_expr.clone(), infer_guard);
 
-                match result {
-                    Ok(member_type) => {
-                        return Ok(member_type);
-                    }
-                    Err(InferFailReason::FieldNotFound) => {}
-                    Err(err) => return Err(err),
+            match result {
+                Ok(member_type) => {
+                    return Ok(member_type);
                 }
+                Err(InferFailReason::FieldNotFound) => {}
+                Err(err) => return Err(err),
             }
         }
     }
 
     // 解决`key`为表达式的情况
-    if let LuaIndexKey::Expr(expr) = index_key {
-        if let Some(keys) = expr_to_member_key(db, cache, &expr) {
-            let mut result_types = Vec::new();
-            for key in keys {
-                // 解决 enum[enum] | class[class] 的情况
-                if let Some(member_type) = get_expr_key_members(db, &key, &owner) {
-                    result_types.push(member_type);
-                    continue;
-                }
+    if let LuaIndexKey::Expr(expr) = index_key
+        && let Some(keys) = expr_to_member_key(db, cache, &expr)
+    {
+        let mut result_types = Vec::new();
+        for key in keys {
+            // 解决 enum[enum] | class[class] 的情况
+            if let Some(member_type) = get_expr_key_members(db, &key, &owner) {
+                result_types.push(member_type);
+                continue;
+            }
 
-                if let Some(member_item) = db.get_member_index().get_member_item(&owner, &key) {
-                    if let Ok(member_type) = member_item.resolve_type(db) {
-                        result_types.push(member_type);
-                    }
-                }
+            if let Some(member_item) = db.get_member_index().get_member_item(&owner, &key)
+                && let Ok(member_type) = member_item.resolve_type(db)
+            {
+                result_types.push(member_type);
             }
-            match &result_types[..] {
-                [] => {}
-                [first] => return Ok(first.clone()),
-                _ => return Ok(LuaType::from_vec(result_types)),
-            }
+        }
+        match &result_types[..] {
+            [] => {}
+            [first] => return Ok(first.clone()),
+            _ => return Ok(LuaType::from_vec(result_types)),
         }
     }
 
@@ -462,19 +452,19 @@ fn get_expr_key_members(
 
     if let Some(member_keys) = get_all_member_key(db, &origin_type) {
         for key in member_keys {
-            if let Some(member_item) = db.get_member_index().get_member_item(&owner, &key) {
-                if let Ok(member_type) = member_item.resolve_type(db) {
-                    result.push(member_type);
-                }
+            if let Some(member_item) = db.get_member_index().get_member_item(owner, &key)
+                && let Ok(member_type) = member_item.resolve_type(db)
+            {
+                result.push(member_type);
             }
         }
     }
 
-    return match result.len() {
+    match result.len() {
         0 => None,
         1 => Some(result[0].clone()),
         _ => Some(LuaType::from_vec(result)),
-    };
+    }
 }
 
 fn get_all_member_key(db: &DbIndex, origin_type: &LuaType) -> Option<Vec<LuaMemberKey>> {
@@ -512,32 +502,28 @@ fn get_all_member_key(db: &DbIndex, origin_type: &LuaType) -> Option<Vec<LuaMemb
                 }
             }
             LuaType::Ref(id) => {
-                if let Some(type_decl) = db.get_type_index().get_type_decl(&id) {
-                    if type_decl.is_enum() {
-                        let owner = LuaMemberOwner::Type(id.clone());
-                        if let Some(members) = db.get_member_index().get_members(&owner) {
-                            let is_enum_key = type_decl.is_enum_key();
-                            for member in members {
-                                if is_enum_key {
-                                    result.push(member.get_key().clone());
-                                } else {
-                                    if let Some(typ) = db
-                                        .get_type_index()
-                                        .get_type_cache(&member.get_id().into())
-                                        .map(|it| it.as_type())
-                                    {
-                                        match typ {
-                                            LuaType::DocStringConst(s)
-                                            | LuaType::StringConst(s) => {
-                                                result.push((*s).to_string().into());
-                                            }
-                                            LuaType::DocIntegerConst(i)
-                                            | LuaType::IntegerConst(i) => {
-                                                result.push((*i).into());
-                                            }
-                                            _ => {}
-                                        }
+                if let Some(type_decl) = db.get_type_index().get_type_decl(&id)
+                    && type_decl.is_enum()
+                {
+                    let owner = LuaMemberOwner::Type(id.clone());
+                    if let Some(members) = db.get_member_index().get_members(&owner) {
+                        let is_enum_key = type_decl.is_enum_key();
+                        for member in members {
+                            if is_enum_key {
+                                result.push(member.get_key().clone());
+                            } else if let Some(typ) = db
+                                .get_type_index()
+                                .get_type_cache(&member.get_id().into())
+                                .map(|it| it.as_type())
+                            {
+                                match typ {
+                                    LuaType::DocStringConst(s) | LuaType::StringConst(s) => {
+                                        result.push((*s).to_string().into());
                                     }
+                                    LuaType::DocIntegerConst(i) | LuaType::IntegerConst(i) => {
+                                        result.push((*i).into());
+                                    }
+                                    _ => {}
                                 }
                             }
                         }
@@ -606,7 +592,7 @@ fn infer_object_member(
     // todo
     let index_accesses = object_type.get_index_access();
     for (key, value) in index_accesses {
-        let result = infer_index_metamethod(db, cache, &index_key, &key, value);
+        let result = infer_index_metamethod(db, cache, &index_key, key, value);
         match result {
             Ok(typ) => {
                 return Ok(typ);
@@ -658,13 +644,10 @@ fn infer_union_member(
             index_expr.clone(),
             &mut InferGuard::new(),
         );
-        match result {
-            Ok(typ) => {
-                if !typ.is_nil() {
-                    member_types.push(typ);
-                }
-            }
-            _ => {}
+        if let Ok(typ) = result
+            && !typ.is_nil()
+        {
+            member_types.push(typ);
         }
     }
 
@@ -703,7 +686,7 @@ fn infer_generic_members_from_super_generics(
 ) -> Option<LuaType> {
     let type_index = db.get_type_index();
 
-    let type_decl = type_index.get_type_decl(&type_decl_id)?;
+    let type_decl = type_index.get_type_decl(type_decl_id)?;
     if !type_decl.is_class() {
         return None;
     };
@@ -711,7 +694,7 @@ fn infer_generic_members_from_super_generics(
     let type_decl_id = type_decl.get_id();
     if let Some(super_types) = type_index.get_super_types(&type_decl_id) {
         super_types.iter().find_map(|super_type| {
-            let super_type = instantiate_type_generic(db, &super_type, &substitutor);
+            let super_type = instantiate_type_generic(db, super_type, substitutor);
             infer_member_by_member_key(
                 db,
                 cache,
@@ -722,7 +705,7 @@ fn infer_generic_members_from_super_generics(
             .ok()
         })
     } else {
-        return None;
+        None
     }
 }
 
@@ -771,7 +754,7 @@ fn infer_instance_member(
 
     let origin_type = inst.get_base();
     let base_result =
-        infer_member_by_member_key(db, cache, &origin_type, index_expr.clone(), infer_guard);
+        infer_member_by_member_key(db, cache, origin_type, index_expr.clone(), infer_guard);
     match base_result {
         Ok(typ) => {
             return Ok(typ);
@@ -815,7 +798,7 @@ pub fn infer_member_by_operator(
         }
         LuaType::Instance(inst) => {
             let base = inst.get_base();
-            infer_member_by_operator(db, cache, &base, index_expr, infer_guard)
+            infer_member_by_operator(db, cache, base, index_expr, infer_guard)
         }
         _ => Err(InferFailReason::FieldNotFound),
     }
@@ -860,7 +843,7 @@ fn infer_member_by_index_table(
                     .get_member_index()
                     .get_members(&LuaMemberOwner::Element(table_range.clone()));
                 if let Some(mut members) = members {
-                    members.sort_by(|a, b| a.get_key().cmp(&b.get_key()));
+                    members.sort_by(|a, b| a.get_key().cmp(b.get_key()));
                     let mut result_type = LuaType::Unknown;
                     for member in members {
                         let member_key_type = match member.get_key() {
@@ -904,10 +887,10 @@ fn infer_member_by_index_custom_type(
     index_expr: LuaIndexMemberExpr,
     infer_guard: &mut InferGuard,
 ) -> InferResult {
-    infer_guard.check(&prefix_type_id)?;
+    infer_guard.check(prefix_type_id)?;
     let type_index = db.get_type_index();
     let type_decl = type_index
-        .get_type_decl(&prefix_type_id)
+        .get_type_decl(prefix_type_id)
         .ok_or(InferFailReason::None)?;
     if type_decl.is_alias() {
         if let Some(origin_type) = type_decl.get_alias_origin(db, None) {
@@ -936,23 +919,18 @@ fn infer_member_by_index_custom_type(
     }
 
     // find member by key in super
-    if type_decl.is_class() {
-        if let Some(super_types) = type_index.get_super_types(&prefix_type_id) {
-            for super_type in super_types {
-                let result = infer_member_by_operator(
-                    db,
-                    cache,
-                    &super_type,
-                    index_expr.clone(),
-                    infer_guard,
-                );
-                match result {
-                    Ok(member_type) => {
-                        return Ok(member_type);
-                    }
-                    Err(InferFailReason::FieldNotFound) => {}
-                    Err(err) => return Err(err),
+    if type_decl.is_class()
+        && let Some(super_types) = type_index.get_super_types(prefix_type_id)
+    {
+        for super_type in super_types {
+            let result =
+                infer_member_by_operator(db, cache, &super_type, index_expr.clone(), infer_guard);
+            match result {
+                Ok(member_type) => {
+                    return Ok(member_type);
                 }
+                Err(InferFailReason::FieldNotFound) => {}
+                Err(err) => return Err(err),
             }
         }
     }
@@ -1148,7 +1126,7 @@ fn infer_member_by_index_generic(
 fn infer_member_by_index_table_generic(
     db: &DbIndex,
     cache: &mut LuaInferCache,
-    table_params: &Vec<LuaType>,
+    table_params: &[LuaType],
     index_expr: LuaIndexMemberExpr,
 ) -> InferResult {
     if table_params.len() != 2 {
@@ -1230,10 +1208,10 @@ fn expr_to_member_key(
                 keys.insert(LuaMemberKey::ExprType(expr_type.clone()));
             }
             LuaType::Ref(id) => {
-                if let Some(type_decl) = db.get_type_index().get_type_decl(id) {
-                    if type_decl.is_enum() || type_decl.is_alias() {
-                        keys.insert(LuaMemberKey::ExprType(current_type.clone()));
-                    }
+                if let Some(type_decl) = db.get_type_index().get_type_decl(id)
+                    && (type_decl.is_enum() || type_decl.is_alias())
+                {
+                    keys.insert(LuaMemberKey::ExprType(current_type.clone()));
                 }
             }
             _ => {}
@@ -1261,5 +1239,5 @@ fn infer_tpl_ref_member(
         0,
     )
     .ok_or(InferFailReason::None)?;
-    return infer_member_by_member_key(db, cache, &extend_type, index_expr.clone(), infer_guard);
+    infer_member_by_member_key(db, cache, &extend_type, index_expr.clone(), infer_guard)
 }

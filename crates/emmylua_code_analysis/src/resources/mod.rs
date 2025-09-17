@@ -22,14 +22,11 @@ pub fn load_resource_std(
         };
         let std_dir = PathBuf::from(&resource_path).join("std");
         let result = load_resource_from_file_system(&resource_path);
-        match result {
-            Some(mut files) => {
-                if !is_jit {
-                    remove_jit_resource(&mut files);
-                }
-                return (std_dir, files);
+        if let Some(mut files) = result {
+            if !is_jit {
+                remove_jit_resource(&mut files);
             }
-            None => {}
+            return (std_dir, files);
         }
     }
 
@@ -102,7 +99,7 @@ fn load_resource_from_file_system(resources_dir: &Path) -> Option<Vec<LuaFileInf
         }
 
         let version_path = resources_dir.join("version");
-        let content = format!("{}", VERSION);
+        let content = VERSION.to_string();
         match std::fs::write(&version_path, content) {
             Ok(_) => {}
             Err(e) => {
@@ -123,7 +120,7 @@ fn load_resource_from_file_system(resources_dir: &Path) -> Option<Vec<LuaFileInf
         }
     };
 
-    return Some(files);
+    Some(files)
 }
 
 fn check_need_dump_to_file_system() -> bool {

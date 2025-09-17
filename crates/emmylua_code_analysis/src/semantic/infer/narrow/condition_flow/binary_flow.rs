@@ -20,6 +20,7 @@ use crate::{
     },
 };
 
+#[allow(clippy::too_many_arguments)]
 pub fn get_type_at_binary_expr(
     db: &DbIndex,
     tree: &FlowTree,
@@ -85,12 +86,11 @@ pub fn get_type_at_binary_expr(
             condition_flow,
             false,
         ),
-        _ => {
-            return Ok(ResultTypeOrContinue::Continue);
-        }
+        _ => Ok(ResultTypeOrContinue::Continue),
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn try_get_at_eq_or_neq_expr(
     db: &DbIndex,
     tree: &FlowTree,
@@ -133,7 +133,7 @@ fn try_get_at_eq_or_neq_expr(
         return Ok(ResultTypeOrContinue::Result(result_type));
     }
 
-    return maybe_var_eq_narrow(
+    maybe_var_eq_narrow(
         db,
         tree,
         cache,
@@ -143,9 +143,10 @@ fn try_get_at_eq_or_neq_expr(
         left_expr,
         right_expr,
         condition_flow,
-    );
+    )
 }
 
+#[allow(clippy::too_many_arguments)]
 fn try_get_at_gt_or_ge_expr(
     db: &DbIndex,
     tree: &FlowTree,
@@ -185,7 +186,7 @@ fn try_get_at_gt_or_ge_expr(
             let right_expr_type = infer_expr(db, cache, right_expr)?;
             let antecedent_flow_id = get_single_antecedent(tree, flow_node)?;
             let antecedent_type =
-                get_type_at_flow(db, tree, cache, root, &var_ref_id, antecedent_flow_id)?;
+                get_type_at_flow(db, tree, cache, root, var_ref_id, antecedent_flow_id)?;
             match (&antecedent_type, &right_expr_type) {
                 (
                     LuaType::Array(array_type),
@@ -211,6 +212,7 @@ fn try_get_at_gt_or_ge_expr(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn maybe_type_guard_binary(
     db: &DbIndex,
     tree: &FlowTree,
@@ -249,36 +251,36 @@ fn maybe_type_guard_binary(
             }
         }
         // may ref a type value
-    } else if let LuaExpr::NameExpr(name_expr) = left_expr {
-        if let LuaExpr::LiteralExpr(literal_expr) = right_expr {
-            let Some(decl_id) = db
-                .get_reference_index()
-                .get_var_reference_decl(&cache.get_file_id(), name_expr.get_range())
-            else {
-                return Ok(ResultTypeOrContinue::Continue);
-            };
+    } else if let LuaExpr::NameExpr(name_expr) = left_expr
+        && let LuaExpr::LiteralExpr(literal_expr) = right_expr
+    {
+        let Some(decl_id) = db
+            .get_reference_index()
+            .get_var_reference_decl(&cache.get_file_id(), name_expr.get_range())
+        else {
+            return Ok(ResultTypeOrContinue::Continue);
+        };
 
-            let Some(expr_ptr) = tree.get_decl_ref_expr(&decl_id) else {
-                return Ok(ResultTypeOrContinue::Continue);
-            };
+        let Some(expr_ptr) = tree.get_decl_ref_expr(&decl_id) else {
+            return Ok(ResultTypeOrContinue::Continue);
+        };
 
-            let Some(expr) = expr_ptr.to_node(root) else {
-                return Ok(ResultTypeOrContinue::Continue);
-            };
+        let Some(expr) = expr_ptr.to_node(root) else {
+            return Ok(ResultTypeOrContinue::Continue);
+        };
 
-            if let LuaExpr::CallExpr(call_expr) = expr {
-                if call_expr.is_type() {
-                    type_guard_expr = Some(call_expr);
-                    match literal_expr.get_literal() {
-                        Some(LuaLiteralToken::String(s)) => {
-                            literal_string = s.get_value();
-                        }
-                        _ => return Ok(ResultTypeOrContinue::Continue),
+        if let LuaExpr::CallExpr(call_expr) = expr {
+            if call_expr.is_type() {
+                type_guard_expr = Some(call_expr);
+                match literal_expr.get_literal() {
+                    Some(LuaLiteralToken::String(s)) => {
+                        literal_string = s.get_value();
                     }
+                    _ => return Ok(ResultTypeOrContinue::Continue),
                 }
-            } else {
-                return Ok(ResultTypeOrContinue::Continue);
             }
+        } else {
+            return Ok(ResultTypeOrContinue::Continue);
         }
     }
 
@@ -334,6 +336,7 @@ fn maybe_type_guard_binary(
     Ok(ResultTypeOrContinue::Result(result_type))
 }
 
+#[allow(clippy::too_many_arguments)]
 fn maybe_var_eq_narrow(
     db: &DbIndex,
     tree: &FlowTree,
@@ -373,15 +376,15 @@ fn maybe_var_eq_narrow(
                 InferConditionFlow::FalseCondition => {
                     let antecedent_flow_id = get_single_antecedent(tree, flow_node)?;
                     let antecedent_type =
-                        get_type_at_flow(db, tree, cache, root, &var_ref_id, antecedent_flow_id)?;
+                        get_type_at_flow(db, tree, cache, root, var_ref_id, antecedent_flow_id)?;
                     TypeOps::Remove.apply(db, &antecedent_type, &right_expr_type)
                 }
             };
             Ok(ResultTypeOrContinue::Result(result_type))
         }
         LuaExpr::CallExpr(left_call_expr) => {
-            match right_expr {
-                LuaExpr::LiteralExpr(literal_expr) => match literal_expr.get_literal() {
+            if let LuaExpr::LiteralExpr(literal_expr) = right_expr {
+                match literal_expr.get_literal() {
                     Some(LuaLiteralToken::Bool(b)) => {
                         let flow = if b.is_true() {
                             condition_flow
@@ -394,15 +397,14 @@ fn maybe_var_eq_narrow(
                             tree,
                             cache,
                             root,
-                            &var_ref_id,
+                            var_ref_id,
                             flow_node,
                             left_call_expr,
                             flow,
                         );
                     }
                     _ => return Ok(ResultTypeOrContinue::Continue),
-                },
-                _ => {}
+                }
             };
 
             Ok(ResultTypeOrContinue::Continue)
@@ -425,7 +427,7 @@ fn maybe_var_eq_narrow(
                 InferConditionFlow::FalseCondition => {
                     let antecedent_flow_id = get_single_antecedent(tree, flow_node)?;
                     let antecedent_type =
-                        get_type_at_flow(db, tree, cache, root, &var_ref_id, antecedent_flow_id)?;
+                        get_type_at_flow(db, tree, cache, root, var_ref_id, antecedent_flow_id)?;
                     TypeOps::Remove.apply(db, &antecedent_type, &right_expr_type)
                 }
             };
@@ -457,7 +459,7 @@ fn maybe_var_eq_narrow(
             let right_expr_type = infer_expr(db, cache, right_expr)?;
             let antecedent_flow_id = get_single_antecedent(tree, flow_node)?;
             let antecedent_type =
-                get_type_at_flow(db, tree, cache, root, &var_ref_id, antecedent_flow_id)?;
+                get_type_at_flow(db, tree, cache, root, var_ref_id, antecedent_flow_id)?;
             match (&antecedent_type, &right_expr_type) {
                 (
                     LuaType::Array(array_type),
@@ -483,6 +485,7 @@ fn maybe_var_eq_narrow(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn maybe_field_literal_eq_narrow(
     db: &DbIndex,
     tree: &FlowTree,
@@ -519,21 +522,18 @@ fn maybe_field_literal_eq_narrow(
         if cache
             .narrow_by_literal_stop_position_cache
             .contains(&syntax_id)
+            && var_ref_id.start_with(&maybe_var_ref_id)
         {
-            if var_ref_id.start_with(&maybe_var_ref_id) {
-                return Ok(ResultTypeOrContinue::Result(get_var_ref_type(
-                    db,
-                    cache,
-                    &var_ref_id,
-                )?));
-            }
+            return Ok(ResultTypeOrContinue::Result(get_var_ref_type(
+                db, cache, var_ref_id,
+            )?));
         }
 
         return Ok(ResultTypeOrContinue::Continue);
     }
 
     let antecedent_flow_id = get_single_antecedent(tree, flow_node)?;
-    let left_type = get_type_at_flow(db, tree, cache, root, &var_ref_id, antecedent_flow_id)?;
+    let left_type = get_type_at_flow(db, tree, cache, root, var_ref_id, antecedent_flow_id)?;
     let LuaType::Union(union_type) = left_type else {
         return Ok(ResultTypeOrContinue::Continue);
     };
@@ -549,7 +549,7 @@ fn maybe_field_literal_eq_narrow(
     let mut union_types = union_type.into_vec();
     for (i, sub_type) in union_types.iter().enumerate() {
         let member_type =
-            match infer_member_by_member_key(db, cache, &sub_type, index.clone(), &mut guard) {
+            match infer_member_by_member_key(db, cache, sub_type, index.clone(), &mut guard) {
                 Ok(member_type) => member_type,
                 Err(_) => continue, // If we cannot infer the member type, skip this type
             };

@@ -31,11 +31,10 @@ pub fn infer_binary_expr(
         if let Some(ty) = special_or_rule(db, left_type_ref, right_type_ref, left, right) {
             return Ok(ty);
         }
-    } else if !matches!(op, BinaryOperator::OpAnd | BinaryOperator::OpOr) {
-        if let Some(ty) = infer_union_binary_expr(db, op, left_type_ref, right_type_ref) {
+    } else if !matches!(op, BinaryOperator::OpAnd | BinaryOperator::OpOr)
+        && let Some(ty) = infer_union_binary_expr(db, op, left_type_ref, right_type_ref) {
             return Ok(ty);
         }
-    }
 
     match (real_left_type.is_some(), real_right_type.is_some()) {
         (false, false) => infer_binary_expr_type(db, left_type, right_type, op),
@@ -117,8 +116,8 @@ fn infer_binary_custom_operator(
     op: LuaOperatorMetaMethod,
 ) -> InferResult {
     // 先检查 left 是否是自定义类型，避免不必要的 clone
-    if left.is_custom_type() {
-        if let Some(operators) = get_custom_type_operator(db, left.clone(), op) {
+    if left.is_custom_type()
+        && let Some(operators) = get_custom_type_operator(db, left.clone(), op) {
             for operator in operators {
                 let operand = operator.get_operand(db);
                 if check_type_compact(db, &operand, right).is_ok() {
@@ -126,11 +125,10 @@ fn infer_binary_custom_operator(
                 }
             }
         }
-    }
 
     // 再检查 right 是否是自定义类型，只在需要时 clone
-    if right.is_custom_type() {
-        if let Some(operators) = get_custom_type_operator(db, right.clone(), op) {
+    if right.is_custom_type()
+        && let Some(operators) = get_custom_type_operator(db, right.clone(), op) {
             for operator in operators {
                 let operand = operator.get_operand(db);
                 if check_type_compact(db, &operand, left).is_ok() {
@@ -138,7 +136,6 @@ fn infer_binary_custom_operator(
                 }
             }
         }
-    }
 
     match op {
         LuaOperatorMetaMethod::Add
@@ -169,10 +166,10 @@ fn infer_binary_expr_add(db: &DbIndex, left: LuaType, right: LuaType) -> InferRe
                 Ok(LuaType::FloatConst(num1 + num2))
             }
             (LuaType::IntegerConst(int1), LuaType::FloatConst(num2)) => {
-                Ok(LuaType::FloatConst((*int1 as f64 + *num2).into()))
+                Ok(LuaType::FloatConst(*int1 as f64 + *num2))
             }
             (LuaType::FloatConst(num1), LuaType::IntegerConst(int2)) => {
-                Ok(LuaType::FloatConst((*num1 + *int2 as f64).into()))
+                Ok(LuaType::FloatConst(*num1 + *int2 as f64))
             }
             _ => {
                 if left.is_integer() && right.is_integer() {
@@ -206,10 +203,10 @@ fn infer_binary_expr_sub(db: &DbIndex, left: LuaType, right: LuaType) -> InferRe
                 Ok(LuaType::FloatConst(num1 - num2))
             }
             (LuaType::IntegerConst(int1), LuaType::FloatConst(num2)) => {
-                Ok(LuaType::FloatConst((*int1 as f64 - *num2).into()))
+                Ok(LuaType::FloatConst(*int1 as f64 - *num2))
             }
             (LuaType::FloatConst(num1), LuaType::IntegerConst(int2)) => {
-                Ok(LuaType::FloatConst((*num1 - *int2 as f64).into()))
+                Ok(LuaType::FloatConst(*num1 - *int2 as f64))
             }
             _ => {
                 if left.is_integer() && right.is_integer() {
@@ -234,10 +231,10 @@ fn infer_binary_expr_mul(db: &DbIndex, left: LuaType, right: LuaType) -> InferRe
                 Ok(LuaType::FloatConst(num1 * num2))
             }
             (LuaType::IntegerConst(int1), LuaType::FloatConst(num2)) => {
-                Ok(LuaType::FloatConst((*int1 as f64 * *num2).into()))
+                Ok(LuaType::FloatConst(*int1 as f64 * *num2))
             }
             (LuaType::FloatConst(num1), LuaType::IntegerConst(int2)) => {
-                Ok(LuaType::FloatConst((*num1 * *int2 as f64).into()))
+                Ok(LuaType::FloatConst(*num1 * *int2 as f64))
             }
             _ => {
                 if left.is_integer() && right.is_integer() {
@@ -258,7 +255,7 @@ fn infer_binary_expr_div(db: &DbIndex, left: LuaType, right: LuaType) -> InferRe
             (LuaType::IntegerConst(int1), LuaType::IntegerConst(int2)) => {
                 if *int2 != 0 {
                     if int1 % int2 != 0 {
-                        return Ok(LuaType::FloatConst((*int1 as f64 / *int2 as f64).into()));
+                        return Ok(LuaType::FloatConst(*int1 as f64 / *int2 as f64));
                     } else {
                         return Ok(LuaType::IntegerConst(int1 / int2));
                     }
@@ -273,7 +270,7 @@ fn infer_binary_expr_div(db: &DbIndex, left: LuaType, right: LuaType) -> InferRe
             }
             (LuaType::IntegerConst(int1), LuaType::FloatConst(num2)) => {
                 if *num2 != 0.0 {
-                    return Ok(LuaType::FloatConst((*int1 as f64 / *num2).into()));
+                    return Ok(LuaType::FloatConst(*int1 as f64 / *num2));
                 }
                 Ok(LuaType::Number)
             }
@@ -333,7 +330,7 @@ fn infer_binary_expr_pow(db: &DbIndex, left: LuaType, right: LuaType) -> InferRe
                 }
             }
             (LuaType::FloatConst(num1), LuaType::IntegerConst(num2)) => {
-                Ok(LuaType::FloatConst(num1.powf(*num2 as f64).into()))
+                Ok(LuaType::FloatConst(num1.powf(*num2 as f64)))
             }
             _ => Ok(LuaType::Number),
         };

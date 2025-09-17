@@ -26,10 +26,10 @@ pub fn get_type_at_flow(
     flow_id: FlowId,
 ) -> InferResult {
     let key = (var_ref_id.clone(), flow_id);
-    if let Some(cache_entry) = cache.flow_node_cache.get(&key) {
-        if let CacheEntry::Cache(narrow_type) = cache_entry {
-            return Ok(narrow_type.clone());
-        }
+    if let Some(cache_entry) = cache.flow_node_cache.get(&key)
+        && let CacheEntry::Cache(narrow_type) = cache_entry
+    {
+        return Ok(narrow_type.clone());
     }
 
     let result_type;
@@ -161,8 +161,7 @@ fn get_type_at_assign_stat(
     assign_stat: LuaAssignStat,
 ) -> Result<ResultTypeOrContinue, InferFailReason> {
     let (vars, exprs) = assign_stat.get_var_and_expr_list();
-    for i in 0..vars.len() {
-        let var = vars[i].clone();
+    for (i, var) in vars.iter().cloned().enumerate() {
         let Some(maybe_ref_id) = get_var_expr_var_ref_id(db, cache, var.to_expr()) else {
             continue;
         };
@@ -177,20 +176,12 @@ fn get_type_at_assign_stat(
             LuaVarExpr::NameExpr(name_expr) => {
                 let decl_id = LuaDeclId::new(cache.get_file_id(), name_expr.get_position());
                 let type_cache = db.get_type_index().get_type_cache(&decl_id.into());
-                if let Some(typ_cache) = type_cache {
-                    Some(typ_cache.as_type().clone())
-                } else {
-                    None
-                }
+                type_cache.map(|typ_cache| typ_cache.as_type().clone())
             }
             LuaVarExpr::IndexExpr(index_expr) => {
                 let member_id = LuaMemberId::new(index_expr.get_syntax_id(), cache.get_file_id());
                 let type_cache = db.get_type_index().get_type_cache(&member_id.into());
-                if let Some(typ_cache) = type_cache {
-                    Some(typ_cache.as_type().clone())
-                } else {
-                    None
-                }
+                type_cache.map(|typ_cache| typ_cache.as_type().clone())
             }
         };
 

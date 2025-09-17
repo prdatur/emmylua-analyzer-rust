@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, JsonSchema, Clone)]
 #[serde(rename_all = "camelCase")]
+#[derive(Default)]
 pub struct EmmyrcDoc {
     /// Treat specific field names as private, e.g. `m_*` means `XXX.m_id` and `XXX.m_type` are private, witch can only be accessed in the class where the definition is located.
     #[serde(default)]
@@ -27,29 +28,15 @@ pub struct EmmyrcDoc {
     pub rst_default_role: Option<String>,
 }
 
-impl Default for EmmyrcDoc {
-    fn default() -> Self {
-        Self {
-            private_name: Default::default(),
-            known_tags: Default::default(),
-            syntax: Default::default(),
-            rst_primary_domain: None,
-            rst_default_role: None,
-        }
-    }
-}
 
 #[derive(Serialize, Deserialize, Debug, JsonSchema, Clone)]
 #[serde(rename_all = "kebab-case")]
+#[derive(Default)]
 pub enum DocSyntax {
     None,
+    #[default]
     Md,
     Myst,
     Rst,
 }
 
-impl Default for DocSyntax {
-    fn default() -> Self {
-        DocSyntax::Md
-    }
-}

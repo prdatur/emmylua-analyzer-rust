@@ -45,7 +45,7 @@ impl LuaDiagnosticConfig {
 
         let mut severity = HashMap::new();
         for (code, sev) in &emmyrc.diagnostics.severity {
-            severity.insert(code.clone(), sev.clone().into());
+            severity.insert(*code, (*sev).into());
         }
         Self {
             workspace_disabled,

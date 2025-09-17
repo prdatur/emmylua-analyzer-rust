@@ -13,6 +13,12 @@ pub struct LuaGlobalIndex {
     global_decl: HashMap<GlobalId, Vec<LuaDeclId>>,
 }
 
+impl Default for LuaGlobalIndex {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LuaGlobalIndex {
     pub fn new() -> Self {
         Self {
@@ -24,13 +30,13 @@ impl LuaGlobalIndex {
         let id = GlobalId::new(name);
         self.global_decl
             .entry(id)
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(decl_id);
     }
 
     pub fn get_all_global_decl_ids(&self) -> Vec<LuaDeclId> {
         let mut decls = Vec::new();
-        for (_, v) in &self.global_decl {
+        for v in self.global_decl.values() {
             decls.extend(v);
         }
 
@@ -55,23 +61,20 @@ impl LuaGlobalIndex {
 
         let mut last_valid_decl_id = None;
         for decl_id in decl_ids {
-            let decl_type_cache = db.get_type_index().get_type_cache(&decl_id.clone().into());
-            match decl_type_cache {
-                Some(type_cache) => {
-                    let typ = type_cache.as_type();
-                    if typ.is_def() || typ.is_ref() || typ.is_function() {
-                        return Some(*decl_id);
-                    }
-
-                    if type_cache.is_table() {
-                        last_valid_decl_id = Some(decl_id)
-                    }
+            let decl_type_cache = db.get_type_index().get_type_cache(&(*decl_id).into());
+            if let Some(type_cache) = decl_type_cache {
+                let typ = type_cache.as_type();
+                if typ.is_def() || typ.is_ref() || typ.is_function() {
+                    return Some(*decl_id);
                 }
-                None => {}
+
+                if type_cache.is_table() {
+                    last_valid_decl_id = Some(decl_id)
+                }
             }
         }
 
-        if last_valid_decl_id.is_none() && decl_ids.len() > 0 {
+        if last_valid_decl_id.is_none() && !decl_ids.is_empty() {
             return Some(decl_ids[0]);
         }
 

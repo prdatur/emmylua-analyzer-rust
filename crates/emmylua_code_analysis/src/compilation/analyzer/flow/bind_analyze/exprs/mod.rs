@@ -101,9 +101,7 @@ pub fn bind_paren_expr(
     paren_expr: emmylua_parser::LuaParenExpr,
     current: FlowId,
 ) -> Option<()> {
-    let Some(inner_expr) = paren_expr.get_expr() else {
-        return None;
-    };
+    let inner_expr = paren_expr.get_expr()?;
 
     bind_expr(binder, inner_expr, current);
     Some(())
@@ -114,9 +112,7 @@ pub fn bind_unary_expr(
     unary_expr: LuaUnaryExpr,
     current: FlowId,
 ) -> Option<()> {
-    let Some(inner_expr) = unary_expr.get_expr() else {
-        return None;
-    };
+    let inner_expr = unary_expr.get_expr()?;
     bind_expr(binder, inner_expr, current);
     Some(())
 }

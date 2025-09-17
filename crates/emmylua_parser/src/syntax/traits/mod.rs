@@ -109,7 +109,7 @@ pub trait LuaAstNode {
     where
         Self: Sized,
     {
-        LuaAstPtr::new(&self)
+        LuaAstPtr::new(self)
     }
 }
 

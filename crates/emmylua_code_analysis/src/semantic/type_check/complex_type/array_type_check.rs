@@ -97,17 +97,12 @@ fn check_array_type_compact_ref_def(
     };
 
     for member in &members {
-        match &member.key {
-            LuaMemberKey::ExprType(key_type) => {
-                if key_type.is_integer() {
-                    match check_general_type_compact(context, source_base, &member.typ, check_guard)
-                    {
-                        Ok(()) => return Ok(()),
-                        _ => {}
-                    }
-                }
-            }
-            _ => {}
+        if let LuaMemberKey::ExprType(key_type) = &member.key
+            && key_type.is_integer()
+            && let Ok(()) =
+                check_general_type_compact(context, source_base, &member.typ, check_guard)
+        {
+            return Ok(());
         }
     }
 

@@ -34,17 +34,13 @@ fn analyze_diagnostic_disable(
     let comment = analyzer.comment.clone();
     let owner_block = comment.ancestors::<LuaBlock>().next()?;
     let owner_block_range = owner_block.get_range();
-    let is_file_disable = if let Some(_) = owner_block.get_parent::<LuaChunk>() {
-        true
-    } else {
-        false
-    };
+    let is_file_disable = owner_block.get_parent::<LuaChunk>().is_some();
 
     let diagnostic_index = analyzer.db.get_diagnostic_index_mut();
     if let Some(diagnostic_code_list) = diagnostic.get_code_list() {
         for code in diagnostic_code_list.get_codes() {
             let name = code.get_name_text();
-            let diagnostic_code = if let Some(code) = DiagnosticCode::from_str(name).ok() {
+            let diagnostic_code = if let Ok(code) = DiagnosticCode::from_str(name) {
                 code
             } else {
                 continue;
@@ -79,7 +75,7 @@ fn analyze_diagnostic_disable_next_line(
     let comment = analyzer.comment.clone();
     let comment_range = comment.get_range();
     let document = analyzer.db.get_vfs().get_document(&analyzer.file_id)?;
-    let comment_end_line = document.get_line(comment_range.end().into())?;
+    let comment_end_line = document.get_line(comment_range.end())?;
     let line_range = document.get_line_range(comment_end_line + 1)?;
     let valid_range = TextRange::new(comment_range.start(), line_range.end());
 
@@ -87,7 +83,7 @@ fn analyze_diagnostic_disable_next_line(
     if let Some(diagnostic_code_list) = diagnostic.get_code_list() {
         for code in diagnostic_code_list.get_codes() {
             let name = code.get_name_text();
-            let diagnostic_code = if let Some(code) = DiagnosticCode::from_str(name).ok() {
+            let diagnostic_code = if let Ok(code) = DiagnosticCode::from_str(name) {
                 code
             } else {
                 continue;
@@ -115,14 +111,14 @@ fn analyze_diagnostic_disable_line(
     let comment = analyzer.comment.clone();
     let comment_range = comment.get_range();
     let document = analyzer.db.get_vfs().get_document(&analyzer.file_id)?;
-    let comment_end_line = document.get_line(comment_range.end().into())?;
+    let comment_end_line = document.get_line(comment_range.end())?;
     let valid_range = document.get_line_range(comment_end_line)?;
 
     let diagnostic_index = analyzer.db.get_diagnostic_index_mut();
     if let Some(diagnostic_code_list) = diagnostic.get_code_list() {
         for code in diagnostic_code_list.get_codes() {
             let name = code.get_name_text();
-            let diagnostic_code = if let Some(code) = DiagnosticCode::from_str(name).ok() {
+            let diagnostic_code = if let Ok(code) = DiagnosticCode::from_str(name) {
                 code
             } else {
                 continue;
@@ -151,7 +147,7 @@ fn analyze_diagnostic_enable(
     let diagnostic_code_list = diagnostic.get_code_list()?;
     for code in diagnostic_code_list.get_codes() {
         let name = code.get_name_text();
-        let diagnostic_code = if let Some(code) = DiagnosticCode::from_str(name).ok() {
+        let diagnostic_code = if let Ok(code) = DiagnosticCode::from_str(name) {
             code
         } else {
             continue;

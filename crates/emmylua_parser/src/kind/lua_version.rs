@@ -24,6 +24,7 @@ impl LuaVersionNumber {
         patch: 0,
     };
 
+    #[allow(clippy::should_implement_trait)]
     pub fn from_str(s: &str) -> Option<Self> {
         if s == "JIT" {
             return Some(Self::LUA_JIT);

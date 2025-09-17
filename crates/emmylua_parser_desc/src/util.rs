@@ -79,12 +79,11 @@ pub fn desc_to_lines(
         .syntax()
         .siblings_with_tokens(Direction::Prev)
         .skip(1)
-        .skip_while(|tk| tk.kind() == LuaTokenKind::TkWhitespace.into())
-        .next();
-    if let Some(prev_token) = prev_token {
-        if prev_token.kind() == LuaTokenKind::TkNormalStart.into() {
-            handle_token(&prev_token);
-        }
+        .find(|tk| tk.kind() != LuaTokenKind::TkWhitespace.into());
+    if let Some(prev_token) = prev_token
+        && prev_token.kind() == LuaTokenKind::TkNormalStart.into()
+    {
+        handle_token(&prev_token);
     }
     for child in desc.syntax().children_with_tokens() {
         handle_token(&child);
@@ -167,7 +166,7 @@ pub fn desc_to_lines(
     // we don't affect common indent and other logic.
     if let Some(cursor_position) = cursor_position {
         for (i, line) in lines.iter().enumerate() {
-            let start: usize = line.start_offset.into();
+            let start: usize = line.start_offset;
             if start > cursor_position {
                 lines.truncate(i);
                 break;
@@ -304,15 +303,10 @@ pub fn is_quote_match(l: char, r: char) -> bool {
         return true;
     }
 
-    match (l, r) {
-        ('\'', '\'') => true,
-        ('"', '"') => true,
-        ('<', '>') => true,
-        ('(', ')') => true,
-        ('[', ']') => true,
-        ('{', '}') => true,
-        _ => false,
-    }
+    matches!(
+        (l, r),
+        ('\'', '\'') | ('"', '"') | ('<', '>') | ('(', ')') | ('[', ']') | ('{', '}')
+    )
 }
 
 pub fn is_blank(s: &str) -> bool {
@@ -343,7 +337,7 @@ pub fn is_lua_role(name: &str) -> bool {
     )
 }
 
-pub fn sort_result(items: &mut Vec<DescItem>) {
+pub fn sort_result(items: &mut [DescItem]) {
     items.sort_by_key(|r| {
         let len: usize = r.range.len().into();
 

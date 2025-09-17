@@ -85,11 +85,11 @@ impl LuaOperator {
                 if let Some(signature) = signature {
                     if signature.resolve_return == SignatureReturnStatus::UnResolve {
                         return Err(InferFailReason::UnResolveSignatureReturn(
-                            signature_id.clone(),
+                            *signature_id,
                         ));
                     }
 
-                    let return_type = signature.return_docs.get(0);
+                    let return_type = signature.return_docs.first();
                     if let Some(return_type) = return_type {
                         return Ok(return_type.type_ref.clone());
                     }
@@ -106,11 +106,11 @@ impl LuaOperator {
                 if let Some(signature) = db.get_signature_index().get(signature_id) {
                     if signature.resolve_return == SignatureReturnStatus::UnResolve {
                         return Err(InferFailReason::UnResolveSignatureReturn(
-                            signature_id.clone(),
+                            *signature_id,
                         ));
                     }
 
-                    let return_type = signature.return_docs.get(0);
+                    let return_type = signature.return_docs.first();
                     if let Some(return_type) = return_type {
                         return Ok(return_type.type_ref.clone());
                     }

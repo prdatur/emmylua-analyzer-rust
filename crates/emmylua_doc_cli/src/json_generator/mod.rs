@@ -12,12 +12,11 @@ pub fn generate_json(
 
     let output = match output {
         OutputDestination::File(output) if output.extension() == Some("json".as_ref()) => {
-            if let Some(parent) = output.parent() {
-                if !parent.exists() {
+            if let Some(parent) = output.parent()
+                && !parent.exists() {
                     log::info!("Creating output directory: {:?}", parent);
-                    std::fs::create_dir_all(&parent)?;
+                    std::fs::create_dir_all(parent)?;
                 }
-            }
 
             OutputDestination::File(output)
         }

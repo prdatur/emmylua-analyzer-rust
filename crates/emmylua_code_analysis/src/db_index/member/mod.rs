@@ -27,6 +27,12 @@ enum MemberOrOwner {
     Owner(LuaMemberOwner),
 }
 
+impl Default for LuaMemberIndex {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LuaMemberIndex {
     pub fn new() -> Self {
         Self {
@@ -53,7 +59,7 @@ impl LuaMemberIndex {
     fn add_in_file_object(&mut self, file_id: FileId, member_or_owner: MemberOrOwner) {
         self.in_filed
             .entry(file_id)
-            .or_insert_with(HashSet::new)
+            .or_default()
             .insert(member_or_owner);
     }
 
@@ -70,7 +76,7 @@ impl LuaMemberIndex {
                 match item {
                     LuaMemberIndexItem::One(old_id) => {
                         if old_id != &id {
-                            let ids = vec![old_id.clone(), id];
+                            let ids = vec![*old_id, id];
                             *item = LuaMemberIndexItem::Many(ids);
                         }
                     }
@@ -129,11 +135,10 @@ impl LuaMemberIndex {
             }
             LuaMemberIndexItem::Many(ids) => {
                 for id in ids {
-                    if let Some(member) = self.get_member(id) {
-                        if !member.get_feature().is_meta_decl() {
+                    if let Some(member) = self.get_member(id)
+                        && !member.get_feature().is_meta_decl() {
                             return false;
                         }
-                    }
                 }
                 return true;
             }

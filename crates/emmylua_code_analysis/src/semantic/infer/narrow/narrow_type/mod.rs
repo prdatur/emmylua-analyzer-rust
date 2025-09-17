@@ -186,7 +186,7 @@ pub fn narrow_down_type(db: &DbIndex, source: LuaType, target: LuaType) -> Optio
         LuaType::MultiLineUnion(multi_line_union) => {
             let union_types = multi_line_union
                 .get_unions()
-                .into_iter()
+                .iter()
                 .filter_map(|(ty, _)| narrow_down_type(db, ty.clone(), target.clone()))
                 .collect::<Vec<_>>();
 

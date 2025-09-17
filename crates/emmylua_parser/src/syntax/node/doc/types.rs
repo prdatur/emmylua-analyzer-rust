@@ -48,23 +48,23 @@ impl LuaAstNode for LuaDocType {
     where
         Self: Sized,
     {
-        match kind {
-            LuaSyntaxKind::TypeName => true,
-            LuaSyntaxKind::TypeArray => true,
-            LuaSyntaxKind::TypeFun => true,
-            LuaSyntaxKind::TypeObject => true,
-            LuaSyntaxKind::TypeBinary => true,
-            LuaSyntaxKind::TypeUnary => true,
-            LuaSyntaxKind::TypeConditional => true,
-            LuaSyntaxKind::TypeTuple => true,
-            LuaSyntaxKind::TypeLiteral => true,
-            LuaSyntaxKind::TypeVariadic => true,
-            LuaSyntaxKind::TypeNullable => true,
-            LuaSyntaxKind::TypeGeneric => true,
-            LuaSyntaxKind::TypeStringTemplate => true,
-            LuaSyntaxKind::TypeMultiLineUnion => true,
-            _ => false,
-        }
+        matches!(
+            kind,
+            LuaSyntaxKind::TypeName
+                | LuaSyntaxKind::TypeArray
+                | LuaSyntaxKind::TypeFun
+                | LuaSyntaxKind::TypeObject
+                | LuaSyntaxKind::TypeBinary
+                | LuaSyntaxKind::TypeUnary
+                | LuaSyntaxKind::TypeConditional
+                | LuaSyntaxKind::TypeTuple
+                | LuaSyntaxKind::TypeLiteral
+                | LuaSyntaxKind::TypeVariadic
+                | LuaSyntaxKind::TypeNullable
+                | LuaSyntaxKind::TypeGeneric
+                | LuaSyntaxKind::TypeStringTemplate
+                | LuaSyntaxKind::TypeMultiLineUnion
+        )
     }
 
     fn cast(syntax: LuaSyntaxNode) -> Option<Self>

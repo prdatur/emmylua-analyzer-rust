@@ -13,6 +13,7 @@ use crate::{
     },
 };
 
+#[allow(clippy::enum_variant_names)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum VarRefId {
     VarRef(LuaDeclId),
@@ -63,10 +64,7 @@ impl VarRefId {
     }
 
     pub fn is_self_ref(&self) -> bool {
-        match self {
-            VarRefId::SelfRef(_) => true,
-            _ => false,
-        }
+        matches!(self, VarRefId::SelfRef(_))
     }
 }
 
@@ -75,9 +73,7 @@ fn get_call_expr_var_ref_id(
     cache: &mut LuaInferCache,
     call_expr: &LuaCallExpr,
 ) -> Option<VarRefId> {
-    let Some(prefix_expr) = call_expr.get_prefix_expr() else {
-        return None;
-    };
+    let prefix_expr = call_expr.get_prefix_expr()?;
     let maybe_func = infer_expr(db, cache, prefix_expr.clone()).ok()?;
 
     let ret = match maybe_func {
@@ -106,7 +102,7 @@ fn get_call_expr_var_ref_id(
             // 开始构建 access_path
             let mut access_path = String::new();
             access_path.push_str(obj_expr.syntax().text().to_string().as_str()); // 这里不需要精确的文本
-            access_path.push_str(".");
+            access_path.push('.');
             let key_expr = args_iter.next()?;
             match key_expr {
                 LuaExpr::LiteralExpr(literal_expr) => match literal_expr.get_literal()? {
@@ -132,7 +128,7 @@ fn get_call_expr_var_ref_id(
                 ArcIntern::new(SmolStr::new(access_path)),
             ))
         }
-        _ => return None,
+        _ => None,
     }
 }
 

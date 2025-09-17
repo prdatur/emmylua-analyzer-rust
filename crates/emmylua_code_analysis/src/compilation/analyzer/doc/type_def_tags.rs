@@ -186,11 +186,7 @@ fn get_generic_params(
             continue;
         };
 
-        let type_ref = if let Some(type_ref) = param.get_type() {
-            Some(infer_type(analyzer, type_ref))
-        } else {
-            None
-        };
+        let type_ref = param.get_type().map(|type_ref| infer_type(analyzer, type_ref));
 
         let is_variadic = param.is_variadic();
         params_result.push(GenericParam::new(name, type_ref, is_variadic));
@@ -239,11 +235,11 @@ fn get_local_stat_reference_ranges(
         .get_reference_index_mut()
         .get_decl_references(&file_id, &decl_id)?;
     for decl_ref in &decl_ref.cells {
-        let syntax_id = LuaSyntaxId::new(LuaSyntaxKind::NameExpr.into(), decl_ref.range.clone());
+        let syntax_id = LuaSyntaxId::new(LuaSyntaxKind::NameExpr.into(), decl_ref.range);
         let name_node = syntax_id.to_node_from_root(&analyzer.root)?;
-        if let Some(parent1) = name_node.parent() {
-            if parent1.kind() == LuaSyntaxKind::IndexExpr.into() {
-                if let Some(parent2) = parent1.parent() {
+        if let Some(parent1) = name_node.parent()
+            && parent1.kind() == LuaSyntaxKind::IndexExpr.into()
+                && let Some(parent2) = parent1.parent() {
                     if parent2.kind() == LuaSyntaxKind::FuncStat.into() {
                         ranges.push(parent2.text_range());
                         let stat = LuaFuncStat::cast(parent2)?;
@@ -252,18 +248,15 @@ fn get_local_stat_reference_ranges(
                         }
                     } else if parent2.kind() == LuaSyntaxKind::AssignStat.into() {
                         let stat = LuaAssignStat::cast(parent2)?;
-                        if let Some(assign_token) = stat.get_assign_op() {
-                            if assign_token.get_position() > decl_ref.range.start() {
+                        if let Some(assign_token) = stat.get_assign_op()
+                            && assign_token.get_position() > decl_ref.range.start() {
                                 ranges.push(stat.get_range());
                                 for comment in stat.get_comments() {
                                     ranges.push(comment.get_range());
                                 }
                             }
-                        }
                     }
                 }
-            }
-        }
     }
 
     Some(ranges)
@@ -284,9 +277,9 @@ fn get_global_reference_ranges(
         .get_global_file_references(&name, file_id)?;
     for syntax_id in ref_syntax_ids {
         let name_node = syntax_id.to_node_from_root(&analyzer.root)?;
-        if let Some(parent1) = name_node.parent() {
-            if parent1.kind() == LuaSyntaxKind::IndexExpr.into() {
-                if let Some(parent2) = parent1.parent() {
+        if let Some(parent1) = name_node.parent()
+            && parent1.kind() == LuaSyntaxKind::IndexExpr.into()
+                && let Some(parent2) = parent1.parent() {
                     if parent2.kind() == LuaSyntaxKind::FuncStat.into() {
                         ranges.push(parent2.text_range());
                         let stat = LuaFuncStat::cast(parent2)?;
@@ -295,18 +288,15 @@ fn get_global_reference_ranges(
                         }
                     } else if parent2.kind() == LuaSyntaxKind::AssignStat.into() {
                         let stat = LuaAssignStat::cast(parent2)?;
-                        if let Some(assign_token) = stat.token_by_kind(LuaTokenKind::TkAssign) {
-                            if assign_token.get_position() > syntax_id.get_range().start() {
+                        if let Some(assign_token) = stat.token_by_kind(LuaTokenKind::TkAssign)
+                            && assign_token.get_position() > syntax_id.get_range().start() {
                                 ranges.push(stat.get_range());
                                 for comment in stat.get_comments() {
                                     ranges.push(comment.get_range());
                                 }
                             }
-                        }
                     }
                 }
-            }
-        }
     }
 
     Some(ranges)
@@ -327,11 +317,7 @@ pub fn analyze_func_generic(analyzer: &mut DocAnalyzer, tag: LuaDocTagGeneric) -
                 continue;
             };
 
-            let type_ref = if let Some(type_ref) = param.get_type() {
-                Some(infer_type(analyzer, type_ref))
-            } else {
-                None
-            };
+            let type_ref = param.get_type().map(|type_ref| infer_type(analyzer, type_ref));
 
             params_result.push(GenericParam::new(
                 SmolStr::new(name.as_str()),

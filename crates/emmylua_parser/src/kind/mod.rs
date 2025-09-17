@@ -87,9 +87,9 @@ impl LuaKind {
 
     pub fn from_raw(raw: u16) -> LuaKind {
         if raw & 0x8000 != 0 {
-            LuaKind::Syntax(unsafe { std::mem::transmute(raw & 0x7FFF) })
+            LuaKind::Syntax(unsafe { std::mem::transmute::<u16, LuaSyntaxKind>(raw & 0x7FFF) })
         } else {
-            LuaKind::Token(unsafe { std::mem::transmute(raw) })
+            LuaKind::Token(unsafe { std::mem::transmute::<u16, LuaTokenKind>(raw) })
         }
     }
 }

@@ -395,12 +395,10 @@ impl TerminalDisplay {
             } else {
                 println!("\nCheck completed with warnings");
             }
+        } else if self.supports_color {
+            println!("\n{}", Color::Green.bold().paint("Check successful"));
         } else {
-            if self.supports_color {
-                println!("\n{}", Color::Green.bold().paint("Check successful"));
-            } else {
-                println!("\nCheck successful");
-            }
+            println!("\nCheck successful");
         }
     }
 }

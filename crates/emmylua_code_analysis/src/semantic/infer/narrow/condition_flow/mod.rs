@@ -46,6 +46,7 @@ impl InferConditionFlow {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn get_type_at_condition_flow(
     db: &DbIndex,
     tree: &FlowTree,
@@ -129,6 +130,7 @@ pub fn get_type_at_condition_flow(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn get_type_at_name_expr(
     db: &DbIndex,
     tree: &FlowTree,
@@ -169,6 +171,7 @@ fn get_type_at_name_expr(
     Ok(ResultTypeOrContinue::Result(result_type))
 }
 
+#[allow(clippy::too_many_arguments)]
 fn get_type_at_name_ref(
     db: &DbIndex,
     tree: &FlowTree,
@@ -206,6 +209,7 @@ fn get_type_at_name_ref(
     )
 }
 
+#[allow(clippy::too_many_arguments)]
 fn get_type_at_unary_flow(
     db: &DbIndex,
     tree: &FlowTree,

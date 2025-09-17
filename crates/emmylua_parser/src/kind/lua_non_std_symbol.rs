@@ -25,6 +25,12 @@ pub enum LuaNonStdSymbol {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct LuaNonStdSymbolSet(u64);
 
+impl Default for LuaNonStdSymbolSet {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LuaNonStdSymbolSet {
     pub fn new() -> Self {
         LuaNonStdSymbolSet(0)

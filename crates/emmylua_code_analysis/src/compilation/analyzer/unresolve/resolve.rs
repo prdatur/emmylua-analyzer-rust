@@ -64,7 +64,7 @@ pub fn try_resolve_member(
                 return Ok(()); // Changed from return None to return Ok(())
             }
         };
-        let member_id = unresolve_member.member_id.clone();
+        let member_id = unresolve_member.member_id;
         add_member(db, member_owner, member_id);
         unresolve_member.prefix = None;
     }
@@ -132,10 +132,8 @@ pub fn try_resolve_table_field(
         None,
     );
     db.get_member_index_mut().add_member(owner_id, member);
-    db.get_type_index_mut().bind_type(
-        member_id.clone().into(),
-        LuaTypeCache::InferType(decl_type.clone()),
-    );
+    db.get_type_index_mut()
+        .bind_type(member_id.into(), LuaTypeCache::InferType(decl_type.clone()));
 
     merge_table_field_to_def(db, cache, table_expr, member_id);
     Ok(())
@@ -188,7 +186,7 @@ pub fn try_resolve_return_point(
     cache: &mut LuaInferCache,
     return_: &mut UnResolveReturn,
 ) -> ResolveResult {
-    let return_docs = analyze_return_point(&db, cache, &return_.return_points)?;
+    let return_docs = analyze_return_point(db, cache, &return_.return_points)?;
 
     let signature = db
         .get_signature_index_mut()
@@ -209,8 +207,7 @@ pub fn try_resolve_iter_var(
     unresolve_iter_var: &mut UnResolveIterVar,
 ) -> ResolveResult {
     let iter_var_types = infer_for_range_iter_expr_func(db, cache, &unresolve_iter_var.iter_exprs)?;
-    let mut idx = 0;
-    for var_name in &unresolve_iter_var.iter_vars {
+    for (idx, var_name) in unresolve_iter_var.iter_vars.iter().enumerate() {
         let position = var_name.get_position();
         let decl_id = LuaDeclId::new(unresolve_iter_var.file_id, position);
         let ret_type = iter_var_types
@@ -221,7 +218,6 @@ pub fn try_resolve_iter_var(
 
         db.get_type_index_mut()
             .bind_type(decl_id.into(), LuaTypeCache::InferType(ret_type));
-        idx += 1;
     }
     Ok(())
 }
@@ -239,13 +235,11 @@ pub fn try_resolve_module_ref(
     match &module_ref.owner_id {
         LuaSemanticDeclId::LuaDecl(decl_id) => {
             db.get_type_index_mut()
-                .bind_type(decl_id.clone().into(), LuaTypeCache::InferType(export_type));
+                .bind_type((*decl_id).into(), LuaTypeCache::InferType(export_type));
         }
         LuaSemanticDeclId::Member(member_id) => {
-            db.get_type_index_mut().bind_type(
-                member_id.clone().into(),
-                LuaTypeCache::InferType(export_type),
-            );
+            db.get_type_index_mut()
+                .bind_type((*member_id).into(), LuaTypeCache::InferType(export_type));
         }
         _ => {}
     };

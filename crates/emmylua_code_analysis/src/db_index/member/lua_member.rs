@@ -58,7 +58,7 @@ impl LuaMember {
     }
 
     pub fn is_field(&self) -> bool {
-        LuaSyntaxKind::DocTagField == self.member_id.get_syntax_id().get_kind().into()
+        LuaSyntaxKind::DocTagField == self.member_id.get_syntax_id().get_kind()
     }
 
     pub fn get_feature(&self) -> LuaMemberFeature {

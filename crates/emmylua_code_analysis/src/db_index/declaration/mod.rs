@@ -19,6 +19,12 @@ pub struct LuaDeclIndex {
     decl_trees: HashMap<FileId, LuaDeclarationTree>,
 }
 
+impl Default for LuaDeclIndex {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LuaDeclIndex {
     pub fn new() -> Self {
         Self {

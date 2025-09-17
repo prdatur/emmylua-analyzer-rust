@@ -54,14 +54,14 @@ fn check_doc_tag_type(
             .get_generic_params(&generic_type.get_base_type_id())?;
         for (i, param_type) in generic_type.get_params().iter().enumerate() {
             let extend_type = generic_params.get(i)?.type_constraint.clone()?;
-            let result = semantic_model.type_check_detail(&extend_type, &param_type);
-            if !result.is_ok() {
+            let result = semantic_model.type_check_detail(&extend_type, param_type);
+            if result.is_err() {
                 add_type_check_diagnostic(
                     context,
                     semantic_model,
                     doc_type.get_range(),
                     &extend_type,
-                    &param_type,
+                    param_type,
                     result,
                 );
             }
@@ -126,6 +126,7 @@ fn check_call_expr(
     Some(())
 }
 
+#[allow(clippy::too_many_arguments)]
 fn check_param_type(
     context: &mut DiagnosticContext,
     semantic_model: &SemanticModel,
@@ -141,7 +142,7 @@ fn check_param_type(
         LuaType::StrTplRef(str_tpl_ref) => {
             let extend_type = get_extend_type(
                 semantic_model,
-                &call_expr,
+                call_expr,
                 str_tpl_ref.get_tpl_id(),
                 signature,
             );
@@ -163,7 +164,7 @@ fn check_param_type(
         }
         LuaType::TplRef(tpl_ref) | LuaType::ConstTplRef(tpl_ref) => {
             let extend_type =
-                get_extend_type(semantic_model, &call_expr, tpl_ref.get_tpl_id(), signature);
+                get_extend_type(semantic_model, call_expr, tpl_ref.get_tpl_id(), signature);
             check_tpl_ref(
                 context,
                 semantic_model,
@@ -216,7 +217,7 @@ fn get_extend_type(
                             let generic_params = semantic_model
                                 .get_db()
                                 .get_type_index()
-                                .get_generic_params(&type_id)?;
+                                .get_generic_params(type_id)?;
                             generic_params.get(tpl_id as usize)?.type_constraint.clone()
                         }
                         _ => None,
@@ -257,21 +258,21 @@ fn check_str_tpl_ref(
                 );
             }
 
-            if let Some(extend_type) = extend_type {
-                if let Some(type_decl) = founded_type_decl {
-                    let type_id = type_decl.get_id();
-                    let ref_type = LuaType::Ref(type_id);
-                    let result = semantic_model.type_check_detail(&extend_type, &ref_type);
-                    if result.is_err() {
-                        add_type_check_diagnostic(
-                            context,
-                            semantic_model,
-                            range,
-                            &extend_type,
-                            &ref_type,
-                            result,
-                        );
-                    }
+            if let Some(extend_type) = extend_type
+                && let Some(type_decl) = founded_type_decl
+            {
+                let type_id = type_decl.get_id();
+                let ref_type = LuaType::Ref(type_id);
+                let result = semantic_model.type_check_detail(&extend_type, &ref_type);
+                if result.is_err() {
+                    add_type_check_diagnostic(
+                        context,
+                        semantic_model,
+                        range,
+                        &extend_type,
+                        &ref_type,
+                        result,
+                    );
                 }
             }
         }
@@ -297,7 +298,7 @@ fn check_tpl_ref(
     let extend_type = extend_type.clone()?;
     let arg_info = arg_info?;
     let result = semantic_model.type_check_detail(&extend_type, &arg_info.0);
-    if !result.is_ok() {
+    if result.is_err() {
         add_type_check_diagnostic(
             context,
             semantic_model,
@@ -320,7 +321,7 @@ fn add_type_check_diagnostic(
 ) {
     let db = semantic_model.get_db();
     match result {
-        Ok(_) => return,
+        Ok(_) => (),
         Err(reason) => {
             let reason_message = match reason {
                 TypeCheckFailReason::TypeNotMatchWithReason(reason) => reason,
@@ -334,8 +335,8 @@ fn add_type_check_diagnostic(
                 range,
                 t!(
                     "type `%{found}` does not satisfy the constraint `%{source}`. %{reason}",
-                    source = humanize_type(db, &extend_type, RenderLevel::Simple),
-                    found = humanize_type(db, &expr_type, RenderLevel::Simple),
+                    source = humanize_type(db, extend_type, RenderLevel::Simple),
+                    found = humanize_type(db, expr_type, RenderLevel::Simple),
                     reason = reason_message
                 )
                 .to_string(),
@@ -421,7 +422,7 @@ fn try_instantiate_arg_type(
                                         let generic_params = semantic_model
                                             .get_db()
                                             .get_type_index()
-                                            .get_generic_params(&type_id)?;
+                                            .get_generic_params(type_id)?;
                                         return generic_params
                                             .get(tpl_id as usize)?
                                             .type_constraint

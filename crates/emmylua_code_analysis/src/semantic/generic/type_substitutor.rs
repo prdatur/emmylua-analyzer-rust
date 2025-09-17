@@ -9,6 +9,12 @@ pub struct TypeSubstitutor {
     self_type: Option<LuaType>,
 }
 
+impl Default for TypeSubstitutor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TypeSubstitutor {
     pub fn new() -> Self {
         Self {
@@ -44,9 +50,7 @@ impl TypeSubstitutor {
 
     pub fn add_need_infer_tpls(&mut self, tpl_ids: HashSet<GenericTplId>) {
         for tpl_id in tpl_ids {
-            if !self.tpl_replace_map.contains_key(&tpl_id) {
-                self.tpl_replace_map.insert(tpl_id, SubstitutorValue::None);
-            }
+            self.tpl_replace_map.entry(tpl_id).or_insert(SubstitutorValue::None);
         }
     }
 
@@ -144,11 +148,10 @@ impl TypeSubstitutor {
     }
 
     pub fn check_recursion(&self, type_id: &LuaTypeDeclId) -> bool {
-        if let Some(alias_type_id) = &self.alias_type_id {
-            if alias_type_id == type_id {
+        if let Some(alias_type_id) = &self.alias_type_id
+            && alias_type_id == type_id {
                 return true;
             }
-        }
 
         false
     }

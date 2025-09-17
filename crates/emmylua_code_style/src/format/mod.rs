@@ -64,7 +64,7 @@ impl LuaFormatter {
                     (_, LuaTokenKind::TkEndOfLine) => {
                         // No space expected
                         context.reset_whitespace();
-                        context.text.push_str("\n");
+                        context.text.push('\n');
                         context.is_line_first_token = true;
                         continue;
                     }
@@ -97,10 +97,10 @@ impl LuaFormatter {
                         TokenNodeChange::Remove => continue,
                         TokenNodeChange::AddLeft(s) => {
                             context.text.push_str(s);
-                            context.text.push_str(&token.text());
+                            context.text.push_str(token.text());
                         }
                         TokenNodeChange::AddRight(s) => {
-                            context.text.push_str(&token.text());
+                            context.text.push_str(token.text());
                             context.text.push_str(s);
                         }
                         TokenNodeChange::ReplaceWith(s) => {
@@ -108,7 +108,7 @@ impl LuaFormatter {
                         }
                     }
                 } else {
-                    context.text.push_str(&token.text());
+                    context.text.push_str(token.text());
                 }
 
                 context.current_expected = self.token_right_expected.get(&syntax_id).cloned();

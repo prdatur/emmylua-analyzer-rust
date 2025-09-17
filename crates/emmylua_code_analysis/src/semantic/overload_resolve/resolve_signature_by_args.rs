@@ -33,18 +33,19 @@ pub fn resolve_signature_by_args(
         }
     }
 
-    let mut best_match_result = need_resolve_funcs[0].clone().unwrap();
-    for arg_index in 0..expr_len {
-        let mut current_match_result = ParamMatchResult::NotMatch;
-        for i in 0..need_resolve_funcs.len() {
-            let opt_func = &need_resolve_funcs[i];
-            if opt_func.is_none() {
-                continue;
-            }
-            let func = opt_func.as_ref().unwrap();
+    let mut best_match_result = need_resolve_funcs[0]
+        .clone()
+        .expect("Match result should exist");
+    for (arg_index, expr_type) in expr_types.iter().enumerate() {
+        let mut current_match_result = ParamMatchResult::Not;
+        for opt_func in &mut need_resolve_funcs {
+            let func = match opt_func.as_ref() {
+                None => continue,
+                Some(func) => func,
+            };
             let param_len = func.get_params().len();
             if param_len < arg_count && !is_func_last_param_variadic(func) {
-                need_resolve_funcs[i] = None;
+                *opt_func = None;
                 continue;
             }
 
@@ -62,7 +63,6 @@ pub fn resolve_signature_by_args(
                 }
                 _ => {}
             }
-            let expr_type = &expr_types[arg_index];
             let param_type = if param_index < param_len {
                 let param_info = func.get_params().get(param_index);
                 param_info
@@ -72,20 +72,20 @@ pub fn resolve_signature_by_args(
                 if last_param_info.0 == "..." {
                     last_param_info.1.clone().unwrap_or(LuaType::Any)
                 } else {
-                    need_resolve_funcs[i] = None;
+                    *opt_func = None;
                     continue;
                 }
             } else {
-                need_resolve_funcs[i] = None;
+                *opt_func = None;
                 continue;
             };
 
             let match_result = if param_type.is_any() {
-                ParamMatchResult::AnyMatch
-            } else if check_type_compact(db, &param_type, &expr_type).is_ok() {
-                ParamMatchResult::TypeMatch
+                ParamMatchResult::Any
+            } else if check_type_compact(db, &param_type, expr_type).is_ok() {
+                ParamMatchResult::Type
             } else {
-                ParamMatchResult::NotMatch
+                ParamMatchResult::Not
             };
 
             if match_result > current_match_result {
@@ -93,12 +93,12 @@ pub fn resolve_signature_by_args(
                 best_match_result = func.clone();
             }
 
-            if match_result == ParamMatchResult::NotMatch {
-                need_resolve_funcs[i] = None;
+            if match_result == ParamMatchResult::Not {
+                *opt_func = None;
                 continue;
             }
 
-            if match_result > ParamMatchResult::AnyMatch
+            if match_result > ParamMatchResult::Any
                 && arg_index + 1 == expr_len
                 && param_index + 1 == func.get_params().len()
             {
@@ -106,7 +106,7 @@ pub fn resolve_signature_by_args(
             }
         }
 
-        if current_match_result == ParamMatchResult::NotMatch {
+        if current_match_result == ParamMatchResult::Not {
             break;
         }
     }
@@ -114,35 +114,36 @@ pub fn resolve_signature_by_args(
     let mut rest_need_resolve_funcs = need_resolve_funcs
         .iter()
         .filter_map(|it| it.clone())
-        .map(|it| Some(it))
+        .map(Some)
         .collect::<Vec<_>>();
 
-    match rest_need_resolve_funcs.len() {
+    let rest_len = rest_need_resolve_funcs.len();
+    match rest_len {
         0 => return Ok(best_match_result),
-        1 => return Ok(rest_need_resolve_funcs[0].clone().unwrap()),
+        1 => {
+            return Ok(rest_need_resolve_funcs[0]
+                .clone()
+                .expect("Resolve function should exist"));
+        }
         _ => {}
     }
 
     let start_param_index = expr_len;
     let mut max_param_len = 0;
-    for opt_func in &rest_need_resolve_funcs {
-        if let Some(func) = opt_func {
-            let param_len = func.get_params().len();
-            if param_len > max_param_len {
-                max_param_len = param_len;
-            }
+    for func in rest_need_resolve_funcs.iter().flatten() {
+        let param_len = func.get_params().len();
+        if param_len > max_param_len {
+            max_param_len = param_len;
         }
     }
 
-    let rest_len = rest_need_resolve_funcs.len();
     for param_index in start_param_index..max_param_len {
-        let mut current_match_result = ParamMatchResult::NotMatch;
-        for i in 0..rest_len {
-            let opt_func = &rest_need_resolve_funcs[i];
-            if opt_func.is_none() {
-                continue;
-            }
-            let func = opt_func.as_ref().unwrap();
+        let mut current_match_result = ParamMatchResult::Not;
+        for (i, opt_func) in rest_need_resolve_funcs.iter_mut().enumerate() {
+            let func = match opt_func.as_ref() {
+                None => continue,
+                Some(func) => func,
+            };
             let param_len = func.get_params().len();
             let colon_define = func.is_colon_define();
             let mut param_index = param_index;
@@ -174,11 +175,11 @@ pub fn resolve_signature_by_args(
             };
 
             let match_result = if param_type.is_any() {
-                ParamMatchResult::AnyMatch
+                ParamMatchResult::Any
             } else if param_type.is_nullable() {
-                ParamMatchResult::TypeMatch
+                ParamMatchResult::Type
             } else {
-                ParamMatchResult::NotMatch
+                ParamMatchResult::Not
             };
 
             if match_result > current_match_result {
@@ -186,12 +187,12 @@ pub fn resolve_signature_by_args(
                 best_match_result = func.clone();
             }
 
-            if match_result == ParamMatchResult::NotMatch {
-                rest_need_resolve_funcs[i] = None;
+            if match_result == ParamMatchResult::Not {
+                *opt_func = None;
                 continue;
             }
 
-            if match_result >= ParamMatchResult::AnyMatch
+            if match_result >= ParamMatchResult::Any
                 && i + 1 == rest_len
                 && param_index + 1 == func.get_params().len()
             {
@@ -199,7 +200,7 @@ pub fn resolve_signature_by_args(
             }
         }
 
-        if current_match_result == ParamMatchResult::NotMatch {
+        if current_match_result == ParamMatchResult::Not {
             break;
         }
     }
@@ -217,7 +218,7 @@ fn is_func_last_param_variadic(func: &LuaFunctionType) -> bool {
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 enum ParamMatchResult {
-    NotMatch,
-    AnyMatch,
-    TypeMatch,
+    Not,
+    Any,
+    Type,
 }

@@ -60,7 +60,7 @@ pub fn process_code<'a, C: ResultContainer>(
         CodeBlockLang::Protobuf => process_protobuf_code_block(c, reader, state),
         _ => {
             c.emit_range(range, DescItemKind::CodeBlock);
-            return state;
+            state
         }
     }
 }

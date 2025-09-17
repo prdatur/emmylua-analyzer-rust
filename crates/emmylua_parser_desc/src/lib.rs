@@ -75,7 +75,9 @@ pub struct DescItem {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Default)]
 pub enum DescParserType {
+    #[default]
     None,
     Md,
     MySt {
@@ -87,11 +89,6 @@ pub enum DescParserType {
     },
 }
 
-impl Default for DescParserType {
-    fn default() -> Self {
-        DescParserType::None
-    }
-}
 
 /// Parses markup in comments.
 pub trait LuaDescParser {

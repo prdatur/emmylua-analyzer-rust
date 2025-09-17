@@ -60,10 +60,7 @@ fn analyze_block_returns(block: LuaBlock, returns: &mut Vec<LuaReturnPoint>) -> 
             }
             LuaStat::CallExprStat(call_expr) => {
                 let flow = analyze_call_expr_stat_returns(call_expr, returns);
-                match flow {
-                    Some(ChangeFlow::Error) => return Some(ChangeFlow::Error),
-                    _ => {}
-                }
+                if let Some(ChangeFlow::Error) = flow { return Some(ChangeFlow::Error) }
             }
             LuaStat::BreakStat(_) => {
                 return Some(ChangeFlow::Break);

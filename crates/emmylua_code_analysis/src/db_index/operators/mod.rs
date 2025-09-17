@@ -17,6 +17,12 @@ pub struct LuaOperatorIndex {
     in_filed_operator_map: HashMap<FileId, Vec<LuaOperatorId>>,
 }
 
+impl Default for LuaOperatorIndex {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LuaOperatorIndex {
     pub fn new() -> Self {
         Self {
@@ -33,13 +39,13 @@ impl LuaOperatorIndex {
         self.operators.insert(id, operator);
         self.type_operators_map
             .entry(owner)
-            .or_insert_with(HashMap::new)
+            .or_default()
             .entry(op)
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(id);
         self.in_filed_operator_map
             .entry(id.file_id)
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(id);
     }
 

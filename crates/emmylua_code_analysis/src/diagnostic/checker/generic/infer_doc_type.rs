@@ -24,7 +24,7 @@ pub fn infer_doc_type(semantic_model: &SemanticModel, node: &LuaDocType) -> LuaT
                     semantic_model,
                     &name,
                     name_type.get_range(),
-                    &node,
+                    node,
                 );
             }
         }
@@ -48,7 +48,7 @@ pub fn infer_doc_type(semantic_model: &SemanticModel, node: &LuaDocType) -> LuaT
                 if t.is_unknown() {
                     return LuaType::Unknown;
                 }
-                return LuaType::Array(Arc::new(LuaArrayType::new(t.into(), LuaArrayLen::None)));
+                return LuaType::Array(Arc::new(LuaArrayType::new(t, LuaArrayLen::None)));
             }
         }
         LuaDocType::Literal(literal) => {
@@ -100,7 +100,7 @@ pub fn infer_doc_type(semantic_model: &SemanticModel, node: &LuaDocType) -> LuaT
             return infer_object_type(semantic_model, object_type);
         }
         LuaDocType::StrTpl(str_tpl) => {
-            return infer_str_tpl(semantic_model, str_tpl, &node);
+            return infer_str_tpl(semantic_model, str_tpl, node);
         }
         LuaDocType::Variadic(variadic_type) => {
             return infer_variadic_type(semantic_model, variadic_type).unwrap_or(LuaType::Unknown);
@@ -181,36 +181,36 @@ fn infer_special_table_type(
 }
 
 fn infer_generic_type(semantic_model: &SemanticModel, generic_type: &LuaDocGenericType) -> LuaType {
-    if let Some(name_type) = generic_type.get_name_type() {
-        if let Some(name) = name_type.get_name_text() {
-            if let Some(typ) = infer_special_generic_type(semantic_model, &name, &generic_type) {
-                return typ;
-            }
-
-            let file_id = semantic_model.get_file_id();
-            let id = if let Some(name_type_decl) = semantic_model
-                .get_db()
-                .get_type_index()
-                .find_type_decl(file_id, &name)
-            {
-                name_type_decl.get_id()
-            } else {
-                return LuaType::Unknown;
-            };
-
-            let mut generic_params = Vec::new();
-            if let Some(generic_decl_list) = generic_type.get_generic_types() {
-                for param in generic_decl_list.get_types() {
-                    let param_type = infer_doc_type(semantic_model, &param);
-                    if param_type.is_unknown() {
-                        return LuaType::Unknown;
-                    }
-                    generic_params.push(param_type);
-                }
-            }
-
-            return LuaType::Generic(LuaGenericType::new(id, generic_params).into());
+    if let Some(name_type) = generic_type.get_name_type()
+        && let Some(name) = name_type.get_name_text()
+    {
+        if let Some(typ) = infer_special_generic_type(semantic_model, &name, generic_type) {
+            return typ;
         }
+
+        let file_id = semantic_model.get_file_id();
+        let id = if let Some(name_type_decl) = semantic_model
+            .get_db()
+            .get_type_index()
+            .find_type_decl(file_id, &name)
+        {
+            name_type_decl.get_id()
+        } else {
+            return LuaType::Unknown;
+        };
+
+        let mut generic_params = Vec::new();
+        if let Some(generic_decl_list) = generic_type.get_generic_types() {
+            for param in generic_decl_list.get_types() {
+                let param_type = infer_doc_type(semantic_model, &param);
+                if param_type.is_unknown() {
+                    return LuaType::Unknown;
+                }
+                generic_params.push(param_type);
+            }
+        }
+
+        return LuaType::Generic(LuaGenericType::new(id, generic_params).into());
     }
 
     LuaType::Unknown
@@ -509,10 +509,10 @@ fn infer_str_tpl(
         let typ = infer_buildin_or_ref_type(semantic_model, &tpl, str_tpl.get_range(), node);
         if let LuaType::TplRef(tpl) = typ {
             let tpl_id = tpl.get_tpl_id();
-            let prefix = prefix.unwrap_or("".to_string());
-            let suffix = suffix.unwrap_or("".to_string());
+            let prefix = prefix.unwrap_or_default();
+            let suffix = suffix.unwrap_or_default();
             if tpl_id.is_func() {
-                let str_tpl_type = LuaStringTplType::new(&prefix, &tpl.get_name(), tpl_id, &suffix);
+                let str_tpl_type = LuaStringTplType::new(&prefix, tpl.get_name(), tpl_id, &suffix);
                 return LuaType::StrTplRef(str_tpl_type.into());
             }
         }

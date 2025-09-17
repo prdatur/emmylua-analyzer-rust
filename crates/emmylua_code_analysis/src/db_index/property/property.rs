@@ -11,6 +11,12 @@ pub struct LuaCommonProperty {
     pub export: Option<LuaExport>,
 }
 
+impl Default for LuaCommonProperty {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LuaCommonProperty {
     pub fn new() -> Self {
         Self {
@@ -93,6 +99,12 @@ pub enum LuaExportScope {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LuaTagContent {
     pub tags: Vec<(String, String)>,
+}
+
+impl Default for LuaTagContent {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl LuaTagContent {

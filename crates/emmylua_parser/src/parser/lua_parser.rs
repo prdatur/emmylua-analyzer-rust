@@ -278,7 +278,7 @@ impl<'a> LuaParser<'a> {
         }
     }
 
-    fn parse_comments(&mut self, comment_tokens: &Vec<LuaTokenData>) {
+    fn parse_comments(&mut self, comment_tokens: &[LuaTokenData]) {
         let mut trivia_token_start = comment_tokens.len();
         // Reverse iterate over comment_tokens, removing whitespace and end-of-line tokens
         for i in (0..comment_tokens.len()).rev() {
@@ -295,8 +295,7 @@ impl<'a> LuaParser<'a> {
         let tokens = &comment_tokens[..trivia_token_start];
         LuaDocParser::parse(self, tokens);
 
-        for i in trivia_token_start..comment_tokens.len() {
-            let token = &comment_tokens[i];
+        for token in comment_tokens.iter().skip(trivia_token_start) {
             self.events.push(MarkEvent::EatToken {
                 kind: token.kind,
                 range: token.range,

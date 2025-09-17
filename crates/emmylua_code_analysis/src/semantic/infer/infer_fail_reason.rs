@@ -15,13 +15,13 @@ pub enum InferFailReason {
 
 impl InferFailReason {
     pub fn is_need_resolve(&self) -> bool {
-        match self {
+        matches!(
+            self,
             InferFailReason::UnResolveExpr(_)
-            | InferFailReason::UnResolveSignatureReturn(_)
-            | InferFailReason::FieldNotFound
-            | InferFailReason::UnResolveDeclType(_)
-            | InferFailReason::UnResolveMemberType(_) => true,
-            _ => false,
-        }
+                | InferFailReason::UnResolveSignatureReturn(_)
+                | InferFailReason::FieldNotFound
+                | InferFailReason::UnResolveDeclType(_)
+                | InferFailReason::UnResolveMemberType(_)
+        )
     }
 }

@@ -23,8 +23,7 @@ pub fn analyze_for_range_stat(
 
     match iter_var_types {
         Ok(iter_var_types) => {
-            let mut idx = 0;
-            for var_name in var_name_list {
+            for (idx, var_name) in var_name_list.enumerate() {
                 let position = var_name.get_position();
                 let decl_id = LuaDeclId::new(analyzer.file_id, position);
                 let ret_type = iter_var_types
@@ -36,9 +35,7 @@ pub fn analyze_for_range_stat(
                     .db
                     .get_type_index_mut()
                     .bind_type(decl_id.into(), LuaTypeCache::InferType(ret_type));
-                idx += 1;
             }
-            return Some(());
         }
         Err(InferFailReason::None) => {
             for var_name in var_name_list {
@@ -49,7 +46,6 @@ pub fn analyze_for_range_stat(
                     .get_type_index_mut()
                     .bind_type(decl_id.into(), LuaTypeCache::InferType(LuaType::Unknown));
             }
-            return Some(());
         }
         Err(reason) => {
             let unresolved = UnResolveIterVar {
@@ -125,7 +121,7 @@ pub fn infer_for_range_iter_expr_func(
                             _ => None,
                         }
                     })
-                    .nth(0)
+                    .next()
                     .ok_or(InferFailReason::None)?
             } else {
                 return Err(InferFailReason::None);
@@ -154,7 +150,7 @@ pub fn infer_for_range_iter_expr_func(
         db,
         cache,
         substitutor: &mut substitutor,
-        root: root,
+        root,
         call_expr: None,
     };
     let params = doc_function

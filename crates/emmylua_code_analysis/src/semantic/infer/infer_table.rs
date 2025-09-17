@@ -79,36 +79,32 @@ fn infer_table_tuple_or_array(
     if let Some(last_field) = fields.last() {
         let last_value_expr = last_field.get_value_expr().ok_or(InferFailReason::None)?;
         let last_expr_type = infer_expr(db, cache, last_value_expr)?;
-        match last_expr_type {
-            LuaType::Variadic(multi) => match &multi.deref() {
-                VariadicType::Base(base) => {
-                    let non_nil_base = TypeOps::Remove.apply(db, base, &LuaType::Nil);
-                    if fields.len() <= 1 {
-                        return Ok(LuaType::Array(
-                            LuaArrayType::from_base_type(non_nil_base).into(),
-                        ));
-                    }
-                    let len = fields.len() - 1;
-                    let mut all_can_accept_base = true;
-                    for i in 0..len {
-                        let field = fields.get(i).ok_or(InferFailReason::None)?;
-                        let value_expr = field.get_value_expr().ok_or(InferFailReason::None)?;
-                        let typ = infer_expr(db, cache, value_expr)?;
-                        if check_type_compact(db, &non_nil_base, &typ).is_err() {
-                            all_can_accept_base = false;
-                            break;
-                        }
-                    }
-
-                    if all_can_accept_base {
-                        return Ok(LuaType::Array(
-                            LuaArrayType::from_base_type(non_nil_base).into(),
-                        ));
-                    }
+        if let LuaType::Variadic(multi) = last_expr_type
+            && let VariadicType::Base(base) = &multi.deref()
+        {
+            let non_nil_base = TypeOps::Remove.apply(db, base, &LuaType::Nil);
+            if fields.len() <= 1 {
+                return Ok(LuaType::Array(
+                    LuaArrayType::from_base_type(non_nil_base).into(),
+                ));
+            }
+            let len = fields.len() - 1;
+            let mut all_can_accept_base = true;
+            for i in 0..len {
+                let field = fields.get(i).ok_or(InferFailReason::None)?;
+                let value_expr = field.get_value_expr().ok_or(InferFailReason::None)?;
+                let typ = infer_expr(db, cache, value_expr)?;
+                if check_type_compact(db, &non_nil_base, &typ).is_err() {
+                    all_can_accept_base = false;
+                    break;
                 }
-                _ => {}
-            },
-            _ => {}
+            }
+
+            if all_can_accept_base {
+                return Ok(LuaType::Array(
+                    LuaArrayType::from_base_type(non_nil_base).into(),
+                ));
+            }
         };
     }
 
@@ -150,11 +146,10 @@ fn flatten_multi_into_tuple(tuple_list: &mut Vec<LuaType>, multi: &VariadicType)
 }
 
 fn is_dots_expr(expr: &LuaExpr) -> Option<bool> {
-    if let LuaExpr::LiteralExpr(literal) = expr {
-        match literal.get_literal()? {
-            LuaLiteralToken::Dots(_) => return Some(true),
-            _ => {}
-        }
+    if let LuaExpr::LiteralExpr(literal) = expr
+        && let LuaLiteralToken::Dots(_) = literal.get_literal()?
+    {
+        return Some(true);
     }
 
     Some(false)
@@ -208,7 +203,7 @@ pub fn infer_table_field_value_should_be(
         db,
         cache,
         &parent_table_expr_type,
-        index.into(),
+        index,
         &mut InferGuard::new(),
     ) {
         Ok(member_type) => return Ok(member_type),
@@ -217,9 +212,8 @@ pub fn infer_table_field_value_should_be(
     }
 
     let member_id = LuaMemberId::new(table_field.get_syntax_id(), cache.get_file_id());
-    match db.get_type_index().get_type_cache(&member_id.into()) {
-        Some(type_cache) => return Ok(type_cache.as_type().clone()),
-        None => {}
+    if let Some(type_cache) = db.get_type_index().get_type_cache(&member_id.into()) {
+        return Ok(type_cache.as_type().clone());
     };
 
     Err(reason)
@@ -247,7 +241,6 @@ fn infer_table_type_by_calleee(
     let param_types = func_type.get_params();
     let mut call_arg_number = call_arg_list
         .children::<LuaAst>()
-        .into_iter()
         .enumerate()
         .find(|(_, arg)| arg.get_position() == table_expr.get_position())
         .ok_or(InferFailReason::None)?
@@ -342,7 +335,7 @@ fn infer_table_field_type_by_parent(
         db,
         cache,
         &parent_table_expr_type,
-        index.into(),
+        index,
         &mut InferGuard::new(),
     ) {
         Ok(member_type) => return Ok(member_type),
@@ -373,7 +366,7 @@ fn infer_table_type_by_local(
     match db.get_type_index().get_type_cache(&decl_id.into()) {
         Some(type_cache) => match type_cache.as_type() {
             LuaType::TableConst(_) => Err(InferFailReason::None),
-            typ => return Ok(typ.clone()),
+            typ => Ok(typ.clone()),
         },
         None => Err(InferFailReason::UnResolveDeclType(decl_id)),
     }
@@ -399,7 +392,7 @@ fn infer_table_type_by_assign_stat(
         match db.get_type_index().get_type_cache(&decl_id.into()) {
             Some(type_cache) => match type_cache.as_type() {
                 LuaType::TableConst(_) => Err(InferFailReason::None),
-                typ => return Ok(typ.clone()),
+                typ => Ok(typ.clone()),
             },
             None => Err(InferFailReason::UnResolveDeclType(decl_id)),
         }

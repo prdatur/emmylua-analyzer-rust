@@ -116,7 +116,7 @@ fn check_generic_type_compact_table(
         .map(|members| {
             members
                 .iter()
-                .map(|m| (m.get_key().clone(), m.get_id().clone()))
+                .map(|m| (m.get_key().clone(), m.get_id()))
                 .collect()
         })
         .unwrap_or_default();
@@ -149,7 +149,7 @@ fn check_generic_type_compact_table(
                 if let Err(err) = check_general_type_compact(
                     context,
                     &source_member_type,
-                    &table_member_type,
+                    table_member_type,
                     next_guard,
                 ) && err.is_type_not_match()
                 {
@@ -162,8 +162,7 @@ fn check_generic_type_compact_table(
                             name = key.to_path(),
                             expect =
                                 humanize_type(context.db, &source_member_type, RenderLevel::Simple),
-                            got =
-                                humanize_type(context.db, &table_member_type, RenderLevel::Simple)
+                            got = humanize_type(context.db, table_member_type, RenderLevel::Simple)
                         )
                         .to_string(),
                     ));

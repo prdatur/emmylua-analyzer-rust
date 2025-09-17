@@ -54,7 +54,7 @@ fn check_general_type_compact(
         return Ok(());
     }
 
-    if let Some(origin_type) = escape_type(&context.db, compact_type) {
+    if let Some(origin_type) = escape_type(context.db, compact_type) {
         return check_general_type_compact(
             context,
             source,
@@ -143,7 +143,7 @@ fn check_general_type_compact(
             if compact_type.is_boolean() {
                 return Ok(());
             }
-            return Err(TypeCheckFailReason::TypeNotMatch);
+            Err(TypeCheckFailReason::TypeNotMatch)
         }
         _ => Err(TypeCheckFailReason::TypeNotMatch),
     }
@@ -164,10 +164,10 @@ fn escape_type(db: &DbIndex, typ: &LuaType) -> Option<LuaType> {
     match typ {
         LuaType::Ref(type_id) => {
             let type_decl = db.get_type_index().get_type_decl(type_id)?;
-            if type_decl.is_alias() {
-                if let Some(origin_type) = type_decl.get_alias_origin(db, None) {
-                    return Some(origin_type.clone());
-                }
+            if type_decl.is_alias()
+                && let Some(origin_type) = type_decl.get_alias_origin(db, None)
+            {
+                return Some(origin_type.clone());
             }
         }
         // todo donot escape

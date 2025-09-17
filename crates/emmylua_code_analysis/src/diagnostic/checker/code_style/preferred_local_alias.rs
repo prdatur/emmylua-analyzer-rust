@@ -75,10 +75,10 @@ fn collect_local_alias(
                 .get_db()
                 .get_reference_index()
                 .get_decl_references(&semantic_model.get_file_id(), &decl_id);
-            if let Some(decl_refs) = decl_refs {
-                if decl_refs.mutable {
-                    continue;
-                }
+            if let Some(decl_refs) = decl_refs
+                && decl_refs.mutable
+            {
+                continue;
             }
 
             let name = match value_expr {

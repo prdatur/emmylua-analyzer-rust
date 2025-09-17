@@ -36,14 +36,14 @@ fn collect_property(db: &DbIndex, semantic_decl: LuaSemanticDeclId) -> Property 
                     "see" => {
                         let see_content = doc_property.see.get_or_insert_with(String::new);
                         if !see_content.is_empty() {
-                            see_content.push_str("\n");
+                            see_content.push('\n');
                         }
                         see_content.push_str(content);
                     }
                     _ => {
                         let other_content = doc_property.other.get_or_insert_with(String::new);
                         if !other_content.is_empty() {
-                            other_content.push_str("\n");
+                            other_content.push('\n');
                         }
                         other_content.push_str(&format!("@{} {}", tag_name, content));
                     }

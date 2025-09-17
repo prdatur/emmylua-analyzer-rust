@@ -20,7 +20,7 @@ pub fn special_or_rule(
             }
         }
         LuaExpr::TableExpr(table_expr) => {
-            if table_expr.is_empty() && check_type_compact(db, &left_type, &LuaType::Table).is_ok()
+            if table_expr.is_empty() && check_type_compact(db, left_type, &LuaType::Table).is_ok()
             {
                 return Some(remove_false_or_nil(left_type.clone()));
             }
@@ -35,7 +35,7 @@ pub fn special_or_rule(
                 return None;
             }
 
-            if check_type_compact(db, &left_type, &right_type).is_ok() {
+            if check_type_compact(db, left_type, right_type).is_ok() {
                 return Some(remove_false_or_nil(left_type.clone()));
             }
         }

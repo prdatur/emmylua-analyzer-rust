@@ -36,7 +36,7 @@ pub fn find_index_operations_guard(
         LuaType::TableGeneric(table_generic) => find_index_table_generic(db, table_generic),
         LuaType::Instance(inst) => {
             let base = inst.get_base();
-            find_index_operations_guard(db, &base, infer_guard)
+            find_index_operations_guard(db, base, infer_guard)
         }
         _ => None,
     }
@@ -108,9 +108,9 @@ fn find_index_custom_type(
     prefix_type_id: &LuaTypeDeclId,
     infer_guard: &mut InferGuard,
 ) -> FindMembersResult {
-    infer_guard.check(&prefix_type_id).ok()?;
+    infer_guard.check(prefix_type_id).ok()?;
     let type_index = db.get_type_index();
-    let type_decl = type_index.get_type_decl(&prefix_type_id)?;
+    let type_decl = type_index.get_type_decl(prefix_type_id)?;
 
     if type_decl.is_alias() {
         if let Some(origin_type) = type_decl.get_alias_origin(db, None) {
@@ -143,14 +143,12 @@ fn find_index_custom_type(
     }
 
     // Find index operations in super types
-    if type_decl.is_class() {
-        if let Some(super_types) = type_index.get_super_types(&prefix_type_id) {
-            for super_type in super_types {
-                if let Some(super_members) =
-                    find_index_operations_guard(db, &super_type, infer_guard)
-                {
-                    members.extend(super_members);
-                }
+    if type_decl.is_class()
+        && let Some(super_types) = type_index.get_super_types(prefix_type_id)
+    {
+        for super_type in super_types {
+            if let Some(super_members) = find_index_operations_guard(db, &super_type, infer_guard) {
+                members.extend(super_members);
             }
         }
     }
@@ -248,9 +246,9 @@ fn find_index_intersection(
     }
 
     if all_members.is_empty() {
-        return None;
+        None
     } else if all_members.len() == 1 {
-        return Some(all_members.remove(0));
+        Some(all_members.remove(0))
     } else {
         let mut result = Vec::new();
         let mut member_set = HashSet::new();
@@ -272,7 +270,7 @@ fn find_index_intersection(
             });
         }
 
-        return Some(result);
+        Some(result)
     }
 }
 
@@ -349,7 +347,7 @@ fn find_index_generic(
 }
 
 #[allow(unused)]
-fn find_index_table_generic(db: &DbIndex, table_params: &Vec<LuaType>) -> FindMembersResult {
+fn find_index_table_generic(db: &DbIndex, table_params: &[LuaType]) -> FindMembersResult {
     if table_params.len() != 2 {
         return None;
     }

@@ -70,7 +70,7 @@ fn find_members_guard(
         | LuaType::StringConst(_)
         | LuaType::DocStringConst(_)
         | LuaType::Language(_) => {
-            let type_decl_id = get_buildin_type_map_type_id(&prefix_type)?;
+            let type_decl_id = get_buildin_type_map_type_id(prefix_type)?;
             find_custom_type_members(db, &type_decl_id, infer_guard, filter)
         }
         LuaType::Ref(type_decl_id) => {
@@ -113,7 +113,7 @@ fn should_stop_collecting(current_count: usize, filter: &FindMemberFilter) -> bo
 }
 
 fn find_table_generic_members(
-    table_type: &Vec<LuaType>,
+    table_type: &[LuaType],
     filter: &FindMemberFilter,
 ) -> FindMembersResult {
     let mut members = Vec::new();
@@ -177,9 +177,9 @@ fn find_custom_type_members(
     infer_guard: &mut InferGuard,
     filter: &FindMemberFilter,
 ) -> FindMembersResult {
-    infer_guard.check(&type_decl_id).ok()?;
+    infer_guard.check(type_decl_id).ok()?;
     let type_index = db.get_type_index();
-    let type_decl = type_index.get_type_decl(&type_decl_id)?;
+    let type_decl = type_index.get_type_decl(type_decl_id)?;
     if type_decl.is_alias() {
         if let Some(origin) = type_decl.get_alias_origin(db, None) {
             return find_members_guard(db, &origin, infer_guard, filter);
@@ -216,17 +216,15 @@ fn find_custom_type_members(
         }
     }
 
-    if type_decl.is_class() {
-        if let Some(super_types) = type_index.get_super_types(&type_decl_id) {
-            for super_type in super_types {
-                if let Some(super_members) =
-                    find_members_guard(db, &super_type, infer_guard, filter)
-                {
-                    members.extend(super_members);
+    if type_decl.is_class()
+        && let Some(super_types) = type_index.get_super_types(type_decl_id)
+    {
+        for super_type in super_types {
+            if let Some(super_members) = find_members_guard(db, &super_type, infer_guard, filter) {
+                members.extend(super_members);
 
-                    if should_stop_collecting(members.len(), filter) {
-                        return Some(members);
-                    }
+                if should_stop_collecting(members.len(), filter) {
+                    return Some(members);
                 }
             }
         }
@@ -318,9 +316,9 @@ fn find_intersection_members(
     }
 
     if members.is_empty() {
-        return None;
+        None
     } else if members.len() == 1 {
-        return Some(members.remove(0));
+        Some(members.remove(0))
     } else {
         let mut result = Vec::new();
         let mut member_set = HashSet::new();
@@ -359,7 +357,7 @@ fn find_generic_members_from_super_generics(
 ) -> Vec<LuaMemberInfo> {
     let type_index = db.get_type_index();
 
-    let Some(type_decl) = type_index.get_type_decl(&type_decl_id) else {
+    let Some(type_decl) = type_index.get_type_decl(type_decl_id) else {
         return vec![];
     };
     if !type_decl.is_class() {
@@ -371,15 +369,15 @@ fn find_generic_members_from_super_generics(
         super_types
             .iter() /*.filter(|super_type| super_type.is_generic())*/
             .filter_map(|super_type| {
-                let super_type_sub = instantiate_type_generic(db, &super_type, &substitutor);
-                if !super_type_sub.eq(&super_type) {
+                let super_type_sub = instantiate_type_generic(db, super_type, substitutor);
+                if !super_type_sub.eq(super_type) {
                     Some(super_type_sub)
                 } else {
                     None
                 }
             })
             .filter_map(|super_type| {
-                let super_type = instantiate_type_generic(db, &super_type, &substitutor);
+                let super_type = instantiate_type_generic(db, &super_type, substitutor);
                 find_members_guard(db, &super_type, infer_guard, filter)
             })
             .flatten()

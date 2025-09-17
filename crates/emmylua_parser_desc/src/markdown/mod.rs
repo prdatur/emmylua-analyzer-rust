@@ -946,7 +946,7 @@ impl MarkdownParser {
             bt.rollback(self, reader);
             return Err(());
         }
-        if !is_blank(&reader.tail_text()) {
+        if !is_blank(reader.tail_text()) {
             bt.rollback(self, reader);
             return Err(());
         }
@@ -977,7 +977,7 @@ impl MarkdownParser {
             reader.reset_buff();
             reader.bump();
             reader.bump();
-            if !is_blank(&reader.tail_text()) {
+            if !is_blank(reader.tail_text()) {
                 bt.rollback(self, reader);
                 return Err(());
             }

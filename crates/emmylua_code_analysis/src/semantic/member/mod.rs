@@ -59,7 +59,7 @@ pub fn find_member_origin_owner(
             break;
         }
 
-        visited_members.insert(current_member_id.clone());
+        visited_members.insert(*current_member_id);
         iteration_count += 1;
 
         match resolve_member_owner(db, infer_config, current_member_id) {

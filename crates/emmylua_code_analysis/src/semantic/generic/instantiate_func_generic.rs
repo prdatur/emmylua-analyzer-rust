@@ -98,13 +98,12 @@ pub fn instantiate_func_generic(
                 continue;
             }
 
-            if !func_param_type.is_variadic() {
-                if check_expr_can_later_infer(&mut context, func_param_type, call_arg_expr)? {
+            if !func_param_type.is_variadic()
+                && check_expr_can_later_infer(&mut context, func_param_type, call_arg_expr)? {
                     // If the argument cannot be inferred later, we will handle it later.
                     unresolve_tpls.push((func_param_type.clone(), call_arg_expr.clone()));
                     continue;
                 }
-            }
 
             let arg_type = infer_expr(db, context.cache, call_arg_expr.clone())?;
 
@@ -142,11 +141,10 @@ pub fn instantiate_func_generic(
         }
     }
 
-    if contain_self {
-        if let Some(self_type) = infer_self_type(db, cache, &call_expr) {
+    if contain_self
+        && let Some(self_type) = infer_self_type(db, cache, &call_expr) {
             substitutor.add_self_type(self_type);
         }
-    }
 
     if let LuaType::DocFunction(f) = instantiate_doc_function(db, func, &substitutor) {
         Ok(f.deref().clone())
@@ -186,16 +184,15 @@ pub fn infer_self_type(
     call_expr: &LuaCallExpr,
 ) -> Option<LuaType> {
     let prefix_expr = call_expr.get_prefix_expr();
-    if let Some(prefix_expr) = prefix_expr {
-        if let LuaExpr::IndexExpr(index) = prefix_expr {
+    if let Some(prefix_expr) = prefix_expr
+        && let LuaExpr::IndexExpr(index) = prefix_expr {
             let self_expr = index.get_prefix_expr();
             if let Some(self_expr) = self_expr {
-                let self_type = infer_expr(db, cache, self_expr.into()).ok()?;
+                let self_type = infer_expr(db, cache, self_expr).ok()?;
                 let self_type = build_self_type(db, &self_type);
                 return Some(self_type);
             }
         }
-    }
 
     None
 }
@@ -211,7 +208,7 @@ fn check_expr_can_later_infer(
             let sig = context
                 .db
                 .get_signature_index()
-                .get(&sig_id)
+                .get(sig_id)
                 .ok_or(InferFailReason::None)?;
 
             sig.to_doc_func_type()

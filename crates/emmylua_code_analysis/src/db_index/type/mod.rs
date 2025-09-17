@@ -32,6 +32,12 @@ pub struct LuaTypeIndex {
     in_filed_type_owner: HashMap<FileId, HashSet<LuaTypeOwner>>,
 }
 
+impl Default for LuaTypeIndex {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LuaTypeIndex {
     pub fn new() -> Self {
         Self {
@@ -57,7 +63,7 @@ impl LuaTypeIndex {
     pub fn add_file_using_namespace(&mut self, file_id: FileId, namespace: String) {
         self.file_using_namespace
             .entry(file_id)
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(namespace);
     }
 
@@ -69,7 +75,7 @@ impl LuaTypeIndex {
         let id = type_decl.get_id();
         self.file_types
             .entry(file_id)
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(id.clone());
 
         if let Some(old_decl) = self.full_name_type_map.get_mut(&id) {
@@ -114,9 +120,7 @@ impl LuaTypeIndex {
                 if let Some(rest_name) = id_name.strip_prefix(prefix) {
                     if let Some(i) = rest_name.find('.') {
                         let name = rest_name[..i].to_string();
-                        if !result.contains_key(&name) {
-                            result.insert(name, None);
-                        }
+                        result.entry(name).or_insert(None);
                     } else {
                         result.insert(rest_name.to_string(), Some(id.clone()));
                     }
@@ -133,9 +137,7 @@ impl LuaTypeIndex {
                     if let Some(rest_name) = id_name.strip_prefix(prefix) {
                         if let Some(i) = rest_name.find('.') {
                             let name = rest_name[..i].to_string();
-                            if !result.contains_key(&name) {
-                                result.insert(name, None);
-                            }
+                            result.entry(name).or_insert(None);
                         } else {
                             result.insert(rest_name.to_string(), Some(id.clone()));
                         }
@@ -146,18 +148,15 @@ impl LuaTypeIndex {
 
         for id in all_type_ids {
             let id_name = id.get_name();
-            if id_name.starts_with(prefix) {
-                if let Some(rest_name) = id_name.strip_prefix(prefix) {
+            if id_name.starts_with(prefix)
+                && let Some(rest_name) = id_name.strip_prefix(prefix) {
                     if let Some(i) = rest_name.find('.') {
                         let name = rest_name[..i].to_string();
-                        if !result.contains_key(&name) {
-                            result.insert(name, None);
-                        }
+                        result.entry(name).or_insert(None);
                     } else {
                         result.insert(rest_name.to_string(), Some(id.clone()));
                     }
                 }
-            }
         }
 
         result
@@ -174,16 +173,12 @@ impl LuaTypeIndex {
     pub fn add_super_type(&mut self, decl_id: LuaTypeDeclId, file_id: FileId, super_type: LuaType) {
         self.supers
             .entry(decl_id)
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(InFiled::new(file_id, super_type));
     }
 
     pub fn get_super_types(&self, decl_id: &LuaTypeDeclId) -> Option<Vec<LuaType>> {
-        if let Some(supers) = self.supers.get(decl_id) {
-            Some(supers.iter().map(|s| s.value.clone()).collect())
-        } else {
-            None
-        }
+        self.supers.get(decl_id).map(|supers| supers.iter().map(|s| s.value.clone()).collect())
     }
 
     pub fn get_super_types_iter(
@@ -223,7 +218,7 @@ impl LuaTypeIndex {
         self.types.insert(owner.clone(), cache);
         self.in_filed_type_owner
             .entry(owner.get_file_id())
-            .or_insert_with(HashSet::new)
+            .or_default()
             .insert(owner);
     }
 

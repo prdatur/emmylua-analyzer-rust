@@ -1,3 +1,4 @@
+#[allow(clippy::module_inception)]
 mod property;
 
 use std::collections::{HashMap, HashSet};
@@ -17,6 +18,12 @@ pub struct LuaPropertyIndex {
 
     id_count: u32,
     in_filed_owner: HashMap<FileId, HashSet<LuaSemanticDeclId>>,
+}
+
+impl Default for LuaPropertyIndex {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl LuaPropertyIndex {
@@ -54,11 +61,11 @@ impl LuaPropertyIndex {
     ) -> Option<()> {
         let (_, property_id) = self.get_or_create_property(source_owner_id.clone())?;
         self.property_owners_map
-            .insert(same_property_owner_id, property_id.clone());
+            .insert(same_property_owner_id, property_id);
 
         self.in_filed_owner
             .entry(file_id)
-            .or_insert_with(HashSet::new)
+            .or_default()
             .insert(source_owner_id);
 
         Some(())
@@ -75,7 +82,7 @@ impl LuaPropertyIndex {
 
         self.in_filed_owner
             .entry(file_id)
-            .or_insert_with(HashSet::new)
+            .or_default()
             .insert(owner_id);
 
         Some(())
@@ -92,7 +99,7 @@ impl LuaPropertyIndex {
 
         self.in_filed_owner
             .entry(file_id)
-            .or_insert_with(HashSet::new)
+            .or_default()
             .insert(owner_id);
 
         Some(())
@@ -109,7 +116,7 @@ impl LuaPropertyIndex {
 
         self.in_filed_owner
             .entry(file_id)
-            .or_insert_with(HashSet::new)
+            .or_default()
             .insert(owner_id);
 
         Some(())
@@ -126,7 +133,7 @@ impl LuaPropertyIndex {
 
         self.in_filed_owner
             .entry(file_id)
-            .or_insert_with(HashSet::new)
+            .or_default()
             .insert(owner_id);
 
         Some(())
@@ -143,7 +150,7 @@ impl LuaPropertyIndex {
 
         self.in_filed_owner
             .entry(file_id)
-            .or_insert_with(HashSet::new)
+            .or_default()
             .insert(owner_id);
 
         Some(())
@@ -167,7 +174,7 @@ impl LuaPropertyIndex {
 
         self.in_filed_owner
             .entry(file_id)
-            .or_insert_with(HashSet::new)
+            .or_default()
             .insert(owner_id);
 
         Some(())
@@ -185,7 +192,7 @@ impl LuaPropertyIndex {
 
         self.in_filed_owner
             .entry(file_id)
-            .or_insert_with(HashSet::new)
+            .or_default()
             .insert(owner_id);
 
         Some(())
@@ -202,7 +209,7 @@ impl LuaPropertyIndex {
 
         self.in_filed_owner
             .entry(file_id)
-            .or_insert_with(HashSet::new)
+            .or_default()
             .insert(owner_id);
 
         Some(())
@@ -210,7 +217,7 @@ impl LuaPropertyIndex {
 
     pub fn get_property(&self, owner_id: &LuaSemanticDeclId) -> Option<&LuaCommonProperty> {
         self.property_owners_map
-            .get(&owner_id)
+            .get(owner_id)
             .and_then(|id| self.properties.get(id))
     }
 }
@@ -259,7 +266,7 @@ pub fn try_extract_signature_id_from_field(
     match &type_node {
         LuaDocType::Func(doc_func) => Some(LuaSignatureId::from_doc_func(
             member.get_file_id(),
-            &doc_func,
+            doc_func,
         )),
         _ => None,
     }

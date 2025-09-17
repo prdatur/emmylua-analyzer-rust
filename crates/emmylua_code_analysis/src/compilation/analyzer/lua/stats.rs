@@ -49,9 +49,9 @@ pub fn analyze_local_stat(analyzer: &mut LuaAnalyzer, local_stat: LuaLocalStat) 
                 }
                 let decl_id = LuaDeclId::new(analyzer.file_id, position);
                 // 当`call`参数包含表时, 表可能未被分析, 需要延迟
-                if let LuaType::Instance(instance) = &expr_type {
-                    if instance.get_base().is_unknown() {
-                        if call_expr_has_effect_table_arg(&expr).is_some() {
+                if let LuaType::Instance(instance) = &expr_type
+                    && instance.get_base().is_unknown()
+                        && call_expr_has_effect_table_arg(&expr).is_some() {
                             let unresolve = UnResolveDecl {
                                 file_id: analyzer.file_id,
                                 decl_id,
@@ -67,8 +67,6 @@ pub fn analyze_local_stat(analyzer: &mut LuaAnalyzer, local_stat: LuaLocalStat) 
                             );
                             continue;
                         }
-                    }
-                }
 
                 bind_type(
                     analyzer.db,
@@ -163,11 +161,10 @@ fn call_expr_has_effect_table_arg(expr: &LuaExpr) -> Option<()> {
     if let LuaExpr::CallExpr(call_expr) = expr {
         let args_list = call_expr.get_args_list()?;
         for arg in args_list.get_args() {
-            if let LuaExpr::TableExpr(table_expr) = arg {
-                if !table_expr.is_empty() {
+            if let LuaExpr::TableExpr(table_expr) = arg
+                && !table_expr.is_empty() {
                     return Some(());
                 }
-            }
         }
     }
     None
@@ -203,7 +200,7 @@ fn set_index_expr_owner(analyzer: &mut LuaAnalyzer, var_expr: LuaVarExpr) -> Opt
     let index_expr = LuaIndexExpr::cast(var_expr.syntax().clone())?;
     let prefix_expr = index_expr.get_prefix_expr()?;
 
-    match analyzer.infer_expr(&prefix_expr.clone().into()) {
+    match analyzer.infer_expr(&prefix_expr.clone()) {
         Ok(prefix_type) => {
             index_expr.get_index_key()?;
             let member_id = LuaMemberId::new(index_expr.get_syntax_id(), file_id);
@@ -237,7 +234,7 @@ fn set_index_expr_owner(analyzer: &mut LuaAnalyzer, var_expr: LuaVarExpr) -> Opt
                 file_id: analyzer.file_id,
                 member_id: LuaMemberId::new(var_expr.get_syntax_id(), file_id),
                 expr: None,
-                prefix: Some(prefix_expr.into()),
+                prefix: Some(prefix_expr),
                 ret_idx: 0,
             };
             analyzer
@@ -264,11 +261,8 @@ pub fn analyze_assign_stat(analyzer: &mut LuaAnalyzer, assign_stat: LuaAssignSta
         let type_owner = get_var_owner(analyzer, var.clone());
         set_index_expr_owner(analyzer, var.clone());
 
-        match special_assign_pattern(analyzer, type_owner.clone(), var.clone(), expr.clone()) {
-            Some(_) => {
-                continue;
-            }
-            None => {}
+        if special_assign_pattern(analyzer, type_owner.clone(), var.clone(), expr.clone()).is_some() {
+            continue;
         }
 
         let expr_type = match analyzer.infer_expr(expr) {
@@ -312,8 +306,8 @@ pub fn analyze_assign_stat(analyzer: &mut LuaAnalyzer, assign_stat: LuaAssignSta
     }
 
     // The complexity brought by multiple return values is too high
-    if var_count > expr_count {
-        if let Some(last_expr) = expr_list.last() {
+    if var_count > expr_count
+        && let Some(last_expr) = expr_list.last() {
             match analyzer.infer_expr(last_expr) {
                 Ok(last_expr_type) => {
                     if last_expr_type.is_multi_return() {
@@ -347,7 +341,6 @@ pub fn analyze_assign_stat(analyzer: &mut LuaAnalyzer, assign_stat: LuaAssignSta
         }
 
         // Expressions like a, b are not valid
-    }
 
     Some(())
 }
@@ -444,7 +437,7 @@ pub fn analyze_table_field(analyzer: &mut LuaAnalyzer, field: LuaTableField) -> 
     if field.is_assign_field() {
         let value_expr = field.get_value_expr()?;
         let member_id = LuaMemberId::new(field.get_syntax_id(), analyzer.file_id);
-        let value_type = match analyzer.infer_expr(&value_expr.clone().into()) {
+        let value_type = match analyzer.infer_expr(&value_expr.clone()) {
             Ok(value_type) => match value_type {
                 LuaType::Def(ref_id) => LuaType::Ref(ref_id),
                 _ => value_type,
@@ -529,31 +522,25 @@ pub fn try_add_class_default_call(
         let index_key = index_expr.get_index_key()?;
         if index_key.get_path_part() == *default_name {
             let prefix_expr = index_expr.get_prefix_expr()?;
-            match analyzer.infer_expr(&prefix_expr.into()) {
-                Ok(prefix_type) => match prefix_type {
-                    LuaType::Def(decl_id) => {
-                        // 如果已经存在, 则不添加
-                        let call = analyzer.db.get_operator_index().get_operators(
-                            &LuaOperatorOwner::Type(decl_id.clone()),
-                            LuaOperatorMetaMethod::Call,
-                        );
-                        if call.is_some() {
-                            return None;
-                        }
+            if let Ok(prefix_type) = analyzer.infer_expr(&prefix_expr) && let LuaType::Def(decl_id) = prefix_type {
+                // 如果已经存在, 则不添加
+                let call = analyzer.db.get_operator_index().get_operators(
+                    &LuaOperatorOwner::Type(decl_id.clone()),
+                    LuaOperatorMetaMethod::Call,
+                );
+                if call.is_some() {
+                    return None;
+                }
 
-                        let operator = LuaOperator::new(
-                            decl_id.into(),
-                            LuaOperatorMetaMethod::Call,
-                            analyzer.file_id,
-                            // 必须指向名称, 使用 index_expr 的完整范围不会跳转到函数上
-                            index_expr.get_name_token()?.syntax().text_range(),
-                            OperatorFunction::DefaultCall(signature_id),
-                        );
-                        analyzer.db.get_operator_index_mut().add_operator(operator);
-                    }
-                    _ => {}
-                },
-                Err(_) => {}
+                let operator = LuaOperator::new(
+                    decl_id.into(),
+                    LuaOperatorMetaMethod::Call,
+                    analyzer.file_id,
+                    // 必须指向名称, 使用 index_expr 的完整范围不会跳转到函数上
+                    index_expr.get_name_token()?.syntax().text_range(),
+                    OperatorFunction::DefaultCall(signature_id),
+                );
+                analyzer.db.get_operator_index_mut().add_operator(operator);
             }
         }
     }

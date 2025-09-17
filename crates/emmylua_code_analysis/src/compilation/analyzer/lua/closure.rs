@@ -33,7 +33,7 @@ fn analyze_colon_define(
     let signature = analyzer
         .db
         .get_signature_index_mut()
-        .get_or_create(signature_id.clone());
+        .get_or_create(*signature_id);
 
     let func_stat = closure.get_parent::<LuaFuncStat>()?;
     let func_name = func_stat.get_func_name()?;
@@ -61,7 +61,7 @@ fn analyze_lambda_params(
 
             let unresolved = UnResolveCallClosureParams {
                 file_id: analyzer.file_id,
-                signature_id: signature_id.clone(),
+                signature_id: *signature_id,
                 call_expr,
                 param_idx: founded_idx,
             };
@@ -73,7 +73,7 @@ fn analyze_lambda_params(
         LuaAst::LuaFuncStat(func_stat) => {
             let unresolved = UnResolveParentClosureParams {
                 file_id: analyzer.file_id,
-                signature_id: signature_id.clone(),
+                signature_id: *signature_id,
                 parent_ast: UnResolveParentAst::LuaFuncStat(func_stat.clone()),
             };
 
@@ -84,7 +84,7 @@ fn analyze_lambda_params(
         LuaAst::LuaTableField(table_field) => {
             let unresolved = UnResolveParentClosureParams {
                 file_id: analyzer.file_id,
-                signature_id: signature_id.clone(),
+                signature_id: *signature_id,
                 parent_ast: UnResolveParentAst::LuaTableField(table_field.clone()),
             };
 
@@ -95,7 +95,7 @@ fn analyze_lambda_params(
         LuaAst::LuaAssignStat(assign_stat) => {
             let unresolved = UnResolveParentClosureParams {
                 file_id: analyzer.file_id,
-                signature_id: signature_id.clone(),
+                signature_id: *signature_id,
                 parent_ast: UnResolveParentAst::LuaAssignStat(assign_stat.clone()),
             };
 
@@ -114,17 +114,14 @@ fn analyze_return(
     signature_id: &LuaSignatureId,
     closure: &LuaClosureExpr,
 ) -> Option<()> {
-    let signature = analyzer.db.get_signature_index().get(&signature_id)?;
+    let signature = analyzer.db.get_signature_index().get(signature_id)?;
     if signature.resolve_return == SignatureReturnStatus::DocResolve {
         return None;
     }
 
     let parent = closure.get_parent::<LuaAst>()?;
-    match &parent {
-        LuaAst::LuaCallArgList(_) => {
-            analyze_lambda_returns(analyzer, signature_id, closure);
-        }
-        _ => {}
+    if let LuaAst::LuaCallArgList(_) = &parent {
+        analyze_lambda_returns(analyzer, signature_id, closure);
     };
 
     let block = match closure.get_block() {
@@ -133,7 +130,7 @@ fn analyze_return(
             let signature = analyzer
                 .db
                 .get_signature_index_mut()
-                .get_or_create(signature_id.clone());
+                .get_or_create(*signature_id);
             signature.resolve_return = SignatureReturnStatus::InferResolve;
             return Some(());
         }
@@ -141,8 +138,8 @@ fn analyze_return(
 
     let return_points = analyze_func_body_returns(block);
     let returns = match analyze_return_point(
-        &analyzer.db,
-        &mut analyzer
+        analyzer.db,
+        analyzer
             .context
             .infer_manager
             .get_infer_cache(analyzer.file_id),
@@ -159,7 +156,7 @@ fn analyze_return(
         Err(reason) => {
             let unresolve = UnResolveReturn {
                 file_id: analyzer.file_id,
-                signature_id: signature_id.clone(),
+                signature_id: *signature_id,
                 return_points,
             };
 
@@ -170,7 +167,7 @@ fn analyze_return(
     let signature = analyzer
         .db
         .get_signature_index_mut()
-        .get_or_create(signature_id.clone());
+        .get_or_create(*signature_id);
 
     signature.resolve_return = SignatureReturnStatus::InferResolve;
 
@@ -194,7 +191,7 @@ fn analyze_lambda_returns(
     let return_points = analyze_func_body_returns(block);
     let unresolved = UnResolveClosureReturn {
         file_id: analyzer.file_id,
-        signature_id: signature_id.clone(),
+        signature_id: *signature_id,
         call_expr,
         param_idx: founded_idx,
         return_points,
@@ -285,10 +282,10 @@ fn union_return_expr(db: &DbIndex, left: LuaType, right: LuaType) -> LuaType {
                 }
                 VariadicType::Multi(multi) => {
                     let mut new_multi = multi.clone();
-                    if new_multi.len() > 0 {
+                    if !new_multi.is_empty() {
                         new_multi[0] = first_union_type;
-                        for i in 1..new_multi.len() {
-                            new_multi[i] = TypeOps::Union.apply(db, &new_multi[i], &LuaType::Nil);
+                        for mult in new_multi.iter_mut().skip(1) {
+                            *mult = TypeOps::Union.apply(db, mult, &LuaType::Nil);
                         }
                     } else {
                         new_multi.push(first_union_type);
@@ -314,10 +311,10 @@ fn union_return_expr(db: &DbIndex, left: LuaType, right: LuaType) -> LuaType {
                 }
                 VariadicType::Multi(multi) => {
                     let mut new_multi = multi.clone();
-                    if new_multi.len() > 0 {
+                    if !new_multi.is_empty() {
                         new_multi[0] = first_union_type;
-                        for i in 1..new_multi.len() {
-                            new_multi[i] = TypeOps::Union.apply(db, &new_multi[i], &LuaType::Nil);
+                        for mult in new_multi.iter_mut().skip(1) {
+                            *mult = TypeOps::Union.apply(db, mult, &LuaType::Nil);
                         }
                     } else {
                         new_multi.push(first_union_type);

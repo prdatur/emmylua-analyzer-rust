@@ -38,7 +38,7 @@ impl AnalysisPipeline for UnResolveAnalysisPipeline {
         for (unresolve, reason) in context.unresolves.drain(..) {
             reason_resolve
                 .entry(reason.clone())
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push(unresolve);
         }
 
@@ -232,7 +232,7 @@ fn try_resolve(
         for (unresolve, reason) in retain_unresolve {
             reason_reasolve
                 .entry(reason.clone())
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push(unresolve);
         }
 
@@ -388,6 +388,7 @@ impl From<UnResolveModuleRef> for UnResolve {
     }
 }
 
+#[allow(clippy::enum_variant_names)]
 #[derive(Debug)]
 pub enum UnResolveParentAst {
     LuaFuncStat(LuaFuncStat),
