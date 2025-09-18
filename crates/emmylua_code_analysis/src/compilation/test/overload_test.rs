@@ -53,4 +53,18 @@ mod test {
         let expected = ws.ty("MyClass");
         assert_eq!(ws.humanize_type(ty), ws.humanize_type(expected));
     }
+
+    #[test]
+    fn test_issue_770() {
+        let mut ws = VirtualWorkspace::new_with_init_std_lib();
+        assert!(ws.check_code_for(
+            DiagnosticCode::RedundantParameter,
+            r#"
+        local table = {1,2}
+        if next(table, 2) == '2' then
+            print('ok')
+        end
+        "#
+        ));
+    }
 }

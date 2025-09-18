@@ -101,7 +101,8 @@ pub fn resolve_signature_by_args(
     is_colon_call: bool,
     arg_count: Option<usize>,
 ) -> InferCallFuncResult {
-    let arg_count = arg_count.unwrap_or(0);
+    let expr_len = expr_types.len();
+    let arg_count = arg_count.unwrap_or(expr_len);
     let mut need_resolve_funcs = match overloads.len() {
         0 => return Err(InferFailReason::None),
         1 => return Ok(Arc::clone(&overloads[0])),
@@ -111,8 +112,7 @@ pub fn resolve_signature_by_args(
             .collect::<Vec<_>>(),
     };
 
-    let exp_len = expr_types.len();
-    if exp_len == 0 {
+    if expr_len == 0 {
         for overload in overloads {
             let param_len = overload.get_params().len();
             if param_len == 0 {
@@ -122,7 +122,7 @@ pub fn resolve_signature_by_args(
     }
 
     let mut best_match_result = need_resolve_funcs[0].clone().unwrap();
-    for arg_index in 0..exp_len {
+    for arg_index in 0..expr_len {
         let mut current_match_result = ParamMatchResult::NotMatch;
         for i in 0..need_resolve_funcs.len() {
             let opt_func = &need_resolve_funcs[i];
@@ -131,7 +131,7 @@ pub fn resolve_signature_by_args(
             }
             let func = opt_func.as_ref().unwrap();
             let param_len = func.get_params().len();
-            if param_len < arg_count {
+            if param_len < arg_count && !is_func_last_param_variadic(func) {
                 need_resolve_funcs[i] = None;
                 continue;
             }
@@ -186,10 +186,11 @@ pub fn resolve_signature_by_args(
                 continue;
             }
 
-            if match_result > ParamMatchResult::AnyMatch {
-                if param_index + 1 == func.get_params().len() {
-                    return Ok(func.clone());
-                }
+            if match_result > ParamMatchResult::AnyMatch
+                && arg_index + 1 == expr_len
+                && param_index + 1 == func.get_params().len()
+            {
+                return Ok(func.clone());
             }
         }
 
@@ -210,7 +211,7 @@ pub fn resolve_signature_by_args(
         _ => {}
     }
 
-    let start_param_index = exp_len;
+    let start_param_index = expr_len;
     let mut max_param_len = 0;
     for opt_func in &rest_need_resolve_funcs {
         if let Some(func) = opt_func {
@@ -278,10 +279,11 @@ pub fn resolve_signature_by_args(
                 continue;
             }
 
-            if match_result >= ParamMatchResult::AnyMatch {
-                if param_index + 1 == func.get_params().len() {
-                    return Ok(func.clone());
-                }
+            if match_result >= ParamMatchResult::AnyMatch
+                && i + 1 == rest_len
+                && param_index + 1 == func.get_params().len()
+            {
+                return Ok(func.clone());
             }
         }
 
@@ -291,6 +293,14 @@ pub fn resolve_signature_by_args(
     }
 
     Ok(best_match_result)
+}
+
+fn is_func_last_param_variadic(func: &LuaFunctionType) -> bool {
+    if let Some(last_param) = func.get_params().last() {
+        last_param.0 == "..."
+    } else {
+        false
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
