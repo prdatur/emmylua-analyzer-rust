@@ -160,7 +160,7 @@ fn export_alias(db: &DbIndex, type_decl: &LuaTypeDecl) -> Alias {
         loc: export_loc_for_type(db, type_decl),
         typ: type_decl
             .get_alias_ref()
-            .map(|typ| render_typ(db, typ, RenderLevel::Simple)),
+            .map(|typ| render_typ(db, typ, RenderLevel::Documentation)),
         generics: export_generics(db, &type_decl_id),
         members: export_members(db, member_owner),
     }
