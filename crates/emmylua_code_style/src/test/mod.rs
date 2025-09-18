@@ -6,9 +6,9 @@ mod test {
     fn test_reformat_lua_code() {
         let code = r#"
             local a = 1
-            local b = 2
-            local c = a + b
-            print(c)
+            local b =  2
+            local c =   a+b
+            print(c     )
         "#;
 
         let styles = LuaCodeStyle::default();

@@ -1,11 +1,10 @@
+mod format;
+mod style_ruler;
+mod styles;
 mod test;
 
 use emmylua_parser::{LuaAst, LuaParser, ParserConfig};
 use styles::LuaCodeStyle;
-
-mod format;
-mod style_ruler;
-mod styles;
 
 pub fn reformat_lua_code(code: &str, styles: &LuaCodeStyle) -> String {
     let tree = LuaParser::parse(code, ParserConfig::default());

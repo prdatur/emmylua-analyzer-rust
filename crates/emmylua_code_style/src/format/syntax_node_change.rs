@@ -6,3 +6,9 @@ pub enum TokenNodeChange {
     AddRight(String),
     ReplaceWith(String),
 }
+
+#[allow(unused)]
+#[derive(Debug, Clone, Copy)]
+pub enum TokenExpected {
+    Space(usize),
+}
