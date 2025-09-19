@@ -115,9 +115,10 @@ fn infer_metatable_index_type(
     if let Some(meta_members) =
         find_members_with_key(db, &meta_type, LuaMemberKey::Name("__index".into()), false)
         && let Some(meta_member) = meta_members.first()
-            && meta_member.typ.is_custom_type() {
-                return Ok((meta_member.typ.clone(), true));
-            }
+        && meta_member.typ.is_custom_type()
+    {
+        return Ok((meta_member.typ.clone(), true));
+    }
 
     Ok((meta_type, false))
 }

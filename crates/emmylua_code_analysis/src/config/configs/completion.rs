@@ -92,4 +92,3 @@ pub enum EmmyrcFilenameConvention {
     /// When returning class definition, use class name, otherwise keep original name.
     KeepClass,
 }
-

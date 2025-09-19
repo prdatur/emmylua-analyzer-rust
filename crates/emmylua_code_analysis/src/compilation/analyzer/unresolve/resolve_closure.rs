@@ -323,9 +323,10 @@ fn resolve_closure_member_type(
                             .ok_or(InferFailReason::None)?;
 
                         if let Some(origin) = type_decl.get_alias_origin(db, None)
-                            && let LuaType::DocFunction(f) = origin {
-                                multi_function_type.push(f);
-                            }
+                            && let LuaType::DocFunction(f) = origin
+                        {
+                            multi_function_type.push(f);
+                        }
                     }
                     _ => {}
                 };
@@ -354,13 +355,14 @@ fn resolve_closure_member_type(
                             // 如果`doc_params`当前与之后的参数的类型不一致, 那么`variadic_type`为`Any`
                             for i in idx..doc_params.len() {
                                 if let Some(param) = doc_params.get(i)
-                                    && let Some(typ) = &param.1 {
-                                        if variadic_type == LuaType::Unknown {
-                                            variadic_type = typ.clone();
-                                        } else if variadic_type != *typ {
-                                            variadic_type = LuaType::Any;
-                                        }
+                                    && let Some(typ) = &param.1
+                                {
+                                    if variadic_type == LuaType::Unknown {
+                                        variadic_type = typ.clone();
+                                    } else if variadic_type != *typ {
+                                        variadic_type = LuaType::Any;
                                     }
+                                }
                             }
 
                             break;
@@ -380,9 +382,10 @@ fn resolve_closure_member_type(
             }
 
             if !variadic_type.is_unknown()
-                && let Some(param) = final_params.last_mut() {
-                    param.1 = Some(variadic_type);
-                }
+                && let Some(param) = final_params.last_mut()
+            {
+                param.1 = Some(variadic_type);
+            }
 
             resolve_doc_function(
                 db,
@@ -404,15 +407,16 @@ fn resolve_closure_member_type(
                 .ok_or(InferFailReason::None)?;
 
             if type_decl.is_alias()
-                && let Some(origin) = type_decl.get_alias_origin(db, None) {
-                    return resolve_closure_member_type(
-                        db,
-                        closure_params,
-                        &origin,
-                        self_type,
-                        infer_guard,
-                    );
-                }
+                && let Some(origin) = type_decl.get_alias_origin(db, None)
+            {
+                return resolve_closure_member_type(
+                    db,
+                    closure_params,
+                    &origin,
+                    self_type,
+                    infer_guard,
+                );
+            }
             Ok(())
         }
         _ => Ok(()),
@@ -449,9 +453,10 @@ fn resolve_doc_function(
 
     if let Some(self_type) = self_type
         && let Some((_, Some(typ))) = doc_params.first()
-            && typ.is_self_infer() {
-                doc_params[0].1 = Some(self_type);
-            }
+        && typ.is_self_infer()
+    {
+        doc_params[0].1 = Some(self_type);
+    }
 
     for (index, param) in doc_params.iter().enumerate() {
         let name = signature.params.get(index).unwrap_or(&param.0);
@@ -538,23 +543,19 @@ fn find_best_function_type(
 
     match origin_signature.overloads.len() {
         0 => None,
-        1 => {
+        1 => origin_signature
+            .overloads
+            .clone()
+            .into_iter()
+            .next()
+            .map(LuaType::DocFunction),
+        _ => Some(LuaType::from_vec(
             origin_signature
                 .overloads
                 .clone()
                 .into_iter()
-                .next()
                 .map(LuaType::DocFunction)
-        }
-        _ => {
-            Some(LuaType::from_vec(
-                origin_signature
-                    .overloads
-                    .clone()
-                    .into_iter()
-                    .map(LuaType::DocFunction)
-                    .collect(),
-            ))
-        }
+                .collect(),
+        )),
     }
 }

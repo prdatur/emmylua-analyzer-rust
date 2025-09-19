@@ -18,26 +18,19 @@ pub fn bind_type(
         // type backward
         if type_cache.is_infer()
             && let LuaTypeOwner::Decl(decl_id) = &type_owner
-                && let Some(decl_ref) = db
-                    .get_reference_index()
-                    .get_decl_references(&decl_id.file_id, decl_id)
-                    && decl_ref.mutable {
-                        match &type_cache.as_type() {
-                            LuaType::IntegerConst(_) => {
-                                type_cache = LuaTypeCache::InferType(LuaType::Integer)
-                            }
-                            LuaType::StringConst(_) => {
-                                type_cache = LuaTypeCache::InferType(LuaType::String)
-                            }
-                            LuaType::BooleanConst(_) => {
-                                type_cache = LuaTypeCache::InferType(LuaType::Boolean)
-                            }
-                            LuaType::FloatConst(_) => {
-                                type_cache = LuaTypeCache::InferType(LuaType::Number)
-                            }
-                            _ => {}
-                        }
-                    }
+            && let Some(decl_ref) = db
+                .get_reference_index()
+                .get_decl_references(&decl_id.file_id, decl_id)
+            && decl_ref.mutable
+        {
+            match &type_cache.as_type() {
+                LuaType::IntegerConst(_) => type_cache = LuaTypeCache::InferType(LuaType::Integer),
+                LuaType::StringConst(_) => type_cache = LuaTypeCache::InferType(LuaType::String),
+                LuaType::BooleanConst(_) => type_cache = LuaTypeCache::InferType(LuaType::Boolean),
+                LuaType::FloatConst(_) => type_cache = LuaTypeCache::InferType(LuaType::Number),
+                _ => {}
+            }
+        }
 
         db.get_type_index_mut()
             .bind_type(type_owner.clone(), type_cache);
@@ -55,16 +48,18 @@ fn merge_def_type(db: &mut DbIndex, decl_type: LuaType, expr_type: LuaType, merg
         return;
     }
 
-    if let LuaType::Def(def) = &decl_type { match &expr_type {
-        LuaType::TableConst(in_filed_range) => {
-            merge_def_type_with_table(db, def.clone(), in_filed_range.clone());
+    if let LuaType::Def(def) = &decl_type {
+        match &expr_type {
+            LuaType::TableConst(in_filed_range) => {
+                merge_def_type_with_table(db, def.clone(), in_filed_range.clone());
+            }
+            LuaType::Instance(instance) => {
+                let base_ref = instance.get_base();
+                merge_def_type(db, base_ref.clone(), expr_type, merge_level + 1);
+            }
+            _ => {}
         }
-        LuaType::Instance(instance) => {
-            let base_ref = instance.get_base();
-            merge_def_type(db, base_ref.clone(), expr_type, merge_level + 1);
-        }
-        _ => {}
-    } }
+    }
 }
 
 fn merge_def_type_with_table(

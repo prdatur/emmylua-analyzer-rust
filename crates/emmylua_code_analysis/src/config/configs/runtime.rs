@@ -35,9 +35,7 @@ pub struct EmmyrcRuntime {
     pub special: HashMap<String, EmmyrcSpecialSymbol>,
 }
 
-
-#[derive(Serialize, Deserialize, Debug, JsonSchema, Clone, Copy, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Serialize, Deserialize, Debug, JsonSchema, Clone, Copy, PartialEq, Eq, Default)]
 pub enum EmmyrcLuaVersion {
     /// Lua 5.1
     #[serde(rename = "Lua5.1", alias = "Lua 5.1")]
@@ -62,7 +60,6 @@ pub enum EmmyrcLuaVersion {
     #[default]
     LuaLatest,
 }
-
 
 impl EmmyrcLuaVersion {
     pub fn to_lua_version_number(&self) -> LuaVersionNumber {

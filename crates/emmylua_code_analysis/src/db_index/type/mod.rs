@@ -73,10 +73,7 @@ impl LuaTypeIndex {
 
     pub fn add_type_decl(&mut self, file_id: FileId, type_decl: LuaTypeDecl) {
         let id = type_decl.get_id();
-        self.file_types
-            .entry(file_id)
-            .or_default()
-            .push(id.clone());
+        self.file_types.entry(file_id).or_default().push(id.clone());
 
         if let Some(old_decl) = self.full_name_type_map.get_mut(&id) {
             old_decl.merge_decl(type_decl);
@@ -149,14 +146,15 @@ impl LuaTypeIndex {
         for id in all_type_ids {
             let id_name = id.get_name();
             if id_name.starts_with(prefix)
-                && let Some(rest_name) = id_name.strip_prefix(prefix) {
-                    if let Some(i) = rest_name.find('.') {
-                        let name = rest_name[..i].to_string();
-                        result.entry(name).or_insert(None);
-                    } else {
-                        result.insert(rest_name.to_string(), Some(id.clone()));
-                    }
+                && let Some(rest_name) = id_name.strip_prefix(prefix)
+            {
+                if let Some(i) = rest_name.find('.') {
+                    let name = rest_name[..i].to_string();
+                    result.entry(name).or_insert(None);
+                } else {
+                    result.insert(rest_name.to_string(), Some(id.clone()));
                 }
+            }
         }
 
         result
@@ -178,7 +176,9 @@ impl LuaTypeIndex {
     }
 
     pub fn get_super_types(&self, decl_id: &LuaTypeDeclId) -> Option<Vec<LuaType>> {
-        self.supers.get(decl_id).map(|supers| supers.iter().map(|s| s.value.clone()).collect())
+        self.supers
+            .get(decl_id)
+            .map(|supers| supers.iter().map(|s| s.value.clone()).collect())
     }
 
     pub fn get_super_types_iter(

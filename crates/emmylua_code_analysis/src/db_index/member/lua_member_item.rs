@@ -40,9 +40,7 @@ fn resolve_member_type(
 ) -> Result<LuaType, InferFailReason> {
     match member_item {
         LuaMemberIndexItem::One(member_id) => {
-            let member_type_cache = db
-                .get_type_index()
-                .get_type_cache(&(*member_id).into());
+            let member_type_cache = db.get_type_index().get_type_cache(&(*member_id).into());
             match member_type_cache {
                 Some(cache) => Ok(cache.as_type().clone()),
                 None => Err(InferFailReason::UnResolveMemberType(*member_id)),

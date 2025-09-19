@@ -100,13 +100,14 @@ impl FileGenericIndex {
 
         for params_id in params_ids.iter().rev() {
             if let Some(params) = self.generic_params.get(*params_id)
-                && let Some((id, is_variadic)) = params.params.get(name) {
-                    if params.is_func {
-                        return Some((GenericTplId::Func(*id as u32), *is_variadic));
-                    } else {
-                        return Some((GenericTplId::Type(*id as u32), *is_variadic));
-                    }
+                && let Some((id, is_variadic)) = params.params.get(name)
+            {
+                if params.is_func {
+                    return Some((GenericTplId::Func(*id as u32), *is_variadic));
+                } else {
+                    return Some((GenericTplId::Type(*id as u32), *is_variadic));
                 }
+            }
         }
 
         None

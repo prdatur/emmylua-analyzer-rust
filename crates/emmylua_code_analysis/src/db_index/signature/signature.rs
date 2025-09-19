@@ -88,9 +88,10 @@ impl LuaSignature {
         if idx < self.params.len() {
             return Some(self.params[idx].clone());
         } else if let Some(name) = self.params.last()
-            && name == "..." {
-                return Some(name.clone());
-            }
+            && name == "..."
+        {
+            return Some(name.clone());
+        }
 
         None
     }
@@ -99,9 +100,10 @@ impl LuaSignature {
         if idx < self.params.len() {
             return self.param_docs.get(&idx);
         } else if let Some(name) = self.params.last()
-            && name == "..." {
-                return self.param_docs.get(&(self.params.len() - 1));
-            }
+            && name == "..."
+        {
+            return self.param_docs.get(&(self.params.len() - 1));
+        }
 
         None
     }
@@ -139,9 +141,9 @@ impl LuaSignature {
                         && (param_type.is_any()
                             || param_type.is_table()
                             || param_type.is_class_tpl())
-                        {
-                            return false;
-                        }
+                    {
+                        return false;
+                    }
 
                     semantic_model
                         .type_check(owner_type, &param_info.type_ref)

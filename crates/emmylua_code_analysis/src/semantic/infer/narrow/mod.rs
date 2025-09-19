@@ -61,7 +61,10 @@ fn get_var_ref_type(db: &DbIndex, cache: &mut LuaInferCache, var_ref_id: &VarRef
         find_decl_member_type(db, member_id)
     } else {
         if let Some(type_cache) = cache.index_ref_origin_type_cache.get(var_ref_id)
-            && let CacheEntry::Cache(ty) = type_cache { return Ok(ty.clone()) }
+            && let CacheEntry::Cache(ty) = type_cache
+        {
+            return Ok(ty.clone());
+        }
 
         Err(InferFailReason::None)
     }

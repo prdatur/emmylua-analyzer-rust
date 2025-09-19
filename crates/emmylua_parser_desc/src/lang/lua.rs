@@ -102,9 +102,10 @@ fn to_highlight_kind(
                 && matches!(
                     prev_token.kind,
                     LuaTokenKind::TkDot | LuaTokenKind::TkDbColon
-                ) {
-                    return CodeBlockHighlightKind::Property;
-                }
+                )
+            {
+                return CodeBlockHighlightKind::Property;
+            }
 
             CodeBlockHighlightKind::Variable
         }

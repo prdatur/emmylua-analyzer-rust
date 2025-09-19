@@ -56,9 +56,10 @@ impl LuaDeclarationTree {
             match decl_id {
                 ScopeOrDeclId::Decl(decl_id) => {
                     if let Some(decl) = self.get_decl(&decl_id)
-                        && !decl.is_implicit_self() {
-                            result.push(decl.get_id());
-                        }
+                        && !decl.is_implicit_self()
+                    {
+                        result.push(decl.get_id());
+                    }
                 }
                 ScopeOrDeclId::Scope(_) => {}
             }
@@ -161,14 +162,15 @@ impl LuaDeclarationTree {
             }
             LuaScopeKind::Repeat => {
                 if level == 0
-                    && let Some(ScopeOrDeclId::Scope(scope_id)) = scope.get_children().first() {
-                        let scope = match self.scopes.get(scope_id.id as usize) {
-                            Some(scope) => scope,
-                            None => return,
-                        };
-                        self.walk_up(scope, start_pos, level, f);
-                        return;
-                    }
+                    && let Some(ScopeOrDeclId::Scope(scope_id)) = scope.get_children().first()
+                {
+                    let scope = match self.scopes.get(scope_id.id as usize) {
+                        Some(scope) => scope,
+                        None => return,
+                    };
+                    self.walk_up(scope, start_pos, level, f);
+                    return;
+                }
 
                 self.base_walk_up(scope, start_pos, level, f);
             }
@@ -200,9 +202,10 @@ impl LuaDeclarationTree {
             LuaScopeKind::LocalOrAssignStat | LuaScopeKind::FuncStat | LuaScopeKind::MethodStat => {
                 for child in scope.get_children() {
                     if let ScopeOrDeclId::Decl(decl_id) = child
-                        && f(decl_id.into()) {
-                            return true;
-                        }
+                        && f(decl_id.into())
+                    {
+                        return true;
+                    }
                 }
             }
             _ => {}

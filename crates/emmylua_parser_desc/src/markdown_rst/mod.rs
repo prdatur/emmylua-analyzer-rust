@@ -355,10 +355,10 @@ impl MarkdownRstParser {
                     list_enumerator_kind,
                     list_marker_kind,
                 ))
-            {
-                bt.rollback(self, line);
-                return Err(());
-            }
+        {
+            bt.rollback(self, line);
+            return Err(());
+        }
 
         self.emit(line, DescItemKind::Markup);
         indent += line.eat_while(is_ws);
@@ -1307,10 +1307,11 @@ impl MarkdownRstParser {
         }
 
         if let Some(cursor_position) = cursor_position
-            && reader.current_range().contains_inclusive(cursor_position) {
-                process_lua_ref(self, reader.reset_buff_into_sub_reader());
-                return true;
-            }
+            && reader.current_range().contains_inclusive(cursor_position)
+        {
+            process_lua_ref(self, reader.reset_buff_into_sub_reader());
+            return true;
+        }
 
         false
     }

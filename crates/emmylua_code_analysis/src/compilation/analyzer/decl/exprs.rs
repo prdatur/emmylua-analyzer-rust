@@ -327,16 +327,17 @@ pub fn analyze_call_expr(analyzer: &mut DeclAnalyzer, expr: LuaCallExpr) -> Opti
     if expr.is_require() {
         let args = expr.get_args_list()?;
         if let Some(LuaExpr::LiteralExpr(literal_expr)) = args.get_args().next()
-            && let Some(LuaLiteralToken::String(string_token)) = literal_expr.get_literal() {
-                let module_path = string_token.get_value();
-                let file_id = analyzer.get_file_id();
-                let module_info = analyzer.db.get_module_index().find_module(&module_path)?;
-                let module_file_id = module_info.file_id;
-                analyzer
-                    .db
-                    .get_file_dependencies_index_mut()
-                    .add_required_file(file_id, module_file_id);
-            }
+            && let Some(LuaLiteralToken::String(string_token)) = literal_expr.get_literal()
+        {
+            let module_path = string_token.get_value();
+            let file_id = analyzer.get_file_id();
+            let module_info = analyzer.db.get_module_index().find_module(&module_path)?;
+            let module_file_id = module_info.file_id;
+            analyzer
+                .db
+                .get_file_dependencies_index_mut()
+                .add_required_file(file_id, module_file_id);
+        }
     }
 
     Some(())

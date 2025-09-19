@@ -234,7 +234,6 @@ impl LuaTypeDeclId {
 
     pub fn get_simple_name(&self) -> &str {
         let basic_name = self.get_name();
-        
 
         (if let Some(i) = basic_name.rfind('.') {
             &basic_name[i + 1..]

@@ -136,9 +136,10 @@ impl LuaMemberIndex {
             LuaMemberIndexItem::Many(ids) => {
                 for id in ids {
                     if let Some(member) = self.get_member(id)
-                        && !member.get_feature().is_meta_decl() {
-                            return false;
-                        }
+                        && !member.get_feature().is_meta_decl()
+                    {
+                        return false;
+                    }
                 }
                 return true;
             }

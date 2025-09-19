@@ -74,9 +74,10 @@ pub fn remove_type(db: &DbIndex, source: LuaType, removed_type: LuaType) -> Opti
                     return Some(source.clone());
                 }
                 if type_decl.is_alias()
-                    && let Some(alias_ref) = get_real_type(db, real_type) {
-                        return remove_type(db, alias_ref.clone(), removed_type);
-                    }
+                    && let Some(alias_ref) = get_real_type(db, real_type)
+                {
+                    return remove_type(db, alias_ref.clone(), removed_type);
+                }
 
                 // 需要对`userdata`进行特殊处理
                 if let Some(super_types) = db.get_type_index().get_super_types_iter(type_decl_id) {

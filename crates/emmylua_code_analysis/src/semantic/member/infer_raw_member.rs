@@ -35,8 +35,7 @@ fn infer_raw_member_type_guard(
         | LuaType::StringConst(_)
         | LuaType::DocStringConst(_)
         | LuaType::Language(_) => {
-            let decl_id =
-                get_buildin_type_map_type_id(prefix_type).ok_or(InferFailReason::None)?;
+            let decl_id = get_buildin_type_map_type_id(prefix_type).ok_or(InferFailReason::None)?;
             let owner = LuaMemberOwner::Type(decl_id);
             infer_owner_raw_member_type(db, owner, member_key)
         }
@@ -96,19 +95,20 @@ fn infer_custom_type_raw_member_type(
     }
 
     if type_decl.is_class()
-        && let Some(super_types) = type_index.get_super_types(type_id) {
-            for super_type in super_types {
-                let result = infer_raw_member_type_guard(db, &super_type, member_key, infer_guard);
+        && let Some(super_types) = type_index.get_super_types(type_id)
+    {
+        for super_type in super_types {
+            let result = infer_raw_member_type_guard(db, &super_type, member_key, infer_guard);
 
-                match result {
-                    Ok(member_type) => {
-                        return Ok(member_type);
-                    }
-                    Err(InferFailReason::FieldNotFound) => {}
-                    Err(err) => return Err(err),
+            match result {
+                Ok(member_type) => {
+                    return Ok(member_type);
                 }
+                Err(InferFailReason::FieldNotFound) => {}
+                Err(err) => return Err(err),
             }
         }
+    }
 
     Err(InferFailReason::FieldNotFound)
 }

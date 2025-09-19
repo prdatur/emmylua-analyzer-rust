@@ -232,12 +232,11 @@ fn export_members(db: &DbIndex, member_owner: LuaMemberOwner) -> Vec<Member> {
                 let loc = export_loc(vfs, member.get_file_id(), member.get_range());
 
                 match typ {
-                    LuaType::Signature(signature_id) => db
-                        .get_signature_index()
-                        .get(signature_id)
-                        .map(|signature| {
+                    LuaType::Signature(signature_id) => {
+                        db.get_signature_index().get(signature_id).map(|signature| {
                             Member::Fn(export_signature(db, signature, name, property, loc))
-                        }),
+                        })
+                    }
                     _ => Some(Member::Field(export_field(db, typ, name, property, loc))),
                 }
             })

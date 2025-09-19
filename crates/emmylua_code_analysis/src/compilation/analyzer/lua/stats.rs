@@ -51,22 +51,23 @@ pub fn analyze_local_stat(analyzer: &mut LuaAnalyzer, local_stat: LuaLocalStat) 
                 // 当`call`参数包含表时, 表可能未被分析, 需要延迟
                 if let LuaType::Instance(instance) = &expr_type
                     && instance.get_base().is_unknown()
-                        && call_expr_has_effect_table_arg(&expr).is_some() {
-                            let unresolve = UnResolveDecl {
-                                file_id: analyzer.file_id,
-                                decl_id,
-                                expr: expr.clone(),
-                                ret_idx: 0,
-                            };
-                            analyzer.context.add_unresolve(
-                                unresolve.into(),
-                                InferFailReason::UnResolveExpr(InFiled::new(
-                                    analyzer.file_id,
-                                    expr.clone(),
-                                )),
-                            );
-                            continue;
-                        }
+                    && call_expr_has_effect_table_arg(&expr).is_some()
+                {
+                    let unresolve = UnResolveDecl {
+                        file_id: analyzer.file_id,
+                        decl_id,
+                        expr: expr.clone(),
+                        ret_idx: 0,
+                    };
+                    analyzer.context.add_unresolve(
+                        unresolve.into(),
+                        InferFailReason::UnResolveExpr(InFiled::new(
+                            analyzer.file_id,
+                            expr.clone(),
+                        )),
+                    );
+                    continue;
+                }
 
                 bind_type(
                     analyzer.db,
@@ -162,9 +163,10 @@ fn call_expr_has_effect_table_arg(expr: &LuaExpr) -> Option<()> {
         let args_list = call_expr.get_args_list()?;
         for arg in args_list.get_args() {
             if let LuaExpr::TableExpr(table_expr) = arg
-                && !table_expr.is_empty() {
-                    return Some(());
-                }
+                && !table_expr.is_empty()
+            {
+                return Some(());
+            }
         }
     }
     None
@@ -261,7 +263,8 @@ pub fn analyze_assign_stat(analyzer: &mut LuaAnalyzer, assign_stat: LuaAssignSta
         let type_owner = get_var_owner(analyzer, var.clone());
         set_index_expr_owner(analyzer, var.clone());
 
-        if special_assign_pattern(analyzer, type_owner.clone(), var.clone(), expr.clone()).is_some() {
+        if special_assign_pattern(analyzer, type_owner.clone(), var.clone(), expr.clone()).is_some()
+        {
             continue;
         }
 
@@ -307,40 +310,41 @@ pub fn analyze_assign_stat(analyzer: &mut LuaAnalyzer, assign_stat: LuaAssignSta
 
     // The complexity brought by multiple return values is too high
     if var_count > expr_count
-        && let Some(last_expr) = expr_list.last() {
-            match analyzer.infer_expr(last_expr) {
-                Ok(last_expr_type) => {
-                    if last_expr_type.is_multi_return() {
-                        for i in expr_count..var_count {
-                            let var = var_list.get(i)?;
-                            let type_owner = get_var_owner(analyzer, var.clone());
-                            set_index_expr_owner(analyzer, var.clone());
-                            assign_merge_type_owner_and_expr_type(
-                                analyzer,
-                                type_owner,
-                                &last_expr_type,
-                                i - expr_count + 1,
-                            );
-                        }
-                    }
-                }
-                Err(_) => {
+        && let Some(last_expr) = expr_list.last()
+    {
+        match analyzer.infer_expr(last_expr) {
+            Ok(last_expr_type) => {
+                if last_expr_type.is_multi_return() {
                     for i in expr_count..var_count {
                         let var = var_list.get(i)?;
                         let type_owner = get_var_owner(analyzer, var.clone());
                         set_index_expr_owner(analyzer, var.clone());
-                        merge_type_owner_and_unresolve_expr(
+                        assign_merge_type_owner_and_expr_type(
                             analyzer,
                             type_owner,
-                            last_expr.clone(),
+                            &last_expr_type,
                             i - expr_count + 1,
                         );
                     }
                 }
             }
+            Err(_) => {
+                for i in expr_count..var_count {
+                    let var = var_list.get(i)?;
+                    let type_owner = get_var_owner(analyzer, var.clone());
+                    set_index_expr_owner(analyzer, var.clone());
+                    merge_type_owner_and_unresolve_expr(
+                        analyzer,
+                        type_owner,
+                        last_expr.clone(),
+                        i - expr_count + 1,
+                    );
+                }
+            }
         }
+    }
 
-        // Expressions like a, b are not valid
+    // Expressions like a, b are not valid
 
     Some(())
 }
@@ -522,7 +526,9 @@ pub fn try_add_class_default_call(
         let index_key = index_expr.get_index_key()?;
         if index_key.get_path_part() == *default_name {
             let prefix_expr = index_expr.get_prefix_expr()?;
-            if let Ok(prefix_type) = analyzer.infer_expr(&prefix_expr) && let LuaType::Def(decl_id) = prefix_type {
+            if let Ok(prefix_type) = analyzer.infer_expr(&prefix_expr)
+                && let LuaType::Def(decl_id) = prefix_type
+            {
                 // 如果已经存在, 则不添加
                 let call = analyzer.db.get_operator_index().get_operators(
                     &LuaOperatorOwner::Type(decl_id.clone()),

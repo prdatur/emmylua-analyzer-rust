@@ -1,7 +1,6 @@
 use core::fmt;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub enum LuaLanguageLevel {
     Lua51,
     LuaJIT,
@@ -24,4 +23,3 @@ impl fmt::Display for LuaLanguageLevel {
         }
     }
 }
-

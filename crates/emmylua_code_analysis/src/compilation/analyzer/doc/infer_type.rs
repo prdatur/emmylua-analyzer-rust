@@ -205,49 +205,50 @@ fn infer_special_table_type(
 
 fn infer_generic_type(analyzer: &mut DocAnalyzer, generic_type: &LuaDocGenericType) -> LuaType {
     if let Some(name_type) = generic_type.get_name_type()
-        && let Some(name) = name_type.get_name_text() {
-            if let Some(typ) = infer_special_generic_type(analyzer, &name, generic_type) {
-                return typ;
-            }
-
-            let id = if let Some(name_type_decl) = analyzer
-                .db
-                .get_type_index_mut()
-                .find_type_decl(analyzer.file_id, &name)
-            {
-                name_type_decl.get_id()
-            } else {
-                analyzer.db.get_diagnostic_index_mut().add_diagnostic(
-                    analyzer.file_id,
-                    AnalyzeError::new(
-                        DiagnosticCode::TypeNotFound,
-                        &t!("Type '%{name}' not found", name = name),
-                        generic_type.get_range(),
-                    ),
-                );
-                return LuaType::Unknown;
-            };
-
-            let mut generic_params = Vec::new();
-            if let Some(generic_decl_list) = generic_type.get_generic_types() {
-                for param in generic_decl_list.get_types() {
-                    let param_type = infer_type(analyzer, param);
-                    if param_type.is_unknown() {
-                        return LuaType::Unknown;
-                    }
-                    generic_params.push(param_type);
-                }
-            }
-            if let Some(name_type) = generic_type.get_name_type() {
-                analyzer.db.get_reference_index_mut().add_type_reference(
-                    analyzer.file_id,
-                    id.clone(),
-                    name_type.get_range(),
-                );
-            }
-
-            return LuaType::Generic(LuaGenericType::new(id, generic_params).into());
+        && let Some(name) = name_type.get_name_text()
+    {
+        if let Some(typ) = infer_special_generic_type(analyzer, &name, generic_type) {
+            return typ;
         }
+
+        let id = if let Some(name_type_decl) = analyzer
+            .db
+            .get_type_index_mut()
+            .find_type_decl(analyzer.file_id, &name)
+        {
+            name_type_decl.get_id()
+        } else {
+            analyzer.db.get_diagnostic_index_mut().add_diagnostic(
+                analyzer.file_id,
+                AnalyzeError::new(
+                    DiagnosticCode::TypeNotFound,
+                    &t!("Type '%{name}' not found", name = name),
+                    generic_type.get_range(),
+                ),
+            );
+            return LuaType::Unknown;
+        };
+
+        let mut generic_params = Vec::new();
+        if let Some(generic_decl_list) = generic_type.get_generic_types() {
+            for param in generic_decl_list.get_types() {
+                let param_type = infer_type(analyzer, param);
+                if param_type.is_unknown() {
+                    return LuaType::Unknown;
+                }
+                generic_params.push(param_type);
+            }
+        }
+        if let Some(name_type) = generic_type.get_name_type() {
+            analyzer.db.get_reference_index_mut().add_type_reference(
+                analyzer.file_id,
+                id.clone(),
+                name_type.get_range(),
+            );
+        }
+
+        return LuaType::Generic(LuaGenericType::new(id, generic_params).into());
+    }
 
     LuaType::Unknown
 }
@@ -505,9 +506,10 @@ fn infer_func_type(analyzer: &mut DocAnalyzer, func: &LuaDocFuncType) -> LuaType
     // compact luals
     if is_colon
         && let Some(first_param) = params_result.first()
-            && first_param.0 == "self" {
-                is_colon = false
-            }
+        && first_param.0 == "self"
+    {
+        is_colon = false
+    }
 
     let return_type = if return_types.len() == 1 {
         return_types[0].clone()

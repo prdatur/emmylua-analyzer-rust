@@ -28,10 +28,7 @@ impl LuaGlobalIndex {
 
     pub fn add_global_decl(&mut self, name: &str, decl_id: LuaDeclId) {
         let id = GlobalId::new(name);
-        self.global_decl
-            .entry(id)
-            .or_default()
-            .push(decl_id);
+        self.global_decl.entry(id).or_default().push(decl_id);
     }
 
     pub fn get_all_global_decl_ids(&self) -> Vec<LuaDeclId> {

@@ -294,9 +294,7 @@ impl<'a> LuaLexer<'a> {
                         self.reader.bump();
                         LuaTokenKind::TkSlashAssign
                     }
-                    _ if current_char != '/' => {
-                        LuaTokenKind::TkDiv
-                    }
+                    _ if current_char != '/' => LuaTokenKind::TkDiv,
                     _ if self.support_non_std_symbol(LuaNonStdSymbol::DoubleSlash) => {
                         // "//" is a short comment
                         self.reader.bump();

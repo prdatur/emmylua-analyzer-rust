@@ -159,12 +159,8 @@ impl<'a> SemanticModel<'a> {
         arg_count: Option<usize>,
     ) -> Option<Arc<LuaFunctionType>> {
         let prefix_expr = call_expr.get_prefix_expr()?;
-        let call_expr_type = infer_expr(
-            self.db,
-            &mut self.infer_cache.borrow_mut(),
-            prefix_expr,
-        )
-        .ok()?;
+        let call_expr_type =
+            infer_expr(self.db, &mut self.infer_cache.borrow_mut(), prefix_expr).ok()?;
         infer_call_expr_func(
             self.db,
             &mut self.infer_cache.borrow_mut(),

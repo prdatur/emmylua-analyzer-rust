@@ -32,9 +32,10 @@ pub fn infer_binary_expr(
             return Ok(ty);
         }
     } else if !matches!(op, BinaryOperator::OpAnd | BinaryOperator::OpOr)
-        && let Some(ty) = infer_union_binary_expr(db, op, left_type_ref, right_type_ref) {
-            return Ok(ty);
-        }
+        && let Some(ty) = infer_union_binary_expr(db, op, left_type_ref, right_type_ref)
+    {
+        return Ok(ty);
+    }
 
     match (real_left_type.is_some(), real_right_type.is_some()) {
         (false, false) => infer_binary_expr_type(db, left_type, right_type, op),
@@ -117,25 +118,27 @@ fn infer_binary_custom_operator(
 ) -> InferResult {
     // 先检查 left 是否是自定义类型，避免不必要的 clone
     if left.is_custom_type()
-        && let Some(operators) = get_custom_type_operator(db, left.clone(), op) {
-            for operator in operators {
-                let operand = operator.get_operand(db);
-                if check_type_compact(db, &operand, right).is_ok() {
-                    return operator.get_result(db);
-                }
+        && let Some(operators) = get_custom_type_operator(db, left.clone(), op)
+    {
+        for operator in operators {
+            let operand = operator.get_operand(db);
+            if check_type_compact(db, &operand, right).is_ok() {
+                return operator.get_result(db);
             }
         }
+    }
 
     // 再检查 right 是否是自定义类型，只在需要时 clone
     if right.is_custom_type()
-        && let Some(operators) = get_custom_type_operator(db, right.clone(), op) {
-            for operator in operators {
-                let operand = operator.get_operand(db);
-                if check_type_compact(db, &operand, left).is_ok() {
-                    return operator.get_result(db);
-                }
+        && let Some(operators) = get_custom_type_operator(db, right.clone(), op)
+    {
+        for operator in operators {
+            let operand = operator.get_operand(db);
+            if check_type_compact(db, &operand, left).is_ok() {
+                return operator.get_result(db);
             }
         }
+    }
 
     match op {
         LuaOperatorMetaMethod::Add

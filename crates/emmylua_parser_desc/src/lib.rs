@@ -74,8 +74,7 @@ pub struct DescItem {
     pub kind: DescItemKind,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
-#[derive(Default)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Default)]
 pub enum DescParserType {
     #[default]
     None,
@@ -88,7 +87,6 @@ pub enum DescParserType {
         default_role: Option<String>,
     },
 }
-
 
 /// Parses markup in comments.
 pub trait LuaDescParser {

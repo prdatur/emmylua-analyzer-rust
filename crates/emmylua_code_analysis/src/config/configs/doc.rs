@@ -28,7 +28,6 @@ pub struct EmmyrcDoc {
     pub rst_default_role: Option<String>,
 }
 
-
 #[derive(Serialize, Deserialize, Debug, JsonSchema, Clone)]
 #[serde(rename_all = "kebab-case")]
 #[derive(Default)]
@@ -39,4 +38,3 @@ pub enum DocSyntax {
     Myst,
     Rst,
 }
-

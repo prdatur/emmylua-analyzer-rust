@@ -70,7 +70,9 @@ pub fn analyze_nodiscard(analyzer: &mut DocAnalyzer, nodiscard: LuaDocTagNodisca
 }
 
 pub fn analyze_deprecated(analyzer: &mut DocAnalyzer, tag: LuaDocTagDeprecated) -> Option<()> {
-    let message = tag.get_description().map(|desc| desc.get_description_text().to_string());
+    let message = tag
+        .get_description()
+        .map(|desc| desc.get_description_text().to_string());
     let owner_id = get_owner_id_or_report(analyzer, &tag)?;
 
     analyzer

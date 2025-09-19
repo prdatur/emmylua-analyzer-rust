@@ -50,7 +50,9 @@ impl TypeSubstitutor {
 
     pub fn add_need_infer_tpls(&mut self, tpl_ids: HashSet<GenericTplId>) {
         for tpl_id in tpl_ids {
-            self.tpl_replace_map.entry(tpl_id).or_insert(SubstitutorValue::None);
+            self.tpl_replace_map
+                .entry(tpl_id)
+                .or_insert(SubstitutorValue::None);
         }
     }
 
@@ -149,9 +151,10 @@ impl TypeSubstitutor {
 
     pub fn check_recursion(&self, type_id: &LuaTypeDeclId) -> bool {
         if let Some(alias_type_id) = &self.alias_type_id
-            && alias_type_id == type_id {
-                return true;
-            }
+            && alias_type_id == type_id
+        {
+            return true;
+        }
 
         false
     }

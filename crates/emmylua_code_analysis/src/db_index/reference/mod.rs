@@ -101,9 +101,7 @@ impl LuaReferenceIndex {
     }
 
     pub fn create_local_reference(&mut self, file_id: FileId) {
-        self.file_references
-            .entry(file_id)
-            .or_default();
+        self.file_references.entry(file_id).or_default();
     }
 
     pub fn get_decl_references(
@@ -183,10 +181,7 @@ impl LuaReferenceIndex {
     }
 
     pub fn get_string_references(&self, string_value: &str) -> Vec<InFiled<TextRange>> {
-        
-
-        self
-            .string_references
+        self.string_references
             .iter()
             .flat_map(|(file_id, string_reference)| {
                 string_reference
