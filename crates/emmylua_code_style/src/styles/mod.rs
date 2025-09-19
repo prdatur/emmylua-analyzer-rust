@@ -1,6 +1,6 @@
 mod lua_indent;
 
-use lua_indent::LuaIndent;
+pub use lua_indent::LuaIndent;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
