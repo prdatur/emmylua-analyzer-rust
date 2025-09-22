@@ -103,6 +103,8 @@ pub enum DiagnosticCode {
     EnumValueMismatch,
     /// preferred-local-alias
     PreferredLocalAlias,
+    /// readonly
+    ReadOnly,
 
     #[serde(other)]
     None,

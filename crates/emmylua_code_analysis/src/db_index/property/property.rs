@@ -1,5 +1,7 @@
 use emmylua_parser::{LuaVersionCondition, VisibilityKind};
 
+use crate::db_index::property::decl_feature::{DeclFeatureFlag, PropertyDeclFeature};
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LuaCommonProperty {
     pub visibility: VisibilityKind,
@@ -9,6 +11,7 @@ pub struct LuaCommonProperty {
     pub version_conds: Option<Box<Vec<LuaVersionCondition>>>,
     pub tag_content: Option<Box<LuaTagContent>>,
     pub export: Option<LuaExport>,
+    pub decl_features: DeclFeatureFlag,
 }
 
 impl Default for LuaCommonProperty {
@@ -27,6 +30,7 @@ impl LuaCommonProperty {
             version_conds: None,
             tag_content: None,
             export: None,
+            decl_features: DeclFeatureFlag::new(),
         }
     }
 
@@ -81,6 +85,10 @@ impl LuaCommonProperty {
 
     pub fn add_extra_export(&mut self, export: LuaExport) {
         self.export = Some(export);
+    }
+
+    pub fn add_decl_feature(&mut self, feature: PropertyDeclFeature) {
+        self.decl_features.add_feature(feature);
     }
 }
 

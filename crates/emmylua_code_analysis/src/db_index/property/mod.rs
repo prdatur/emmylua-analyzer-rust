@@ -1,8 +1,10 @@
+mod decl_feature;
 #[allow(clippy::module_inception)]
 mod property;
 
 use std::collections::{HashMap, HashSet};
 
+pub use decl_feature::{DeclFeatureFlag, PropertyDeclFeature};
 use emmylua_parser::{LuaAstNode, LuaDocTagField, LuaDocType, LuaVersionCondition, VisibilityKind};
 pub use property::LuaCommonProperty;
 pub use property::{LuaDeprecated, LuaExport, LuaExportScope, LuaPropertyId};
@@ -206,6 +208,23 @@ impl LuaPropertyIndex {
     ) -> Option<()> {
         let (property, _) = self.get_or_create_property(owner_id.clone())?;
         property.add_extra_export(export);
+
+        self.in_filed_owner
+            .entry(file_id)
+            .or_default()
+            .insert(owner_id);
+
+        Some(())
+    }
+
+    pub fn add_decl_feature(
+        &mut self,
+        file_id: FileId,
+        owner_id: LuaSemanticDeclId,
+        feature: PropertyDeclFeature,
+    ) -> Option<()> {
+        let (property, _) = self.get_or_create_property(owner_id.clone())?;
+        property.add_decl_feature(feature);
 
         self.in_filed_owner
             .entry(file_id)

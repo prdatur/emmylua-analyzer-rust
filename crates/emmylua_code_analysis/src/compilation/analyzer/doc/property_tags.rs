@@ -1,6 +1,6 @@
 use crate::{
     AsyncState, LuaDeclId, LuaExport, LuaExportScope, LuaNoDiscard, LuaSemanticDeclId,
-    LuaSignatureId,
+    LuaSignatureId, PropertyDeclFeature,
 };
 
 use super::{
@@ -10,8 +10,8 @@ use super::{
 use crate::compilation::analyzer::doc::tags::report_orphan_tag;
 use emmylua_parser::{
     LuaAst, LuaAstNode, LuaDocDescriptionOwner, LuaDocTagAsync, LuaDocTagDeprecated,
-    LuaDocTagExport, LuaDocTagNodiscard, LuaDocTagSource, LuaDocTagVersion, LuaDocTagVisibility,
-    LuaTableExpr,
+    LuaDocTagExport, LuaDocTagNodiscard, LuaDocTagReadonly, LuaDocTagSource, LuaDocTagVersion,
+    LuaDocTagVisibility, LuaTableExpr,
 };
 
 pub fn analyze_visibility(
@@ -148,6 +148,18 @@ pub fn analyze_export(analyzer: &mut DocAnalyzer, tag: LuaDocTagExport) -> Optio
         .db
         .get_property_index_mut()
         .add_export(analyzer.file_id, owner_id, export);
+
+    Some(())
+}
+
+pub fn analyze_readonly(analyzer: &mut DocAnalyzer, readonly: LuaDocTagReadonly) -> Option<()> {
+    let owner_id = get_owner_id_or_report(analyzer, &readonly)?;
+
+    analyzer.db.get_property_index_mut().add_decl_feature(
+        analyzer.file_id,
+        owner_id,
+        PropertyDeclFeature::ReadOnly,
+    );
 
     Some(())
 }

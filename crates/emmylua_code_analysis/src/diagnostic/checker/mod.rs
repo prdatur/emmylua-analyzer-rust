@@ -22,6 +22,7 @@ mod local_const_reassign;
 mod missing_fields;
 mod need_check_nil;
 mod param_type_check;
+mod readonly_check;
 mod redefined_local;
 mod require_module_visibility;
 mod return_type_mismatch;
@@ -118,6 +119,7 @@ pub fn check_file(context: &mut DiagnosticContext, semantic_model: &SemanticMode
         context,
         semantic_model,
     );
+    run_check::<readonly_check::ReadOnlyChecker>(context, semantic_model);
     Some(())
 }
 

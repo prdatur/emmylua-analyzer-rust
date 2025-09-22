@@ -4,6 +4,7 @@ use emmylua_parser::{
 
 use crate::{
     AnalyzeError, DiagnosticCode, LuaDeclId,
+    compilation::analyzer::doc::property_tags::analyze_readonly,
     db_index::{LuaMemberId, LuaSemanticDeclId, LuaSignatureId},
 };
 
@@ -106,6 +107,9 @@ pub fn analyze_tag(analyzer: &mut DocAnalyzer, tag: LuaDocTag) -> Option<()> {
         }
         LuaDocTag::Export(export) => {
             analyze_export(analyzer, export)?;
+        }
+        LuaDocTag::Readonly(readonly) => {
+            analyze_readonly(analyzer, readonly)?;
         }
         _ => {}
     }
