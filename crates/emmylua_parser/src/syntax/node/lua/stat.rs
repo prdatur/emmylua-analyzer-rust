@@ -61,26 +61,26 @@ impl LuaAstNode for LuaStat {
     where
         Self: Sized,
     {
-        match kind {
-            LuaSyntaxKind::LocalStat => true,
-            LuaSyntaxKind::AssignStat => true,
-            LuaSyntaxKind::CallExprStat => true,
-            LuaSyntaxKind::FuncStat => true,
-            LuaSyntaxKind::LocalFuncStat => true,
-            LuaSyntaxKind::IfStat => true,
-            LuaSyntaxKind::WhileStat => true,
-            LuaSyntaxKind::DoStat => true,
-            LuaSyntaxKind::ForStat => true,
-            LuaSyntaxKind::ForRangeStat => true,
-            LuaSyntaxKind::RepeatStat => true,
-            LuaSyntaxKind::BreakStat => true,
-            LuaSyntaxKind::ReturnStat => true,
-            LuaSyntaxKind::GotoStat => true,
-            LuaSyntaxKind::LabelStat => true,
-            LuaSyntaxKind::EmptyStat => true,
-            LuaSyntaxKind::GlobalStat => true,
-            _ => false,
-        }
+        matches!(
+            kind,
+            LuaSyntaxKind::LocalStat
+                | LuaSyntaxKind::AssignStat
+                | LuaSyntaxKind::CallExprStat
+                | LuaSyntaxKind::FuncStat
+                | LuaSyntaxKind::LocalFuncStat
+                | LuaSyntaxKind::IfStat
+                | LuaSyntaxKind::WhileStat
+                | LuaSyntaxKind::DoStat
+                | LuaSyntaxKind::ForStat
+                | LuaSyntaxKind::ForRangeStat
+                | LuaSyntaxKind::RepeatStat
+                | LuaSyntaxKind::BreakStat
+                | LuaSyntaxKind::ReturnStat
+                | LuaSyntaxKind::GotoStat
+                | LuaSyntaxKind::LabelStat
+                | LuaSyntaxKind::EmptyStat
+                | LuaSyntaxKind::GlobalStat
+        )
     }
 
     fn cast(syntax: LuaSyntaxNode) -> Option<Self>
@@ -146,13 +146,13 @@ impl LuaAstNode for LuaLoopStat {
     where
         Self: Sized,
     {
-        match kind {
-            LuaSyntaxKind::WhileStat => true,
-            LuaSyntaxKind::RepeatStat => true,
-            LuaSyntaxKind::ForStat => true,
-            LuaSyntaxKind::ForRangeStat => true,
-            _ => false,
-        }
+        matches!(
+            kind,
+            LuaSyntaxKind::WhileStat
+                | LuaSyntaxKind::RepeatStat
+                | LuaSyntaxKind::ForStat
+                | LuaSyntaxKind::ForRangeStat
+        )
     }
 
     fn cast(syntax: LuaSyntaxNode) -> Option<Self>
@@ -224,10 +224,10 @@ impl LuaLocalStat {
         let value_exprs = self.get_value_exprs().collect::<Vec<_>>();
 
         for (i, local_name) in local_names.enumerate() {
-            if let Some(value_expr) = value_exprs.get(i) {
-                if value_expr.syntax() == value.syntax() {
-                    return Some(local_name);
-                }
+            if let Some(value_expr) = value_exprs.get(i)
+                && value_expr.syntax() == value.syntax()
+            {
+                return Some(local_name);
             }
         }
         None
@@ -295,10 +295,10 @@ impl LuaAssignStat {
 
     pub fn get_assign_op(&self) -> Option<LuaGeneralToken> {
         for child in self.syntax.children_with_tokens() {
-            if let Some(token) = child.into_token() {
-                if token.kind().to_token().is_assign_op() {
-                    return LuaGeneralToken::cast(token);
-                }
+            if let Some(token) = child.into_token()
+                && token.kind().to_token().is_assign_op()
+            {
+                return LuaGeneralToken::cast(token);
             }
         }
         None

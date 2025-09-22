@@ -347,18 +347,17 @@ impl MarkdownRstParser {
             return Err(());
         }
 
-        if let Some(next_line) = next_line {
-            if !(is_ws(next_line.current_char())
+        if let Some(next_line) = next_line
+            && !(is_ws(next_line.current_char())
                 || next_line.is_eof()
                 || Self::is_list_start(
                     next_line.tail_text(),
                     list_enumerator_kind,
                     list_marker_kind,
                 ))
-            {
-                bt.rollback(self, line);
-                return Err(());
-            }
+        {
+            bt.rollback(self, line);
+            return Err(());
         }
 
         self.emit(line, DescItemKind::Markup);
@@ -1307,11 +1306,11 @@ impl MarkdownRstParser {
             }
         }
 
-        if let Some(cursor_position) = cursor_position {
-            if reader.current_range().contains_inclusive(cursor_position) {
-                process_lua_ref(self, reader.reset_buff_into_sub_reader());
-                return true;
-            }
+        if let Some(cursor_position) = cursor_position
+            && reader.current_range().contains_inclusive(cursor_position)
+        {
+            process_lua_ref(self, reader.reset_buff_into_sub_reader());
+            return true;
         }
 
         false

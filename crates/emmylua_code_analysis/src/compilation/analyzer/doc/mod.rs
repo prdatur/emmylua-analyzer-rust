@@ -103,10 +103,8 @@ pub fn preprocess_description(mut description: &str, owner: Option<&LuaSemanticD
     } else {
         true
     };
-    if need_remove_start_char {
-        if description.starts_with(['#', '@']) {
-            description = description.trim_start_matches(|c| c == '#' || c == '@');
-        }
+    if need_remove_start_char && description.starts_with(['#', '@']) {
+        description = description.trim_start_matches(['#', '@']);
     }
 
     let mut result = String::new();

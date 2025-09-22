@@ -16,6 +16,7 @@ use crate::{
     },
 };
 
+#[allow(clippy::too_many_arguments)]
 pub fn get_type_at_call_expr(
     db: &DbIndex,
     tree: &FlowTree,
@@ -127,6 +128,7 @@ pub fn get_type_at_call_expr(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn get_type_at_call_expr_by_type_guard(
     db: &DbIndex,
     tree: &FlowTree,
@@ -189,6 +191,7 @@ fn get_type_at_call_expr_by_type_guard(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn get_type_at_call_expr_by_signature_self(
     db: &DbIndex,
     tree: &FlowTree,
@@ -239,6 +242,7 @@ fn get_type_at_call_expr_by_signature_self(
     Ok(ResultTypeOrContinue::Result(result_type))
 }
 
+#[allow(clippy::too_many_arguments)]
 fn get_type_at_call_expr_by_signature_param_name(
     db: &DbIndex,
     tree: &FlowTree,
@@ -314,7 +318,7 @@ fn get_type_at_call_expr_by_signature_param_name(
     Ok(ResultTypeOrContinue::Result(result_type))
 }
 
-#[allow(unused)]
+#[allow(unused, clippy::too_many_arguments)]
 fn get_type_at_call_expr_by_call(
     db: &DbIndex,
     tree: &FlowTree,
@@ -336,16 +340,13 @@ fn get_type_at_call_expr_by_call(
         return Ok(ResultTypeOrContinue::Continue);
     }
 
-    match alias_call_type.get_call_kind() {
-        LuaAliasCallKind::RawGet => {
-            let antecedent_type = infer_expr(db, cache, LuaExpr::CallExpr(call_expr))?;
-            let result_type = match condition_flow {
-                InferConditionFlow::FalseCondition => narrow_false_or_nil(db, antecedent_type),
-                InferConditionFlow::TrueCondition => remove_false_or_nil(antecedent_type),
-            };
-            return Ok(ResultTypeOrContinue::Result(result_type));
-        }
-        _ => {}
+    if alias_call_type.get_call_kind() == LuaAliasCallKind::RawGet {
+        let antecedent_type = infer_expr(db, cache, LuaExpr::CallExpr(call_expr))?;
+        let result_type = match condition_flow {
+            InferConditionFlow::FalseCondition => narrow_false_or_nil(db, antecedent_type),
+            InferConditionFlow::TrueCondition => remove_false_or_nil(antecedent_type),
+        };
+        return Ok(ResultTypeOrContinue::Result(result_type));
     };
 
     Ok(ResultTypeOrContinue::Continue)

@@ -21,7 +21,7 @@ pub fn check_reach_reason(
         | InferFailReason::RecursiveInfer => Some(true),
         InferFailReason::UnResolveDeclType(decl_id) => {
             let decl = db.get_decl_index().get_decl(decl_id)?;
-            let typ = db.get_type_index().get_type_cache(&decl_id.clone().into());
+            let typ = db.get_type_index().get_type_cache(&(*decl_id).into());
             if typ.is_none() && decl.is_param() {
                 return Some(infer_param(db, decl).is_ok());
             }
@@ -32,7 +32,7 @@ pub fn check_reach_reason(
             let member = db.get_member_index().get_member(member_id)?;
             let key = member.get_key();
             let owner = db.get_member_index().get_current_owner(member_id)?;
-            let member_item = db.get_member_index().get_member_item(&owner, key)?;
+            let member_item = db.get_member_index().get_member_item(owner, key)?;
             Some(member_item.resolve_type(db).is_ok())
         }
         InferFailReason::UnResolveExpr(expr) => {
@@ -64,10 +64,8 @@ pub fn resolve_as_any(db: &mut DbIndex, reason: &InferFailReason, loop_count: us
             return Some(());
         }
         InferFailReason::UnResolveDeclType(decl_id) => {
-            db.get_type_index_mut().bind_type(
-                decl_id.clone().into(),
-                LuaTypeCache::InferType(LuaType::Any),
-            );
+            db.get_type_index_mut()
+                .bind_type((*decl_id).into(), LuaTypeCache::InferType(LuaType::Any));
         }
         InferFailReason::UnResolveMemberType(member_id) => {
             // 第一次循环不处理, 或许需要判断`unresolves`是否全为取值再跳过?
@@ -76,8 +74,8 @@ pub fn resolve_as_any(db: &mut DbIndex, reason: &InferFailReason, loop_count: us
             }
             let member = db.get_member_index().get_member(member_id)?;
             let key = member.get_key();
-            let owner = db.get_member_index().get_current_owner(&member_id)?;
-            let member_item = db.get_member_index().get_member_item(&owner, key)?;
+            let owner = db.get_member_index().get_current_owner(member_id)?;
+            let member_item = db.get_member_index().get_member_item(owner, key)?;
             let opt_type = member_item.resolve_type(db).ok();
             if opt_type.is_none() {
                 let semantic_member_id = member_item.resolve_semantic_decl(db)?;

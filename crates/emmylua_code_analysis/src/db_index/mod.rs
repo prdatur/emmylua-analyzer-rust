@@ -53,6 +53,12 @@ pub struct DbIndex {
 }
 
 #[allow(unused)]
+impl Default for DbIndex {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DbIndex {
     pub fn new() -> Self {
         Self {

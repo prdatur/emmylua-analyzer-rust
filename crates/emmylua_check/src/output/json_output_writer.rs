@@ -20,10 +20,10 @@ impl JsonOutputWriter {
         let output = match output {
             OutputDestination::Stdout => None,
             OutputDestination::File(path) => {
-                if let Some(parent) = path.parent() {
-                    if !parent.exists() {
-                        std::fs::create_dir_all(parent).unwrap();
-                    }
+                if let Some(parent) = path.parent()
+                    && !parent.exists()
+                {
+                    std::fs::create_dir_all(parent).unwrap();
                 }
 
                 Some(std::fs::File::create(path).unwrap())

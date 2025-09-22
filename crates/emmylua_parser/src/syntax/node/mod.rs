@@ -199,94 +199,95 @@ impl LuaAstNode for LuaAst {
     where
         Self: Sized,
     {
-        match kind {
-            LuaSyntaxKind::Chunk => true,
-            LuaSyntaxKind::Block => true,
-            LuaSyntaxKind::AssignStat => true,
-            LuaSyntaxKind::LocalStat => true,
-            LuaSyntaxKind::CallExprStat => true,
-            LuaSyntaxKind::LabelStat => true,
-            LuaSyntaxKind::BreakStat => true,
-            LuaSyntaxKind::GotoStat => true,
-            LuaSyntaxKind::DoStat => true,
-            LuaSyntaxKind::WhileStat => true,
-            LuaSyntaxKind::RepeatStat => true,
-            LuaSyntaxKind::IfStat => true,
-            LuaSyntaxKind::ForStat => true,
-            LuaSyntaxKind::ForRangeStat => true,
-            LuaSyntaxKind::FuncStat => true,
-            LuaSyntaxKind::LocalFuncStat => true,
-            LuaSyntaxKind::ReturnStat => true,
-            LuaSyntaxKind::GlobalStat => true,
-            LuaSyntaxKind::NameExpr => true,
-            LuaSyntaxKind::IndexExpr => true,
-            LuaSyntaxKind::TableEmptyExpr
-            | LuaSyntaxKind::TableArrayExpr
-            | LuaSyntaxKind::TableObjectExpr => true,
-            LuaSyntaxKind::BinaryExpr => true,
-            LuaSyntaxKind::UnaryExpr => true,
-            LuaSyntaxKind::ParenExpr => true,
-            LuaSyntaxKind::CallExpr
-            | LuaSyntaxKind::AssertCallExpr
-            | LuaSyntaxKind::ErrorCallExpr
-            | LuaSyntaxKind::RequireCallExpr
-            | LuaSyntaxKind::TypeCallExpr
-            | LuaSyntaxKind::SetmetatableCallExpr => true,
-            LuaSyntaxKind::LiteralExpr => true,
-            LuaSyntaxKind::ClosureExpr => true,
-            LuaSyntaxKind::ParamList => true,
-            LuaSyntaxKind::CallArgList => true,
-            LuaSyntaxKind::LocalName => true,
-            LuaSyntaxKind::TableFieldAssign | LuaSyntaxKind::TableFieldValue => true,
-            LuaSyntaxKind::ParamName => true,
-            LuaSyntaxKind::Attribute => true,
-            LuaSyntaxKind::ElseIfClauseStat => true,
-            LuaSyntaxKind::ElseClauseStat => true,
-            LuaSyntaxKind::Comment => true,
-            LuaSyntaxKind::DocTagClass => true,
-            LuaSyntaxKind::DocTagEnum => true,
-            LuaSyntaxKind::DocTagAlias => true,
-            LuaSyntaxKind::DocTagType => true,
-            LuaSyntaxKind::DocTagParam => true,
-            LuaSyntaxKind::DocTagReturn => true,
-            LuaSyntaxKind::DocTagOverload => true,
-            LuaSyntaxKind::DocTagField => true,
-            LuaSyntaxKind::DocTagModule => true,
-            LuaSyntaxKind::DocTagSee => true,
-            LuaSyntaxKind::DocTagDiagnostic => true,
-            LuaSyntaxKind::DocTagDeprecated => true,
-            LuaSyntaxKind::DocTagVersion => true,
-            LuaSyntaxKind::DocTagCast => true,
-            LuaSyntaxKind::DocTagSource => true,
-            LuaSyntaxKind::DocTagOther => true,
-            LuaSyntaxKind::DocTagNamespace => true,
-            LuaSyntaxKind::DocTagUsing => true,
-            LuaSyntaxKind::DocTagMeta => true,
-            LuaSyntaxKind::DocTagNodiscard => true,
-            LuaSyntaxKind::DocTagReadonly => true,
-            LuaSyntaxKind::DocTagOperator => true,
-            LuaSyntaxKind::DocTagGeneric => true,
-            LuaSyntaxKind::DocTagAsync => true,
-            LuaSyntaxKind::DocTagAs => true,
-            LuaSyntaxKind::DocTagReturnCast => true,
-            LuaSyntaxKind::DocTagExport => true,
-            LuaSyntaxKind::DocTagLanguage => true,
-            LuaSyntaxKind::TypeName => true,
-            LuaSyntaxKind::TypeArray => true,
-            LuaSyntaxKind::TypeFun => true,
-            LuaSyntaxKind::TypeObject => true,
-            LuaSyntaxKind::TypeBinary => true,
-            LuaSyntaxKind::TypeUnary => true,
-            LuaSyntaxKind::TypeConditional => true,
-            LuaSyntaxKind::TypeTuple => true,
-            LuaSyntaxKind::TypeLiteral => true,
-            LuaSyntaxKind::TypeVariadic => true,
-            LuaSyntaxKind::TypeNullable => true,
-            LuaSyntaxKind::TypeGeneric => true,
-            LuaSyntaxKind::TypeStringTemplate => true,
-            LuaSyntaxKind::TypeMultiLineUnion => true,
-            _ => false,
-        }
+        matches!(
+            kind,
+            LuaSyntaxKind::Chunk
+                | LuaSyntaxKind::Block
+                | LuaSyntaxKind::AssignStat
+                | LuaSyntaxKind::LocalStat
+                | LuaSyntaxKind::CallExprStat
+                | LuaSyntaxKind::LabelStat
+                | LuaSyntaxKind::BreakStat
+                | LuaSyntaxKind::GotoStat
+                | LuaSyntaxKind::DoStat
+                | LuaSyntaxKind::WhileStat
+                | LuaSyntaxKind::RepeatStat
+                | LuaSyntaxKind::IfStat
+                | LuaSyntaxKind::ForStat
+                | LuaSyntaxKind::ForRangeStat
+                | LuaSyntaxKind::FuncStat
+                | LuaSyntaxKind::LocalFuncStat
+                | LuaSyntaxKind::ReturnStat
+                | LuaSyntaxKind::GlobalStat
+                | LuaSyntaxKind::NameExpr
+                | LuaSyntaxKind::IndexExpr
+                | LuaSyntaxKind::TableEmptyExpr
+                | LuaSyntaxKind::TableArrayExpr
+                | LuaSyntaxKind::TableObjectExpr
+                | LuaSyntaxKind::BinaryExpr
+                | LuaSyntaxKind::UnaryExpr
+                | LuaSyntaxKind::ParenExpr
+                | LuaSyntaxKind::CallExpr
+                | LuaSyntaxKind::AssertCallExpr
+                | LuaSyntaxKind::ErrorCallExpr
+                | LuaSyntaxKind::RequireCallExpr
+                | LuaSyntaxKind::TypeCallExpr
+                | LuaSyntaxKind::SetmetatableCallExpr
+                | LuaSyntaxKind::LiteralExpr
+                | LuaSyntaxKind::ClosureExpr
+                | LuaSyntaxKind::ParamList
+                | LuaSyntaxKind::CallArgList
+                | LuaSyntaxKind::LocalName
+                | LuaSyntaxKind::TableFieldAssign
+                | LuaSyntaxKind::TableFieldValue
+                | LuaSyntaxKind::ParamName
+                | LuaSyntaxKind::Attribute
+                | LuaSyntaxKind::ElseIfClauseStat
+                | LuaSyntaxKind::ElseClauseStat
+                | LuaSyntaxKind::Comment
+                | LuaSyntaxKind::DocTagClass
+                | LuaSyntaxKind::DocTagEnum
+                | LuaSyntaxKind::DocTagAlias
+                | LuaSyntaxKind::DocTagType
+                | LuaSyntaxKind::DocTagParam
+                | LuaSyntaxKind::DocTagReturn
+                | LuaSyntaxKind::DocTagOverload
+                | LuaSyntaxKind::DocTagField
+                | LuaSyntaxKind::DocTagModule
+                | LuaSyntaxKind::DocTagSee
+                | LuaSyntaxKind::DocTagDiagnostic
+                | LuaSyntaxKind::DocTagDeprecated
+                | LuaSyntaxKind::DocTagVersion
+                | LuaSyntaxKind::DocTagCast
+                | LuaSyntaxKind::DocTagSource
+                | LuaSyntaxKind::DocTagOther
+                | LuaSyntaxKind::DocTagNamespace
+                | LuaSyntaxKind::DocTagUsing
+                | LuaSyntaxKind::DocTagMeta
+                | LuaSyntaxKind::DocTagNodiscard
+                | LuaSyntaxKind::DocTagReadonly
+                | LuaSyntaxKind::DocTagOperator
+                | LuaSyntaxKind::DocTagGeneric
+                | LuaSyntaxKind::DocTagAsync
+                | LuaSyntaxKind::DocTagAs
+                | LuaSyntaxKind::DocTagReturnCast
+                | LuaSyntaxKind::DocTagExport
+                | LuaSyntaxKind::DocTagLanguage
+                | LuaSyntaxKind::TypeName
+                | LuaSyntaxKind::TypeArray
+                | LuaSyntaxKind::TypeFun
+                | LuaSyntaxKind::TypeObject
+                | LuaSyntaxKind::TypeBinary
+                | LuaSyntaxKind::TypeUnary
+                | LuaSyntaxKind::TypeConditional
+                | LuaSyntaxKind::TypeTuple
+                | LuaSyntaxKind::TypeLiteral
+                | LuaSyntaxKind::TypeVariadic
+                | LuaSyntaxKind::TypeNullable
+                | LuaSyntaxKind::TypeGeneric
+                | LuaSyntaxKind::TypeStringTemplate
+                | LuaSyntaxKind::TypeMultiLineUnion
+        )
     }
 
     fn cast(syntax: LuaSyntaxNode) -> Option<Self>

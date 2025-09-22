@@ -87,12 +87,11 @@ fn get_unused_check_result(
             .last()
             .ok_or(UnusedCheckResult::Unused(decl_range))?;
 
-        if last_ref_cell.is_write {
-            if let Some(result) =
+        if last_ref_cell.is_write
+            && let Some(result) =
                 check_last_mutable_is_read(decl_range.start(), decl_ref, last_ref_cell.range, root)
-            {
-                return Err(result);
-            }
+        {
+            return Err(result);
         }
     }
 

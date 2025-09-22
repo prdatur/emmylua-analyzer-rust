@@ -36,10 +36,8 @@ pub fn analyze_field(analyzer: &mut DocAnalyzer, tag: LuaDocTagField) -> Option<
     let owner_id = LuaMemberOwner::Type(current_type_id.clone());
     let visibility_kind = if let Some(visibility_token) = tag.get_visibility_token() {
         visibility_token.get_visibility()
-    } else if let Some(visibility) = get_visibility_from_field_attrib(&tag) {
-        Some(visibility)
     } else {
-        None
+        get_visibility_from_field_attrib(&tag)
     };
 
     let member_id = LuaMemberId::new(tag.get_syntax_id(), analyzer.file_id);
@@ -49,7 +47,7 @@ pub fn analyze_field(analyzer: &mut DocAnalyzer, tag: LuaDocTagField) -> Option<
     let (mut field_type, property_owner) = match &type_node {
         LuaDocType::Func(doc_func) => {
             let typ = infer_type(analyzer, type_node.clone());
-            let signature_id = LuaSignatureId::from_doc_func(analyzer.file_id, &doc_func);
+            let signature_id = LuaSignatureId::from_doc_func(analyzer.file_id, doc_func);
             (typ, LuaSemanticDeclId::Signature(signature_id))
         }
         _ => (
@@ -64,9 +62,9 @@ pub fn analyze_field(analyzer: &mut DocAnalyzer, tag: LuaDocTagField) -> Option<
     let mut description = String::new();
 
     for desc in tag.get_descriptions() {
-        let mut desc_text = desc.get_description_text().to_string();
+        let desc_text = desc.get_description_text();
         if !desc_text.is_empty() {
-            let text = preprocess_description(&mut desc_text, Some(&property_owner));
+            let text = preprocess_description(&desc_text, Some(&property_owner));
             if !description.is_empty() {
                 description.push_str("\n\n");
             }
@@ -130,10 +128,10 @@ pub fn analyze_field(analyzer: &mut DocAnalyzer, tag: LuaDocTagField) -> Option<
         .get_member_index_mut()
         .add_member(owner_id, member);
 
-    analyzer.db.get_type_index_mut().bind_type(
-        member_id.clone().into(),
-        LuaTypeCache::DocType(field_type.clone()),
-    );
+    analyzer
+        .db
+        .get_type_index_mut()
+        .bind_type(member_id.into(), LuaTypeCache::DocType(field_type.clone()));
 
     if let Some(visibility_kind) = visibility_kind {
         analyzer.db.get_property_index_mut().add_visibility(

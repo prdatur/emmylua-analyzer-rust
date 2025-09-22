@@ -11,41 +11,37 @@ pub fn analyze_chunk_return(analyzer: &mut LuaAnalyzer, chunk: LuaChunk) -> Opti
     let block = chunk.get_block()?;
     let return_exprs = analyze_func_body_returns(block);
     for point in return_exprs {
-        match point {
-            LuaReturnPoint::Expr(expr) => {
-                let expr_type = match analyzer.infer_expr(&expr) {
-                    Ok(expr_type) => expr_type,
-                    Err(InferFailReason::None) => LuaType::Unknown,
-                    Err(reason) => {
-                        let unresolve = UnResolveModule {
-                            file_id: analyzer.file_id,
-                            expr,
-                        };
-                        analyzer.context.add_unresolve(unresolve.into(), reason);
-                        return None;
-                    }
-                };
-
-                let semantic_id = get_semantic_id(analyzer, expr.clone());
-
-                let module_info = analyzer
-                    .db
-                    .get_module_index_mut()
-                    .get_module_mut(analyzer.file_id)?;
-                match expr_type {
-                    LuaType::Variadic(multi) => {
-                        let ty = multi.get_type(0)?;
-                        module_info.export_type = Some(ty.clone());
-                    }
-                    _ => {
-                        module_info.export_type = Some(expr_type);
-                    }
+        if let LuaReturnPoint::Expr(expr) = point {
+            let expr_type = match analyzer.infer_expr(&expr) {
+                Ok(expr_type) => expr_type,
+                Err(InferFailReason::None) => LuaType::Unknown,
+                Err(reason) => {
+                    let unresolve = UnResolveModule {
+                        file_id: analyzer.file_id,
+                        expr,
+                    };
+                    analyzer.context.add_unresolve(unresolve.into(), reason);
+                    return None;
                 }
-                module_info.semantic_id = semantic_id;
-                break;
+            };
+
+            let semantic_id = get_semantic_id(analyzer, expr.clone());
+
+            let module_info = analyzer
+                .db
+                .get_module_index_mut()
+                .get_module_mut(analyzer.file_id)?;
+            match expr_type {
+                LuaType::Variadic(multi) => {
+                    let ty = multi.get_type(0)?;
+                    module_info.export_type = Some(ty.clone());
+                }
+                _ => {
+                    module_info.export_type = Some(expr_type);
+                }
             }
-            // Other cases are stupid code
-            _ => {}
+            module_info.semantic_id = semantic_id;
+            break;
         }
     }
 

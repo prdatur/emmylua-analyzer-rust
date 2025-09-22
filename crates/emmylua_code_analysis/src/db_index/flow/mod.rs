@@ -18,6 +18,12 @@ pub struct LuaFlowIndex {
     signature_cast_cache: HashMap<FileId, HashMap<LuaSignatureId, LuaSignatureCast>>,
 }
 
+impl Default for LuaFlowIndex {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LuaFlowIndex {
     pub fn new() -> Self {
         Self {
@@ -49,7 +55,7 @@ impl LuaFlowIndex {
     ) {
         self.signature_cast_cache
             .entry(file_id)
-            .or_insert_with(HashMap::new)
+            .or_default()
             .insert(signature_id, LuaSignatureCast { name, cast });
     }
 }

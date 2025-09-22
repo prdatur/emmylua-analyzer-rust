@@ -49,7 +49,7 @@ pub fn infer_token_semantic_info(
                 LuaDeclExtra::Param {
                     idx, signature_id, ..
                 } => {
-                    let signature = db.get_signature_index().get(&signature_id)?;
+                    let signature = db.get_signature_index().get(signature_id)?;
                     let param_info = signature.get_param_info_by_id(*idx)?;
                     let mut typ = param_info.type_ref.clone();
                     if param_info.nullable && !typ.is_nullable() {
@@ -135,7 +135,7 @@ pub fn infer_node_semantic_info(
                         semantic_decl: Some(LuaSemanticDeclId::Member(member_id)),
                     })
                 }
-                _ => return None,
+                _ => None,
             }
         }
         _ => None,
@@ -212,7 +212,7 @@ pub fn infer_node_semantic_decl(
                     let member_id = LuaMemberId::new(field.get_syntax_id(), cache.get_file_id());
                     Some(LuaSemanticDeclId::Member(member_id))
                 }
-                _ => return None,
+                _ => None,
             }
         }
         local_name if LuaLocalName::can_cast(local_name.kind().into()) => {

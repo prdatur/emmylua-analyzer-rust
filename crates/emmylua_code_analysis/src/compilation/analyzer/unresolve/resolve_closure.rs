@@ -21,7 +21,7 @@ pub fn try_resolve_call_closure_params(
 ) -> ResolveResult {
     let call_expr = closure_params.call_expr.clone();
     let prefix_expr = call_expr.get_prefix_expr().ok_or(InferFailReason::None)?;
-    let call_expr_type = infer_expr(db, cache, prefix_expr.into())?;
+    let call_expr_type = infer_expr(db, cache, prefix_expr)?;
 
     let call_doc_func = infer_call_expr_func(
         db,
@@ -53,7 +53,7 @@ pub fn try_resolve_call_closure_params(
     let (async_state, params_to_insert) = if let Some(param_type) =
         call_doc_func.get_params().get(param_idx)
     {
-        let Some(param_type) = get_real_type(db, &param_type.1.as_ref().unwrap_or(&LuaType::Any))
+        let Some(param_type) = get_real_type(db, param_type.1.as_ref().unwrap_or(&LuaType::Any))
         else {
             return Ok(());
         };
@@ -110,7 +110,7 @@ pub fn try_resolve_closure_return(
 ) -> ResolveResult {
     let call_expr = closure_return.call_expr.clone();
     let prefix_expr = call_expr.get_prefix_expr().ok_or(InferFailReason::None)?;
-    let call_expr_type = infer_expr(db, cache, prefix_expr.into())?;
+    let call_expr_type = infer_expr(db, cache, prefix_expr)?;
     let mut param_idx = closure_return.param_idx;
     let call_doc_func = infer_call_expr_func(
         db,
@@ -137,7 +137,7 @@ pub fn try_resolve_closure_return(
     }
 
     let ret_type = if let Some(param_type) = call_doc_func.get_params().get(param_idx) {
-        let Some(param_type) = get_real_type(db, &param_type.1.as_ref().unwrap_or(&LuaType::Any))
+        let Some(param_type) = get_real_type(db, param_type.1.as_ref().unwrap_or(&LuaType::Any))
         else {
             return Ok(());
         };
@@ -322,10 +322,10 @@ fn resolve_closure_member_type(
                             .get_type_decl(&ref_id)
                             .ok_or(InferFailReason::None)?;
 
-                        if let Some(origin) = type_decl.get_alias_origin(&db, None) {
-                            if let LuaType::DocFunction(f) = origin {
-                                multi_function_type.push(f);
-                            }
+                        if let Some(origin) = type_decl.get_alias_origin(db, None)
+                            && let LuaType::DocFunction(f) = origin
+                        {
+                            multi_function_type.push(f);
                         }
                     }
                     _ => {}
@@ -342,7 +342,7 @@ fn resolve_closure_member_type(
                     }
                     (false, true) => {
                         // 原始签名不是冒号定义, 但未解析的签名是冒号定义, 即要删除第一个参数
-                        if doc_params.len() > 0 {
+                        if !doc_params.is_empty() {
                             doc_params.remove(0);
                         }
                     }
@@ -354,16 +354,13 @@ fn resolve_closure_member_type(
                         if final_param.0 == "..." {
                             // 如果`doc_params`当前与之后的参数的类型不一致, 那么`variadic_type`为`Any`
                             for i in idx..doc_params.len() {
-                                if let Some(param) = doc_params.get(i) {
-                                    match &param.1 {
-                                        Some(typ) => {
-                                            if variadic_type == LuaType::Unknown {
-                                                variadic_type = typ.clone();
-                                            } else if variadic_type != *typ {
-                                                variadic_type = LuaType::Any;
-                                            }
-                                        }
-                                        None => {}
+                                if let Some(param) = doc_params.get(i)
+                                    && let Some(typ) = &param.1
+                                {
+                                    if variadic_type == LuaType::Unknown {
+                                        variadic_type = typ.clone();
+                                    } else if variadic_type != *typ {
+                                        variadic_type = LuaType::Any;
                                     }
                                 }
                             }
@@ -384,10 +381,10 @@ fn resolve_closure_member_type(
                 final_ret = TypeOps::Union.apply(db, &final_ret, doc_func.get_ret());
             }
 
-            if !variadic_type.is_unknown() {
-                if let Some(param) = final_params.last_mut() {
-                    param.1 = Some(variadic_type);
-                }
+            if !variadic_type.is_unknown()
+                && let Some(param) = final_params.last_mut()
+            {
+                param.1 = Some(variadic_type);
             }
 
             resolve_doc_function(
@@ -409,16 +406,16 @@ fn resolve_closure_member_type(
                 .get_type_decl(ref_id)
                 .ok_or(InferFailReason::None)?;
 
-            if type_decl.is_alias() {
-                if let Some(origin) = type_decl.get_alias_origin(&db, None) {
-                    return resolve_closure_member_type(
-                        db,
-                        closure_params,
-                        &origin,
-                        self_type,
-                        infer_guard,
-                    );
-                }
+            if type_decl.is_alias()
+                && let Some(origin) = type_decl.get_alias_origin(db, None)
+            {
+                return resolve_closure_member_type(
+                    db,
+                    closure_params,
+                    &origin,
+                    self_type,
+                    infer_guard,
+                );
             }
             Ok(())
         }
@@ -447,19 +444,18 @@ fn resolve_doc_function(
             doc_params.insert(0, ("self".to_string(), Some(LuaType::SelfInfer)));
         }
         (false, true) => {
-            if doc_params.len() > 0 {
+            if !doc_params.is_empty() {
                 doc_params.remove(0);
             }
         }
         _ => {}
     }
 
-    if let Some(self_type) = self_type {
-        if let Some((_, Some(typ))) = doc_params.get(0) {
-            if typ.is_self_infer() {
-                doc_params[0].1 = Some(self_type);
-            }
-        }
+    if let Some(self_type) = self_type
+        && let Some((_, Some(typ))) = doc_params.first()
+        && typ.is_self_infer()
+    {
+        doc_params[0].1 = Some(self_type);
     }
 
     for (index, param) in doc_params.iter().enumerate() {
@@ -523,50 +519,43 @@ fn find_best_function_type(
     origin_signature: &LuaSignature,
 ) -> Option<LuaType> {
     // 寻找非自身定义的签名
-    match find_decl_function_type(db, cache, prefix_type, index_member_expr) {
-        Ok(result) => {
-            if result.is_current_owner {
-                // 对应当前类型下的声明, 我们需要过滤掉所有`signature`类型
-                if let Some(filtered_types) = filter_signature_type(&result.typ) {
-                    match filtered_types.len() {
-                        0 => {}
-                        1 => return Some(LuaType::DocFunction(filtered_types[0].clone())),
-                        _ => {
-                            return Some(LuaType::from_vec(
-                                filtered_types
-                                    .into_iter()
-                                    .map(|func| LuaType::DocFunction(func.clone()))
-                                    .collect(),
-                            ));
-                        }
+    if let Ok(result) = find_decl_function_type(db, cache, prefix_type, index_member_expr) {
+        if result.is_current_owner {
+            // 对应当前类型下的声明, 我们需要过滤掉所有`signature`类型
+            if let Some(filtered_types) = filter_signature_type(&result.typ) {
+                match filtered_types.len() {
+                    0 => {}
+                    1 => return Some(LuaType::DocFunction(filtered_types[0].clone())),
+                    _ => {
+                        return Some(LuaType::from_vec(
+                            filtered_types
+                                .into_iter()
+                                .map(|func| LuaType::DocFunction(func.clone()))
+                                .collect(),
+                        ));
                     }
                 }
-            } else {
-                return Some(result.typ);
             }
+        } else {
+            return Some(result.typ);
         }
-        _ => {}
     }
 
     match origin_signature.overloads.len() {
-        0 => return None,
-        1 => {
-            return origin_signature
+        0 => None,
+        1 => origin_signature
+            .overloads
+            .clone()
+            .into_iter()
+            .next()
+            .map(LuaType::DocFunction),
+        _ => Some(LuaType::from_vec(
+            origin_signature
                 .overloads
                 .clone()
                 .into_iter()
-                .next()
-                .map(LuaType::DocFunction);
-        }
-        _ => {
-            return Some(LuaType::from_vec(
-                origin_signature
-                    .overloads
-                    .clone()
-                    .into_iter()
-                    .map(LuaType::DocFunction)
-                    .collect(),
-            ));
-        }
+                .map(LuaType::DocFunction)
+                .collect(),
+        )),
     }
 }

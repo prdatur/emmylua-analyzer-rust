@@ -12,7 +12,7 @@ use crate::{
     },
 };
 
-#[allow(unused)]
+#[allow(clippy::too_many_arguments)]
 pub fn get_type_at_index_expr(
     db: &DbIndex,
     tree: &FlowTree,

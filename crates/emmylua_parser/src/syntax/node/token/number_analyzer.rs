@@ -42,10 +42,10 @@ pub fn float_token_value(token: &LuaSyntaxToken) -> Result<f64, LuaParseError> {
         };
 
         let mut value = integer_part as f64 + fraction_value;
-        if !exponent_part.is_empty() {
-            if let Ok(exp) = exponent_part.parse::<i32>() {
-                value *= 2f64.powi(exp);
-            }
+        if !exponent_part.is_empty()
+            && let Ok(exp) = exponent_part.parse::<i32>()
+        {
+            value *= 2f64.powi(exp);
         }
         value
     } else {
@@ -68,10 +68,10 @@ pub fn float_token_value(token: &LuaSyntaxToken) -> Result<f64, LuaParseError> {
             )
         })?;
 
-        if !exponent_part.is_empty() {
-            if let Ok(exp) = exponent_part.parse::<i32>() {
-                value *= 10f64.powi(exp);
-            }
+        if !exponent_part.is_empty()
+            && let Ok(exp) = exponent_part.parse::<i32>()
+        {
+            value *= 10f64.powi(exp);
         }
         value
     };

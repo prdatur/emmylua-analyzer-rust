@@ -19,6 +19,12 @@ pub struct DiagnosticIndex {
     file_diagnostic_enabled: HashMap<FileId, HashSet<DiagnosticCode>>,
 }
 
+impl Default for DiagnosticIndex {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DiagnosticIndex {
     pub fn new() -> Self {
         Self {

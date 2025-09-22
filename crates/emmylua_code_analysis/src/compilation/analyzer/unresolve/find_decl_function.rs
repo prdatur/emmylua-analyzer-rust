@@ -68,7 +68,7 @@ pub fn find_decl_function_type(
     let reason = match find_function_type_by_member_key(
         db,
         cache,
-        &prefix_type,
+        prefix_type,
         index_member_expr.clone(),
         &mut InferGuard::new(),
         &mut deep_guard,
@@ -87,7 +87,7 @@ pub fn find_decl_function_type(
     match find_function_type_by_operator(
         db,
         cache,
-        &prefix_type,
+        prefix_type,
         index_member_expr,
         &mut InferGuard::new(),
         &mut deep_guard,
@@ -207,13 +207,10 @@ fn find_custom_type_function_member(
         let index_member_id = get_member_id(cache, &index_expr);
         let mut result_type = LuaType::Unknown;
         for member_id in member_item.get_member_ids() {
-            if index_member_id != member_id {
-                match db.get_type_index().get_type_cache(&member_id.into()) {
-                    Some(type_cache) => {
-                        result_type = TypeOps::Union.apply(db, &result_type, &type_cache.as_type());
-                    }
-                    None => {}
-                }
+            if index_member_id != member_id
+                && let Some(type_cache) = db.get_type_index().get_type_cache(&member_id.into())
+            {
+                result_type = TypeOps::Union.apply(db, &result_type, type_cache.as_type());
             }
         }
         if !result_type.is_unknown() {
@@ -221,26 +218,26 @@ fn find_custom_type_function_member(
         }
     }
 
-    if type_decl.is_class() {
-        if let Some(super_types) = type_index.get_super_types(&prefix_type_id) {
-            deep_guard.next();
-            for super_type in super_types {
-                let result = find_function_type_by_member_key(
-                    db,
-                    cache,
-                    &super_type,
-                    index_expr.clone(),
-                    infer_guard,
-                    deep_guard,
-                );
+    if type_decl.is_class()
+        && let Some(super_types) = type_index.get_super_types(&prefix_type_id)
+    {
+        deep_guard.next();
+        for super_type in super_types {
+            let result = find_function_type_by_member_key(
+                db,
+                cache,
+                &super_type,
+                index_expr.clone(),
+                infer_guard,
+                deep_guard,
+            );
 
-                match result {
-                    Ok(member_type) => {
-                        return Ok(member_type);
-                    }
-                    Err(InferFailReason::FieldNotFound) => {}
-                    Err(err) => return Err(err),
+            match result {
+                Ok(member_type) => {
+                    return Ok(member_type);
                 }
+                Err(InferFailReason::FieldNotFound) => {}
+                Err(err) => return Err(err),
             }
         }
     }
@@ -282,7 +279,7 @@ fn find_object_function_member(
     // todo
     let index_accesses = object_type.get_index_access();
     for (key, value) in index_accesses {
-        let result = find_index_metamethod(db, cache, &index_key, &key, value);
+        let result = find_index_metamethod(db, cache, &index_key, key, value);
         match result {
             Ok(typ) => {
                 return Ok(typ);
@@ -336,13 +333,10 @@ fn find_union_function_member(
             &mut InferGuard::new(),
             deep_guard,
         );
-        match result {
-            Ok(typ) => {
-                if !typ.is_nil() {
-                    member_types.push(typ);
-                }
-            }
-            _ => {}
+        if let Ok(typ) = result
+            && !typ.is_nil()
+        {
+            member_types.push(typ);
         }
     }
 
@@ -359,7 +353,7 @@ fn index_generic_members_from_super_generics(
 ) -> Option<LuaType> {
     let type_index = db.get_type_index();
 
-    let type_decl = type_index.get_type_decl(&type_decl_id)?;
+    let type_decl = type_index.get_type_decl(type_decl_id)?;
     if !type_decl.is_class() {
         return None;
     };
@@ -367,7 +361,7 @@ fn index_generic_members_from_super_generics(
     let type_decl_id = type_decl.get_id();
     if let Some(super_types) = type_index.get_super_types(&type_decl_id) {
         super_types.iter().find_map(|super_type| {
-            let super_type = instantiate_type_generic(db, &super_type, &substitutor);
+            let super_type = instantiate_type_generic(db, super_type, substitutor);
             find_function_type_by_member_key(
                 db,
                 cache,
@@ -379,7 +373,7 @@ fn index_generic_members_from_super_generics(
             .ok()
         })
     } else {
-        return None;
+        None
     }
 }
 
@@ -432,7 +426,7 @@ fn find_instance_member_decl_type(
     find_function_type_by_member_key(
         db,
         cache,
-        &origin_type,
+        origin_type,
         index_expr.clone(),
         infer_guard,
         deep_guard,
@@ -486,7 +480,7 @@ fn find_function_type_by_operator(
         }
         LuaType::Instance(inst) => {
             let base = inst.get_base();
-            find_function_type_by_operator(db, cache, &base, index_expr, infer_guard, deep_guard)
+            find_function_type_by_operator(db, cache, base, index_expr, infer_guard, deep_guard)
         }
         _ => Err(InferFailReason::FieldNotFound),
     }
@@ -575,10 +569,10 @@ fn find_member_by_index_custom_type(
     infer_guard: &mut InferGuard,
     deep_guard: &mut DeepGuard,
 ) -> FunctionTypeResult {
-    infer_guard.check(&prefix_type_id)?;
+    infer_guard.check(prefix_type_id)?;
     let type_index = db.get_type_index();
     let type_decl = type_index
-        .get_type_decl(&prefix_type_id)
+        .get_type_decl(prefix_type_id)
         .ok_or(InferFailReason::None)?;
     if type_decl.is_alias() {
         if let Some(origin_type) = type_decl.get_alias_origin(db, None) {
@@ -614,25 +608,25 @@ fn find_member_by_index_custom_type(
     }
 
     // find member by key in super
-    if type_decl.is_class() {
-        if let Some(super_types) = type_index.get_super_types(&prefix_type_id) {
-            deep_guard.next();
-            for super_type in super_types {
-                let result = find_function_type_by_operator(
-                    db,
-                    cache,
-                    &super_type,
-                    index_expr.clone(),
-                    infer_guard,
-                    deep_guard,
-                );
-                match result {
-                    Ok(member_type) => {
-                        return Ok(member_type);
-                    }
-                    Err(InferFailReason::FieldNotFound) => {}
-                    Err(err) => return Err(err),
+    if type_decl.is_class()
+        && let Some(super_types) = type_index.get_super_types(prefix_type_id)
+    {
+        deep_guard.next();
+        for super_type in super_types {
+            let result = find_function_type_by_operator(
+                db,
+                cache,
+                &super_type,
+                index_expr.clone(),
+                infer_guard,
+                deep_guard,
+            );
+            match result {
+                Ok(member_type) => {
+                    return Ok(member_type);
                 }
+                Err(InferFailReason::FieldNotFound) => {}
+                Err(err) => return Err(err),
             }
         }
     }
@@ -832,7 +826,7 @@ fn find_member_by_index_generic(
 fn find_member_by_index_table_generic(
     db: &DbIndex,
     cache: &mut LuaInferCache,
-    table_params: &Vec<LuaType>,
+    table_params: &[LuaType],
     index_expr: LuaIndexMemberExpr,
 ) -> FunctionTypeResult {
     if table_params.len() != 2 {

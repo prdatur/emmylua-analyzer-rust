@@ -9,6 +9,12 @@ pub struct FileReference {
     references_to_decl: HashMap<TextRange, LuaDeclId>,
 }
 
+impl Default for FileReference {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FileReference {
     pub fn new() -> Self {
         Self {
@@ -27,7 +33,7 @@ impl FileReference {
 
         self.decl_references
             .entry(decl_id)
-            .or_insert_with(DeclReference::new)
+            .or_default()
             .add_cell(decl_ref);
     }
 
@@ -54,6 +60,12 @@ pub struct DeclReferenceCell {
 pub struct DeclReference {
     pub cells: Vec<DeclReferenceCell>,
     pub mutable: bool,
+}
+
+impl Default for DeclReference {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl DeclReference {

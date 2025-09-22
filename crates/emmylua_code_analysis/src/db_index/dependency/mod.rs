@@ -13,6 +13,12 @@ pub struct LuaDependencyIndex {
     dependencies: HashMap<FileId, HashSet<FileId>>,
 }
 
+impl Default for LuaDependencyIndex {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LuaDependencyIndex {
     pub fn new() -> Self {
         Self {
@@ -23,7 +29,7 @@ impl LuaDependencyIndex {
     pub fn add_required_file(&mut self, file_id: FileId, dependency_id: FileId) {
         self.dependencies
             .entry(file_id)
-            .or_insert_with(HashSet::new)
+            .or_default()
             .insert(dependency_id);
     }
 

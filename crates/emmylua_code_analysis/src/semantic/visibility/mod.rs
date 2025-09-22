@@ -88,7 +88,7 @@ fn check_visibility_by_visibility(
         db,
         infer_config,
         file_id,
-        &member_owner,
+        member_owner,
         token.clone(),
         visibility,
     )
@@ -99,7 +99,7 @@ fn check_visibility_by_visibility(
 
     let blocks = token.ancestors::<LuaBlock>();
     for block in blocks {
-        if check_block_visibility(db, infer_config, &member_owner, block, visibility)
+        if check_block_visibility(db, infer_config, member_owner, block, visibility)
             .unwrap_or(false)
         {
             return Some(true);
@@ -123,19 +123,16 @@ fn check_block_visibility(
     let func_name = func_stat.get_func_name()?;
     if let LuaVarExpr::IndexExpr(index_expr) = func_name {
         let prefix_expr = index_expr.get_prefix_expr()?;
-        let typ = infer_expr(db, infer_config, prefix_expr.into()).ok()?;
+        let typ = infer_expr(db, infer_config, prefix_expr).ok()?;
         if visibility == VisibilityKind::Protected {
-            match (typ, member_owner) {
-                (LuaType::Def(left), LuaMemberOwner::Type(right)) => {
-                    if left == *right {
-                        return Some(true);
-                    }
-
-                    if is_sub_type_of(db, &left, &right) {
-                        return Some(true);
-                    }
+            if let (LuaType::Def(left), LuaMemberOwner::Type(right)) = (typ, member_owner) {
+                if left == *right {
+                    return Some(true);
                 }
-                _ => {}
+
+                if is_sub_type_of(db, &left, right) {
+                    return Some(true);
+                }
             }
         } else if visibility == VisibilityKind::Private {
             match (typ, member_owner) {
@@ -163,7 +160,7 @@ fn check_def_visibility(
 ) -> Option<bool> {
     let index_expr = token.get_parent::<LuaIndexExpr>()?;
     let prefix_expr = index_expr.get_prefix_expr()?;
-    let typ = infer_expr(db, infer_config, prefix_expr.into()).ok()?;
+    let typ = infer_expr(db, infer_config, prefix_expr).ok()?;
 
     // 这是为解决 require 后仍然是`Def`类型的问题, 但现在不需要了, 不过还是留着以防万一
     // if !in_def_file(db, &typ, file_id) {
@@ -173,7 +170,7 @@ fn check_def_visibility(
     match visibility {
         VisibilityKind::Protected => match (typ, member_owner) {
             (LuaType::Def(left), LuaMemberOwner::Type(right)) => {
-                Some(left == *right || is_sub_type_of(db, &left, &right))
+                Some(left == *right || is_sub_type_of(db, &left, right))
             }
             _ => Some(false),
         },
@@ -207,13 +204,13 @@ fn get_property<'a>(
     db: &'a DbIndex,
     property_owner: &'a LuaSemanticDeclId,
 ) -> Option<&'a LuaCommonProperty> {
-    match db.get_property_index().get_property(&property_owner) {
+    match db.get_property_index().get_property(property_owner) {
         Some(common_property) => Some(common_property),
         None => {
             let LuaSemanticDeclId::Member(member_id) = property_owner else {
                 return None;
             };
-            let member = db.get_member_index().get_member(&member_id)?;
+            let member = db.get_member_index().get_member(member_id)?;
             let signature_id = try_extract_signature_id_from_field(db, member)?;
             db.get_property_index()
                 .get_property(&LuaSemanticDeclId::Signature(signature_id))
@@ -229,32 +226,31 @@ fn check_member_name(
     token: LuaSyntaxToken,
     property_owner: LuaSemanticDeclId,
 ) -> Option<bool> {
-    if let LuaSemanticDeclId::Member(member_id) = property_owner {
-        if let Some(member) = db.get_member_index().get_member(&member_id) {
-            if let Some(name) = member.get_key().get_name() {
-                let config = emmyrc;
-                for pattern in &config.doc.private_name {
-                    let is_match = if let Some(prefix) = pattern.strip_suffix('*') {
-                        name.starts_with(prefix)
-                    } else if let Some(suffix) = pattern.strip_prefix('*') {
-                        name.ends_with(suffix)
-                    } else {
-                        name == pattern
-                    };
-                    if is_match {
-                        return Some(
-                            check_visibility_by_visibility(
-                                db,
-                                infer_config,
-                                file_id,
-                                property_owner,
-                                token,
-                                VisibilityKind::Private,
-                            )
-                            .unwrap_or(false),
-                        );
-                    }
-                }
+    if let LuaSemanticDeclId::Member(member_id) = property_owner
+        && let Some(member) = db.get_member_index().get_member(&member_id)
+        && let Some(name) = member.get_key().get_name()
+    {
+        let config = emmyrc;
+        for pattern in &config.doc.private_name {
+            let is_match = if let Some(prefix) = pattern.strip_suffix('*') {
+                name.starts_with(prefix)
+            } else if let Some(suffix) = pattern.strip_prefix('*') {
+                name.ends_with(suffix)
+            } else {
+                name == pattern
+            };
+            if is_match {
+                return Some(
+                    check_visibility_by_visibility(
+                        db,
+                        infer_config,
+                        file_id,
+                        property_owner,
+                        token,
+                        VisibilityKind::Private,
+                    )
+                    .unwrap_or(false),
+                );
             }
         }
     };

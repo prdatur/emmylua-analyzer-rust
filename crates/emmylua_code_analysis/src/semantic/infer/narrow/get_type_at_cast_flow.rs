@@ -31,6 +31,7 @@ pub fn get_type_at_cast_flow(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn get_type_at_cast_expr(
     db: &DbIndex,
     tree: &FlowTree,

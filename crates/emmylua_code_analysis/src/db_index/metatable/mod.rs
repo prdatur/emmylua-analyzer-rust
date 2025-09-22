@@ -11,6 +11,12 @@ pub struct LuaMetatableIndex {
     pub metatables: HashMap<InFiled<TextRange>, InFiled<TextRange>>,
 }
 
+impl Default for LuaMetatableIndex {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LuaMetatableIndex {
     pub fn new() -> Self {
         Self {

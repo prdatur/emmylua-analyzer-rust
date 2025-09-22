@@ -160,22 +160,22 @@ pub fn get_owner_id(analyzer: &mut DocAnalyzer) -> Option<LuaSemanticDeclId> {
                 LuaVarExpr::NameExpr(name_expr) => {
                     let decl_id = LuaDeclId::new(analyzer.file_id, name_expr.get_position());
                     let _ = analyzer.db.get_decl_index_mut().get_decl_mut(&decl_id)?;
-                    return Some(LuaSemanticDeclId::LuaDecl(decl_id));
+                    Some(LuaSemanticDeclId::LuaDecl(decl_id))
                 }
                 LuaVarExpr::IndexExpr(index_expr) => {
                     let member_id = LuaMemberId::new(index_expr.get_syntax_id(), analyzer.file_id);
-                    return Some(LuaSemanticDeclId::Member(member_id));
+                    Some(LuaSemanticDeclId::Member(member_id))
                 } // _ => None,
             }
         }
         LuaAst::LuaLocalStat(local_stat) => {
             let local_name = local_stat.child::<LuaLocalName>()?;
             let decl_id = LuaDeclId::new(analyzer.file_id, local_name.get_position());
-            return Some(LuaSemanticDeclId::LuaDecl(decl_id));
+            Some(LuaSemanticDeclId::LuaDecl(decl_id))
         }
         LuaAst::LuaTableField(field) => {
             let member_id = LuaMemberId::new(field.get_syntax_id(), analyzer.file_id);
-            return Some(LuaSemanticDeclId::Member(member_id));
+            Some(LuaSemanticDeclId::Member(member_id))
         }
         LuaAst::LuaCallExprStat(call_expr_stat) => {
             let call_expr = call_expr_stat.get_call_expr()?;

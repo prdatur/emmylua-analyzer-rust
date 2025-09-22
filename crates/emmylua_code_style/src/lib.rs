@@ -11,15 +11,15 @@ pub fn reformat_lua_code(code: &str, styles: &LuaCodeStyle) -> String {
 
     let mut formatter = format::LuaFormatter::new(LuaAst::LuaChunk(tree.get_chunk_node()));
     style_ruler::apply_styles(&mut formatter, styles);
-    let formatted_text = formatter.get_formatted_text();
-    formatted_text
+
+    formatter.get_formatted_text()
 }
 
 pub fn reformat_node(node: &LuaAst, styles: &LuaCodeStyle) -> String {
     let mut formatter = format::LuaFormatter::new(node.clone());
     style_ruler::apply_styles(&mut formatter, styles);
-    let formatted_text = formatter.get_formatted_text();
-    formatted_text
+
+    formatter.get_formatted_text()
 }
 
 // Re-export commonly used types for consumers/binaries

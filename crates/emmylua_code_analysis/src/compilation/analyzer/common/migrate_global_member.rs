@@ -24,10 +24,10 @@ fn migrate_global_member_to_decl(db: &mut DbIndex, decl_id: LuaDeclId) -> Option
         return None;
     }
 
-    let owner_id = get_owner_id(db, &decl_id.clone().into())?;
+    let owner_id = get_owner_id(db, &decl_id.into())?;
 
     let name = decl.get_name();
-    let global_id = GlobalId::new(name.into());
+    let global_id = GlobalId::new(name);
     let members = db
         .get_member_index()
         .get_members(&LuaMemberOwner::GlobalPath(global_id))?
@@ -47,7 +47,7 @@ fn migrate_global_member_to_decl(db: &mut DbIndex, decl_id: LuaDeclId) -> Option
 fn migrate_global_member_to_member(db: &mut DbIndex, member_id: LuaMemberId) -> Option<()> {
     let member = db.get_member_index().get_member(&member_id)?;
     let global_id = member.get_global_id()?;
-    let owner_id = get_owner_id(db, &member_id.clone().into())?;
+    let owner_id = get_owner_id(db, &member_id.into())?;
 
     let members = db
         .get_member_index()

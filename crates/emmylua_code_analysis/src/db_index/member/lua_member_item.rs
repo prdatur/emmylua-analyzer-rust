@@ -10,16 +10,16 @@ pub enum LuaMemberIndexItem {
 
 impl LuaMemberIndexItem {
     pub fn resolve_type(&self, db: &DbIndex) -> Result<LuaType, InferFailReason> {
-        resolve_member_type(db, &self)
+        resolve_member_type(db, self)
     }
 
     pub fn resolve_semantic_decl(&self, db: &DbIndex) -> Option<LuaSemanticDeclId> {
-        resolve_member_semantic_id(db, &self)
+        resolve_member_semantic_id(db, self)
     }
 
     #[allow(unused)]
     pub fn resolve_type_owner_member_id(&self, db: &DbIndex) -> Option<LuaMemberId> {
-        resolve_type_owner_member_id(db, &self)
+        resolve_type_owner_member_id(db, self)
     }
 
     pub fn is_one(&self) -> bool {
@@ -40,13 +40,11 @@ fn resolve_member_type(
 ) -> Result<LuaType, InferFailReason> {
     match member_item {
         LuaMemberIndexItem::One(member_id) => {
-            let member_type_cache = db
-                .get_type_index()
-                .get_type_cache(&member_id.clone().into());
-            return match member_type_cache {
+            let member_type_cache = db.get_type_index().get_type_cache(&(*member_id).into());
+            match member_type_cache {
                 Some(cache) => Ok(cache.as_type().clone()),
                 None => Err(InferFailReason::UnResolveMemberType(*member_id)),
-            };
+            }
         }
         LuaMemberIndexItem::Many(member_ids) => {
             let mut resolve_state = MemberTypeResolveState::All;
@@ -77,7 +75,7 @@ fn resolve_member_type(
                         typ = TypeOps::Union.apply(
                             db,
                             &typ,
-                            &db.get_type_index()
+                            db.get_type_index()
                                 .get_type_cache(&member.get_id().into())
                                 .ok_or(InferFailReason::UnResolveMemberType(member.get_id()))?
                                 .as_type(),
@@ -93,7 +91,7 @@ fn resolve_member_type(
                             typ = TypeOps::Union.apply(
                                 db,
                                 &typ,
-                                &db.get_type_index()
+                                db.get_type_index()
                                     .get_type_cache(&member.get_id().into())
                                     .ok_or(InferFailReason::UnResolveMemberType(member.get_id()))?
                                     .as_type(),
@@ -110,7 +108,7 @@ fn resolve_member_type(
                             typ = TypeOps::Union.apply(
                                 db,
                                 &typ,
-                                &db.get_type_index()
+                                db.get_type_index()
                                     .get_type_cache(&member.get_id().into())
                                     .ok_or(InferFailReason::UnResolveMemberType(member.get_id()))?
                                     .as_type(),

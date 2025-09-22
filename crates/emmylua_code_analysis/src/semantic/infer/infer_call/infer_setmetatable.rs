@@ -38,17 +38,17 @@ pub fn infer_setmetatable_call(
                 ));
             }
 
-            return Ok(LuaType::TableConst(InFiled::new(
+            Ok(LuaType::TableConst(InFiled::new(
                 cache.get_file_id(),
                 table_expr.get_range(),
-            )));
+            )))
         }
         _ => {
             if meta_type.is_unknown() {
                 return infer_expr(db, cache, basic_table);
             }
 
-            return Ok(meta_type);
+            Ok(meta_type)
         }
     }
 }
@@ -83,46 +83,41 @@ fn infer_metatable_index_type(
     cache: &mut LuaInferCache,
     metatable: LuaExpr,
 ) -> Result<(LuaType, bool /*__index type*/), InferFailReason> {
-    match &metatable {
-        LuaExpr::TableExpr(table) => {
-            let fields = table.get_fields();
-            for field in fields {
-                let field_name = match field.get_field_key() {
-                    Some(key) => match key {
-                        LuaIndexKey::Name(n) => n.get_name_text().to_string(),
-                        LuaIndexKey::String(s) => s.get_value(),
-                        _ => continue,
-                    },
-                    None => continue,
-                };
+    if let LuaExpr::TableExpr(table) = &metatable {
+        let fields = table.get_fields();
+        for field in fields {
+            let field_name = match field.get_field_key() {
+                Some(key) => match key {
+                    LuaIndexKey::Name(n) => n.get_name_text().to_string(),
+                    LuaIndexKey::String(s) => s.get_value(),
+                    _ => continue,
+                },
+                None => continue,
+            };
 
-                if field_name == "__index" {
-                    let field_value = field.get_value_expr().ok_or(InferFailReason::None)?;
-                    if matches!(
-                        field_value,
-                        LuaExpr::TableExpr(_)
-                            | LuaExpr::CallExpr(_)
-                            | LuaExpr::IndexExpr(_)
-                            | LuaExpr::NameExpr(_)
-                    ) {
-                        let meta_type = infer_expr(db, cache, field_value)?;
-                        return Ok((meta_type, true));
-                    }
+            if field_name == "__index" {
+                let field_value = field.get_value_expr().ok_or(InferFailReason::None)?;
+                if matches!(
+                    field_value,
+                    LuaExpr::TableExpr(_)
+                        | LuaExpr::CallExpr(_)
+                        | LuaExpr::IndexExpr(_)
+                        | LuaExpr::NameExpr(_)
+                ) {
+                    let meta_type = infer_expr(db, cache, field_value)?;
+                    return Ok((meta_type, true));
                 }
             }
         }
-        _ => {}
     };
 
     let meta_type = infer_expr(db, cache, metatable)?;
     if let Some(meta_members) =
         find_members_with_key(db, &meta_type, LuaMemberKey::Name("__index".into()), false)
+        && let Some(meta_member) = meta_members.first()
+        && meta_member.typ.is_custom_type()
     {
-        if let Some(meta_member) = meta_members.first() {
-            if meta_member.typ.is_custom_type() {
-                return Ok((meta_member.typ.clone(), true));
-            }
-        }
+        return Ok((meta_member.typ.clone(), true));
     }
 
     Ok((meta_type, false))

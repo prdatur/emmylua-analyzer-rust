@@ -1,4 +1,5 @@
 mod async_state;
+#[allow(clippy::module_inception)]
 mod signature;
 
 use std::collections::{HashMap, HashSet};
@@ -19,6 +20,12 @@ pub struct LuaSignatureIndex {
     in_file_signatures: HashMap<FileId, HashSet<LuaSignatureId>>,
 }
 
+impl Default for LuaSignatureIndex {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LuaSignatureIndex {
     pub fn new() -> Self {
         Self {
@@ -32,9 +39,7 @@ impl LuaSignatureIndex {
             .entry(signature_id.get_file_id())
             .or_default()
             .insert(signature_id);
-        self.signatures
-            .entry(signature_id)
-            .or_insert_with(LuaSignature::new)
+        self.signatures.entry(signature_id).or_default()
     }
 
     pub fn get(&self, signature_id: &LuaSignatureId) -> Option<&LuaSignature> {

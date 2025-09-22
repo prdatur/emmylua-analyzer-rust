@@ -74,8 +74,9 @@ pub struct DescItem {
     pub kind: DescItemKind,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Default)]
 pub enum DescParserType {
+    #[default]
     None,
     Md,
     MySt {
@@ -85,12 +86,6 @@ pub enum DescParserType {
         primary_domain: Option<String>,
         default_role: Option<String>,
     },
-}
-
-impl Default for DescParserType {
-    fn default() -> Self {
-        DescParserType::None
-    }
 }
 
 /// Parses markup in comments.

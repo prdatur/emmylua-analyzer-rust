@@ -73,10 +73,10 @@ pub fn remove_type(db: &DbIndex, source: LuaType, removed_type: LuaType) -> Opti
                 if type_decl.is_enum() {
                     return Some(source.clone());
                 }
-                if type_decl.is_alias() {
-                    if let Some(alias_ref) = get_real_type(db, &real_type) {
-                        return remove_type(db, alias_ref.clone(), removed_type);
-                    }
+                if type_decl.is_alias()
+                    && let Some(alias_ref) = get_real_type(db, real_type)
+                {
+                    return remove_type(db, alias_ref.clone(), removed_type);
                 }
 
                 // 需要对`userdata`进行特殊处理

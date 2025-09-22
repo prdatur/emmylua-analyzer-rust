@@ -32,6 +32,12 @@ pub enum LuaNoDiscard {
     NoDiscardWithMessage(Box<String>),
 }
 
+impl Default for LuaSignature {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LuaSignature {
     pub fn new() -> Self {
         Self {
@@ -81,10 +87,10 @@ impl LuaSignature {
     pub fn get_param_name_by_id(&self, idx: usize) -> Option<String> {
         if idx < self.params.len() {
             return Some(self.params[idx].clone());
-        } else if let Some(name) = self.params.last() {
-            if name == "..." {
-                return Some(name.clone());
-            }
+        } else if let Some(name) = self.params.last()
+            && name == "..."
+        {
+            return Some(name.clone());
         }
 
         None
@@ -93,10 +99,10 @@ impl LuaSignature {
     pub fn get_param_info_by_id(&self, idx: usize) -> Option<&LuaDocParamInfo> {
         if idx < self.params.len() {
             return self.param_docs.get(&idx);
-        } else if let Some(name) = self.params.last() {
-            if name == "..." {
-                return self.param_docs.get(&(self.params.len() - 1));
-            }
+        } else if let Some(name) = self.params.last()
+            && name == "..."
+        {
+            return self.param_docs.get(&(self.params.len() - 1));
         }
 
         None
@@ -131,16 +137,12 @@ impl LuaSignature {
             match owner_type {
                 Some(owner_type) => {
                     // 一些类型不应该被视为 method
-                    match (owner_type, param_type) {
-                        (LuaType::Ref(_) | LuaType::Def(_), _) => {
-                            if param_type.is_any()
-                                || param_type.is_table()
-                                || param_type.is_class_tpl()
-                            {
-                                return false;
-                            }
-                        }
-                        _ => {}
+                    if let (LuaType::Ref(_) | LuaType::Def(_), _) = (owner_type, param_type)
+                        && (param_type.is_any()
+                            || param_type.is_table()
+                            || param_type.is_class_tpl())
+                    {
+                        return false;
                     }
 
                     semantic_model
@@ -164,7 +166,7 @@ impl LuaSignature {
 
     pub fn to_call_operator_func_type(&self) -> Arc<LuaFunctionType> {
         let mut params = self.get_type_params();
-        if params.len() > 0 && !self.is_colon_define {
+        if !params.is_empty() && !self.is_colon_define {
             params.remove(0);
         }
 

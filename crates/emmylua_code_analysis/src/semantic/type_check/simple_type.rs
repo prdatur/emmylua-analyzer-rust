@@ -235,10 +235,10 @@ pub fn check_simple_type_compact(
         }
         LuaType::TplRef(_) | LuaType::ConstTplRef(_) => return Ok(()),
         LuaType::Namespace(source_namespace) => {
-            if let LuaType::Namespace(compact_namespace) = compact_type {
-                if source_namespace == compact_namespace {
-                    return Ok(());
-                }
+            if let LuaType::Namespace(compact_namespace) = compact_type
+                && source_namespace == compact_namespace
+            {
+                return Ok(());
             }
         }
         LuaType::Variadic(source_type) => {
@@ -283,23 +283,20 @@ fn get_alias_real_type<'a>(
     compact_type: &'a LuaType,
     check_guard: TypeCheckGuard,
 ) -> Result<&'a LuaType, TypeCheckFailReason> {
-    match compact_type {
-        LuaType::Ref(type_decl_id) => {
-            let type_decl = db
-                .get_type_index()
-                .get_type_decl(type_decl_id)
-                .ok_or(TypeCheckFailReason::DonotCheck)?;
-            if type_decl.is_alias() {
-                return get_alias_real_type(
-                    db,
-                    type_decl
-                        .get_alias_ref()
-                        .ok_or(TypeCheckFailReason::DonotCheck)?,
-                    check_guard.next_level()?,
-                );
-            }
+    if let LuaType::Ref(type_decl_id) = compact_type {
+        let type_decl = db
+            .get_type_index()
+            .get_type_decl(type_decl_id)
+            .ok_or(TypeCheckFailReason::DonotCheck)?;
+        if type_decl.is_alias() {
+            return get_alias_real_type(
+                db,
+                type_decl
+                    .get_alias_ref()
+                    .ok_or(TypeCheckFailReason::DonotCheck)?,
+                check_guard.next_level()?,
+            );
         }
-        _ => {}
     }
 
     Ok(compact_type)
@@ -331,20 +328,20 @@ fn check_base_type_for_ref_compact(
                 return Ok(());
             }
             LuaType::Ref(type_decl_id) => {
-                if let Some(source_id) = get_base_type_id(&source) {
-                    if is_sub_type_of(context.db, type_decl_id, &source_id) {
-                        return Ok(());
-                    }
+                if let Some(source_id) = get_base_type_id(source)
+                    && is_sub_type_of(context.db, type_decl_id, &source_id)
+                {
+                    return Ok(());
                 }
-                if let Some(decl) = context.db.get_type_index().get_type_decl(type_decl_id) {
-                    if decl.is_enum() {
-                        return check_enum_fields_match_source(
-                            context,
-                            source,
-                            type_decl_id,
-                            check_guard,
-                        );
-                    }
+                if let Some(decl) = context.db.get_type_index().get_type_decl(type_decl_id)
+                    && decl.is_enum()
+                {
+                    return check_enum_fields_match_source(
+                        context,
+                        source,
+                        type_decl_id,
+                        check_guard,
+                    );
                 }
             }
             _ => {}
@@ -360,14 +357,14 @@ fn check_enum_fields_match_source(
     enum_type_decl_id: &LuaTypeDeclId,
     check_guard: TypeCheckGuard,
 ) -> TypeCheckResult {
-    if let Some(decl) = context.db.get_type_index().get_type_decl(enum_type_decl_id) {
-        if let Some(LuaType::Union(enum_fields)) = decl.get_enum_field_type(context.db) {
-            for field in enum_fields.into_vec() {
-                check_general_type_compact(context, source, &field, check_guard.next_level()?)?;
-            }
-
-            return Ok(());
+    if let Some(decl) = context.db.get_type_index().get_type_decl(enum_type_decl_id)
+        && let Some(LuaType::Union(enum_fields)) = decl.get_enum_field_type(context.db)
+    {
+        for field in enum_fields.into_vec() {
+            check_general_type_compact(context, source, &field, check_guard.next_level()?)?;
         }
+
+        return Ok(());
     }
     Err(TypeCheckFailReason::TypeNotMatch)
 }

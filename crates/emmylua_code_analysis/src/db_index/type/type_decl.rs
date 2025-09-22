@@ -141,7 +141,7 @@ impl LuaTypeDecl {
                     return Some(origin.clone());
                 }
 
-                Some(instantiate_type_generic(db, &origin, substitutor))
+                Some(instantiate_type_generic(db, origin, substitutor))
             }
             _ => None,
         }
@@ -155,20 +155,14 @@ impl LuaTypeDecl {
     }
 
     pub fn add_alias_origin(&mut self, replace: LuaType) {
-        match &mut self.extra {
-            LuaTypeExtra::Alias { origin, .. } => {
-                *origin = Some(replace);
-            }
-            _ => {}
+        if let LuaTypeExtra::Alias { origin, .. } = &mut self.extra {
+            *origin = Some(replace);
         }
     }
 
     pub fn add_enum_base(&mut self, base_type: LuaType) {
-        match &mut self.extra {
-            LuaTypeExtra::Enum { base } => {
-                *base = Some(base_type);
-            }
-            _ => {}
+        if let LuaTypeExtra::Enum { base } = &mut self.extra {
+            *base = Some(base_type);
         }
     }
 
@@ -191,7 +185,7 @@ impl LuaTypeDecl {
                 let member_key = enum_member.get_key();
                 let fake_type = match member_key {
                     LuaMemberKey::Name(name) => LuaType::DocStringConst(name.clone().into()),
-                    LuaMemberKey::Integer(i) => LuaType::IntegerConst(i.clone()),
+                    LuaMemberKey::Integer(i) => LuaType::IntegerConst(*i),
                     LuaMemberKey::ExprType(typ) => typ.clone(),
                     LuaMemberKey::None => continue,
                 };
@@ -204,8 +198,8 @@ impl LuaTypeDecl {
                     db.get_type_index().get_type_cache(&member.get_id().into())
                 {
                     let member_fake_type = match type_cache.as_type() {
-                        LuaType::StringConst(s) => LuaType::DocStringConst(s.clone().into()),
-                        LuaType::IntegerConst(i) => LuaType::DocIntegerConst(i.clone()),
+                        LuaType::StringConst(s) => LuaType::DocStringConst(s.clone()),
+                        LuaType::IntegerConst(i) => LuaType::DocIntegerConst(*i),
                         _ => type_cache.as_type().clone(),
                     };
 
@@ -214,7 +208,7 @@ impl LuaTypeDecl {
             }
         }
 
-        return Some(LuaType::Union(LuaUnionType::from_vec(union_types).into()));
+        Some(LuaType::Union(LuaUnionType::from_vec(union_types).into()))
     }
 }
 
@@ -240,13 +234,12 @@ impl LuaTypeDeclId {
 
     pub fn get_simple_name(&self) -> &str {
         let basic_name = self.get_name();
-        let just_name = if let Some(i) = basic_name.rfind('.') {
+
+        (if let Some(i) = basic_name.rfind('.') {
             &basic_name[i + 1..]
         } else {
-            &basic_name
-        };
-
-        &just_name
+            basic_name
+        }) as _
     }
 
     pub fn collect_super_types(&self, db: &DbIndex, collected_types: &mut Vec<LuaType>) {

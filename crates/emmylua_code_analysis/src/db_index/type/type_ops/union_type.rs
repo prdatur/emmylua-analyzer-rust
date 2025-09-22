@@ -31,7 +31,7 @@ pub fn union_type(db: &DbIndex, source: LuaType, target: LuaType) -> LuaType {
         (LuaType::BooleanConst(_), LuaType::Boolean) => LuaType::Boolean,
         (LuaType::BooleanConst(left), LuaType::BooleanConst(right)) => {
             if left == right {
-                LuaType::BooleanConst(left.clone())
+                LuaType::BooleanConst(*left)
             } else {
                 LuaType::Boolean
             }

@@ -147,24 +147,20 @@ impl LuaGreenNodeBuilder<'_> {
     }
 
     fn is_trivia(&self, pos: usize) -> bool {
-        if let Some(element) = self.elements.get(pos) {
-            match element {
+        self.elements.get(pos).is_some_and(|element| {
+            matches!(
+                element,
                 LuaGreenElement::Token {
-                    kind:
-                        LuaTokenKind::TkWhitespace
+                    kind: LuaTokenKind::TkWhitespace
                         | LuaTokenKind::TkEndOfLine
                         | LuaTokenKind::TkDocContinue,
                     ..
-                } => true,
-                LuaGreenElement::Node {
+                } | LuaGreenElement::Node {
                     kind: LuaSyntaxKind::Comment | LuaSyntaxKind::DocDescription,
                     ..
-                } => true,
-                _ => false,
-            }
-        } else {
-            false
-        }
+                }
+            )
+        })
     }
 
     pub fn is_trivia_whitespace(&self, pos: usize) -> bool {

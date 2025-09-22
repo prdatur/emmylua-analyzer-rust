@@ -114,7 +114,7 @@ pub fn check_table_generic_type_compact(
 
 fn check_table_generic_compact_member_owner(
     context: &TypeCheckContext,
-    source_generic_params: &Vec<LuaType>,
+    source_generic_params: &[LuaType],
     member_owner: LuaMemberOwner,
     check_guard: TypeCheckGuard,
 ) -> TypeCheckResult {
@@ -149,7 +149,7 @@ fn check_table_generic_compact_member_owner(
         check_general_type_compact(
             context,
             source_value,
-            &member_type,
+            member_type,
             check_guard.next_level()?,
         )?;
     }

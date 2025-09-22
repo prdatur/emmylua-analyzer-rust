@@ -23,9 +23,9 @@ impl LuaFileInfo {
 
 pub fn load_workspace_files(
     root: &Path,
-    include_pattern: &Vec<String>,
-    exclude_pattern: &Vec<String>,
-    exclude_dir: &Vec<PathBuf>,
+    include_pattern: &[String],
+    exclude_pattern: &[String],
+    exclude_dir: &[PathBuf],
     encoding: Option<&str>,
 ) -> Result<Vec<LuaFileInfo>, Box<dyn Error>> {
     let encoding = encoding.unwrap_or("utf-8");
@@ -67,13 +67,13 @@ pub fn load_workspace_files(
             continue;
         }
 
-        if include_set.is_match(relative_path) {
-            if let Some(content) = read_file_with_encoding(path, encoding) {
-                files.push(LuaFileInfo {
-                    path: path.to_string_lossy().to_string(),
-                    content,
-                });
-            }
+        if include_set.is_match(relative_path)
+            && let Some(content) = read_file_with_encoding(path, encoding)
+        {
+            files.push(LuaFileInfo {
+                path: path.to_string_lossy().to_string(),
+                content,
+            });
         }
     }
 

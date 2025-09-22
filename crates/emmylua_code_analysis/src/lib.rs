@@ -266,5 +266,11 @@ impl EmmyLuaAnalysis {
     }
 }
 
+impl Default for EmmyLuaAnalysis {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 unsafe impl Send for EmmyLuaAnalysis {}
 unsafe impl Sync for EmmyLuaAnalysis {}

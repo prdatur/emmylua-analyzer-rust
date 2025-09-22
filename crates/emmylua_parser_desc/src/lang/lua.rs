@@ -98,13 +98,13 @@ fn to_highlight_kind(
                 }
             }
 
-            if let Some(prev_token) = tokens.get(i.wrapping_sub(1)) {
-                if matches!(
+            if let Some(prev_token) = tokens.get(i.wrapping_sub(1))
+                && matches!(
                     prev_token.kind,
                     LuaTokenKind::TkDot | LuaTokenKind::TkDbColon
-                ) {
-                    return CodeBlockHighlightKind::Property;
-                }
+                )
+            {
+                return CodeBlockHighlightKind::Property;
             }
 
             CodeBlockHighlightKind::Variable

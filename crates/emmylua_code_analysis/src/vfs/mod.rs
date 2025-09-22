@@ -29,6 +29,12 @@ pub struct Vfs {
     node_cache: NodeCache,
 }
 
+impl Default for Vfs {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Vfs {
     pub fn new() -> Self {
         Vfs {
@@ -70,7 +76,7 @@ impl Vfs {
 
     pub fn get_uri(&self, id: &FileId) -> Option<Uri> {
         let path = self.file_path_map.get(&id.id)?;
-        Some(file_path_to_uri(path)?)
+        file_path_to_uri(path)
     }
 
     pub fn get_file_path(&self, id: &FileId) -> Option<&PathBuf> {
@@ -82,13 +88,13 @@ impl Vfs {
         log::debug!("file_id: {:?}, uri: {}", fid, uri.as_str());
 
         if let Some(data) = &data {
-            let line_index = LineIndex::parse(&data);
+            let line_index = LineIndex::parse(data);
             let parse_config = self
                 .emmyrc
                 .as_ref()
                 .expect("emmyrc set")
                 .get_parse_config(&mut self.node_cache);
-            let tree = LuaParser::parse(&data, parse_config);
+            let tree = LuaParser::parse(data, parse_config);
             self.tree_map.insert(fid, tree);
             self.line_index_map.insert(fid, line_index);
         } else {
@@ -139,7 +145,7 @@ impl Vfs {
             return None;
         }
 
-        Some(errors.iter().map(|e| e.clone()).collect::<Vec<_>>())
+        Some(errors.to_vec())
     }
 
     pub fn get_all_file_ids(&self) -> Vec<FileId> {

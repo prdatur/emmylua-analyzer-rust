@@ -35,8 +35,7 @@ fn infer_raw_member_type_guard(
         | LuaType::StringConst(_)
         | LuaType::DocStringConst(_)
         | LuaType::Language(_) => {
-            let decl_id =
-                get_buildin_type_map_type_id(&prefix_type).ok_or(InferFailReason::None)?;
+            let decl_id = get_buildin_type_map_type_id(prefix_type).ok_or(InferFailReason::None)?;
             let owner = LuaMemberOwner::Type(decl_id);
             infer_owner_raw_member_type(db, owner, member_key)
         }
@@ -80,7 +79,7 @@ fn infer_custom_type_raw_member_type(
     infer_guard.check(type_id)?;
     let type_index = db.get_type_index();
     let type_decl = type_index
-        .get_type_decl(&type_id)
+        .get_type_decl(type_id)
         .ok_or(InferFailReason::None)?;
     if type_decl.is_alias() {
         if let Some(origin_type) = type_decl.get_alias_origin(db, None) {
@@ -95,18 +94,18 @@ fn infer_custom_type_raw_member_type(
         return member_item.resolve_type(db);
     }
 
-    if type_decl.is_class() {
-        if let Some(super_types) = type_index.get_super_types(&type_id) {
-            for super_type in super_types {
-                let result = infer_raw_member_type_guard(db, &super_type, member_key, infer_guard);
+    if type_decl.is_class()
+        && let Some(super_types) = type_index.get_super_types(type_id)
+    {
+        for super_type in super_types {
+            let result = infer_raw_member_type_guard(db, &super_type, member_key, infer_guard);
 
-                match result {
-                    Ok(member_type) => {
-                        return Ok(member_type);
-                    }
-                    Err(InferFailReason::FieldNotFound) => {}
-                    Err(err) => return Err(err),
+            match result {
+                Ok(member_type) => {
+                    return Ok(member_type);
                 }
+                Err(InferFailReason::FieldNotFound) => {}
+                Err(err) => return Err(err),
             }
         }
     }
@@ -134,7 +133,7 @@ fn infer_object_raw_member_type(
     object: &LuaObjectType,
     member_key: &LuaMemberKey,
 ) -> RawGetMemberTypeResult {
-    if let Some(member_type) = object.get_field(&member_key) {
+    if let Some(member_type) = object.get_field(member_key) {
         return Ok(member_type.clone());
     }
 

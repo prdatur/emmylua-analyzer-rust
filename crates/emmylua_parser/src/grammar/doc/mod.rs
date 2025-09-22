@@ -61,16 +61,15 @@ fn parse_docs(p: &mut LuaDocParser) {
             }
         }
 
-        if let Some(reader) = &p.lexer.reader {
-            if !reader.is_eof()
-                && !matches!(
-                    p.current_token(),
-                    LuaTokenKind::TkDocStart | LuaTokenKind::TkDocLongStart
-                )
-            {
-                p.bump_to_end();
-                continue;
-            }
+        if let Some(reader) = &p.lexer.reader
+            && !reader.is_eof()
+            && !matches!(
+                p.current_token(),
+                LuaTokenKind::TkDocStart | LuaTokenKind::TkDocLongStart
+            )
+        {
+            p.bump_to_end();
+            continue;
         }
 
         p.set_state(LuaDocLexerState::Init);
@@ -80,19 +79,13 @@ fn parse_docs(p: &mut LuaDocParser) {
 fn parse_description(p: &mut LuaDocParser) {
     let m = p.mark(LuaSyntaxKind::DocDescription);
 
-    loop {
-        match p.current_token() {
-            LuaTokenKind::TkDocDetail
-            | LuaTokenKind::TkEndOfLine
-            | LuaTokenKind::TkWhitespace
-            | LuaTokenKind::TkDocContinue
-            | LuaTokenKind::TkNormalStart => {
-                p.bump();
-            }
-            _ => {
-                break;
-            }
-        }
+    while let LuaTokenKind::TkDocDetail
+    | LuaTokenKind::TkEndOfLine
+    | LuaTokenKind::TkWhitespace
+    | LuaTokenKind::TkDocContinue
+    | LuaTokenKind::TkNormalStart = p.current_token()
+    {
+        p.bump();
     }
 
     m.complete(p);
@@ -126,19 +119,13 @@ fn if_token_bump(p: &mut LuaDocParser, token: LuaTokenKind) -> bool {
 fn parse_normal_description(p: &mut LuaDocParser) {
     let m = p.mark(LuaSyntaxKind::DocDescription);
 
-    loop {
-        match p.current_token() {
-            LuaTokenKind::TkDocDetail
-            | LuaTokenKind::TkEndOfLine
-            | LuaTokenKind::TkWhitespace
-            | LuaTokenKind::TkDocContinue
-            | LuaTokenKind::TkNormalStart => {
-                p.bump();
-            }
-            _ => {
-                break;
-            }
-        }
+    while let LuaTokenKind::TkDocDetail
+    | LuaTokenKind::TkEndOfLine
+    | LuaTokenKind::TkWhitespace
+    | LuaTokenKind::TkDocContinue
+    | LuaTokenKind::TkNormalStart = p.current_token()
+    {
+        p.bump();
     }
 
     m.complete(p);

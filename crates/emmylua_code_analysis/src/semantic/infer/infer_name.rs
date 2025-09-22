@@ -139,11 +139,7 @@ fn adjust_param_idx(
         (true, false) => {
             adjusted_idx += 1;
         }
-        (false, true) => {
-            if adjusted_idx > 0 {
-                adjusted_idx -= 1;
-            }
-        }
+        (false, true) => adjusted_idx = adjusted_idx.saturating_sub(1),
         _ => {}
     }
     adjusted_idx
@@ -155,12 +151,11 @@ fn check_dots_param_types(
     cur_type: &Option<LuaType>,
 ) -> Option<LuaType> {
     for (_, typ) in params.iter().skip(param_idx) {
-        if let Some(typ) = typ {
-            if let Some(cur_type) = cur_type {
-                if cur_type != typ {
-                    return Some(LuaType::Any);
-                }
-            }
+        if let Some(typ) = typ
+            && let Some(cur_type) = cur_type
+            && cur_type != typ
+        {
+            return Some(LuaType::Any);
         }
     }
     None
@@ -207,14 +202,14 @@ fn find_param_type_from_type(
                                 return None;
                             };
 
-                        if is_dots {
-                            if let Some(any_type) = check_dots_param_types(
-                                &overload.get_params(),
+                        if is_dots
+                            && let Some(any_type) = check_dots_param_types(
+                                overload.get_params(),
                                 adjusted_idx,
                                 &cur_type,
-                            ) {
-                                return Some(any_type);
-                            }
+                            )
+                        {
+                            return Some(any_type);
                         }
 
                         if let Some(typ) = cur_type {
@@ -233,12 +228,11 @@ fn find_param_type_from_type(
                 adjust_param_idx(param_idx, current_colon_define, f.is_colon_define());
             if let Some((_, typ)) = f.get_params().get(adjusted_idx) {
                 let cur_type = typ.clone();
-                if is_dots {
-                    if let Some(any_type) =
-                        check_dots_param_types(&f.get_params(), adjusted_idx, &cur_type)
-                    {
-                        return Some(any_type);
-                    }
+                if is_dots
+                    && let Some(any_type) =
+                        check_dots_param_types(f.get_params(), adjusted_idx, &cur_type)
+                {
+                    return Some(any_type);
                 }
                 cur_type
             } else {
@@ -276,12 +270,11 @@ fn find_param_type_from_union(
                     return None;
                 };
 
-                if is_dots {
-                    if let Some(any_type) =
-                        check_dots_param_types(&overload.get_params(), adjusted_idx, &cur_type)
-                    {
-                        return Some(any_type);
-                    }
+                if is_dots
+                    && let Some(any_type) =
+                        check_dots_param_types(overload.get_params(), adjusted_idx, &cur_type)
+                {
+                    return Some(any_type);
                 }
 
                 if let Some(typ) = cur_type {
@@ -302,12 +295,11 @@ fn find_param_type_from_union(
                 return None;
             };
 
-            if is_dots {
-                if let Some(any_type) =
-                    check_dots_param_types(&f.get_params(), adjusted_idx, &cur_type)
-                {
-                    return Some(any_type);
-                }
+            if is_dots
+                && let Some(any_type) =
+                    check_dots_param_types(f.get_params(), adjusted_idx, &cur_type)
+            {
+                return Some(any_type);
             }
 
             cur_type
@@ -430,7 +422,7 @@ pub fn find_self_decl_or_member_id(
             }
 
             let id = db.get_global_index().resolve_global_decl_id(db, &name)?;
-            return Some(LuaDeclOrMemberId::Decl(id));
+            Some(LuaDeclOrMemberId::Decl(id))
         }
         LuaExpr::IndexExpr(prefix_index) => {
             let semantic_id = infer_node_semantic_decl(
@@ -441,15 +433,11 @@ pub fn find_self_decl_or_member_id(
             )?;
 
             match semantic_id {
-                LuaSemanticDeclId::Member(member_id) => {
-                    return Some(LuaDeclOrMemberId::Member(member_id));
-                }
-                LuaSemanticDeclId::LuaDecl(decl_id) => {
-                    return Some(LuaDeclOrMemberId::Decl(decl_id));
-                }
-                _ => return None,
+                LuaSemanticDeclId::Member(member_id) => Some(LuaDeclOrMemberId::Member(member_id)),
+                LuaSemanticDeclId::LuaDecl(decl_id) => Some(LuaDeclOrMemberId::Decl(decl_id)),
+                _ => None,
             }
         }
-        _ => return None,
+        _ => None,
     }
 }

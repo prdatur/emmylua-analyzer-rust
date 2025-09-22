@@ -78,8 +78,10 @@ fn default_auto_require_separator() -> String {
 
 #[derive(Serialize, Deserialize, Debug, JsonSchema, Clone, Copy)]
 #[serde(rename_all = "kebab-case")]
+#[derive(Default)]
 pub enum EmmyrcFilenameConvention {
     /// Keep the original filename.
+    #[default]
     Keep,
     /// Convert the filename to snake_case.
     SnakeCase,
@@ -89,10 +91,4 @@ pub enum EmmyrcFilenameConvention {
     CamelCase,
     /// When returning class definition, use class name, otherwise keep original name.
     KeepClass,
-}
-
-impl Default for EmmyrcFilenameConvention {
-    fn default() -> Self {
-        EmmyrcFilenameConvention::Keep
-    }
 }

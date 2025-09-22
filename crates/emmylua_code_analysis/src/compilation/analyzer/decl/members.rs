@@ -54,13 +54,11 @@ pub fn find_index_owner(
                 }
                 _ => {}
             }
-        } else {
-            if let Some(access_path) = index_expr.get_access_path() {
-                return (
-                    LuaMemberOwner::LocalUnresolve,
-                    Some(GlobalId(SmolStr::new(access_path).into())),
-                );
-            }
+        } else if let Some(access_path) = index_expr.get_access_path() {
+            return (
+                LuaMemberOwner::LocalUnresolve,
+                Some(GlobalId(SmolStr::new(access_path).into())),
+            );
         }
     }
 

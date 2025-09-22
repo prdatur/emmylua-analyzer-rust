@@ -38,7 +38,7 @@ fn check_cast_tag(
     // 检查每个 cast 操作类型
     for op_type in cast_tag.get_op_types() {
         // 如果具有操作符, 则不检查
-        if let Some(_) = op_type.get_op() {
+        if op_type.get_op().is_some() {
             continue;
         }
         if let Some(target_doc_type) = op_type.get_type() {
@@ -87,7 +87,7 @@ fn check_cast_compatibility(
         _ => cast_type_check(semantic_model, origin_type, target_type, 0),
     };
 
-    if !result.is_ok() {
+    if result.is_err() {
         add_cast_type_mismatch_diagnostic(
             context,
             semantic_model,
@@ -111,7 +111,7 @@ fn add_cast_type_mismatch_diagnostic(
 ) {
     let db = semantic_model.get_db();
     match result {
-        Ok(_) => return,
+        Ok(_) => (),
         Err(reason) => {
             let reason_message = match reason {
                 TypeCheckFailReason::TypeNotMatchWithReason(reason) => reason,
@@ -176,7 +176,7 @@ fn cast_type_check(
                     }
                 }
             }
-            return Ok(());
+            Ok(())
         }
         _ => {
             if origin_type.is_table() {
@@ -194,10 +194,8 @@ fn cast_type_check(
                 if target_type.is_string() {
                     return Ok(());
                 }
-            } else if origin_type.is_number() {
-                if target_type.is_number() {
-                    return Ok(());
-                }
+            } else if origin_type.is_number() && target_type.is_number() {
+                return Ok(());
             }
 
             semantic_model.type_check_detail(target_type, origin_type)

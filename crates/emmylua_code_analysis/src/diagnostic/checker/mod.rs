@@ -139,7 +139,7 @@ impl<'a> DiagnosticContext<'a> {
     }
 
     pub fn get_db(&self) -> &DbIndex {
-        &self.db
+        self.db
     }
 
     pub fn get_file_id(&self) -> FileId {
@@ -192,7 +192,7 @@ impl<'a> DiagnosticContext<'a> {
 
     fn get_severity(&self, code: DiagnosticCode) -> Option<DiagnosticSeverity> {
         if let Some(severity) = self.config.severity.get(&code) {
-            return Some(severity.clone());
+            return Some(*severity);
         }
 
         Some(get_default_severity(code))
@@ -234,12 +234,12 @@ impl<'a> DiagnosticContext<'a> {
         let db = self.get_db();
         let diagnostic_index = db.get_diagnostic_index();
         // force enable
-        if diagnostic_index.is_file_enabled(&file_id, &code) {
+        if diagnostic_index.is_file_enabled(&file_id, code) {
             return true;
         }
 
         // workspace force disabled
-        if self.config.workspace_disabled.contains(&code) {
+        if self.config.workspace_disabled.contains(code) {
             return false;
         }
 
@@ -250,17 +250,17 @@ impl<'a> DiagnosticContext<'a> {
         }
 
         // is file disabled this code
-        if diagnostic_index.is_file_disabled(&file_id, &code) {
+        if diagnostic_index.is_file_disabled(&file_id, code) {
             return false;
         }
 
         // workspace force enabled
-        if self.config.workspace_enabled.contains(&code) {
+        if self.config.workspace_enabled.contains(code) {
             return true;
         }
 
         // default setting
-        is_code_default_enable(&code, self.config.level)
+        is_code_default_enable(code, self.config.level)
     }
 }
 
@@ -286,7 +286,7 @@ pub fn get_return_stats(closure_expr: &LuaClosureExpr) -> impl Iterator<Item = L
         .filter(move |stat| {
             stat.ancestors::<LuaClosureExpr>()
                 .next()
-                .map_or(false, |expr| &expr == closure_expr)
+                .is_some_and(|expr| &expr == closure_expr)
         })
 }
 

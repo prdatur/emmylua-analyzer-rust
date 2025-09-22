@@ -1,11 +1,12 @@
 use core::fmt;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub enum LuaLanguageLevel {
     Lua51,
     LuaJIT,
     Lua52,
     Lua53,
+    #[default]
     Lua54,
     Lua55,
 }
@@ -20,11 +21,5 @@ impl fmt::Display for LuaLanguageLevel {
             LuaLanguageLevel::LuaJIT => write!(f, "LuaJIT"),
             LuaLanguageLevel::Lua55 => write!(f, "Lua 5.5"),
         }
-    }
-}
-
-impl Default for LuaLanguageLevel {
-    fn default() -> Self {
-        LuaLanguageLevel::Lua54
     }
 }

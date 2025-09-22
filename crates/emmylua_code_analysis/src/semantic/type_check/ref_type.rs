@@ -48,7 +48,7 @@ pub fn check_ref_type_compact(
     }
 
     if type_decl.is_enum() {
-        check_ref_enum(context, source_id, compact_type, check_guard, &type_decl)
+        check_ref_enum(context, source_id, compact_type, check_guard, type_decl)
     } else {
         check_ref_class(context, source_id, compact_type, check_guard)
     }
@@ -84,18 +84,16 @@ fn check_ref_enum(
             LuaType::from_vec(new_types)
         }
         LuaType::Ref(compact_id) => {
-            if let Some(compact_decl) = context.db.get_type_index().get_type_decl(compact_id) {
-                if compact_decl.is_enum() {
-                    if let Some(compact_enum_fields) = compact_decl.get_enum_field_type(context.db)
-                    {
-                        return check_general_type_compact(
-                            context,
-                            &enum_fields,
-                            &compact_enum_fields,
-                            check_guard.next_level()?,
-                        );
-                    }
-                }
+            if let Some(compact_decl) = context.db.get_type_index().get_type_decl(compact_id)
+                && compact_decl.is_enum()
+                && let Some(compact_enum_fields) = compact_decl.get_enum_field_type(context.db)
+            {
+                return check_general_type_compact(
+                    context,
+                    &enum_fields,
+                    &compact_enum_fields,
+                    check_guard.next_level()?,
+                );
             }
             compact_type.clone()
         }
@@ -103,18 +101,17 @@ fn check_ref_enum(
     };
 
     // 当 enum 的值全为整数常量时, 可能会用于位运算, 此时右值推断为整数
-    if let LuaType::Union(union_types) = &enum_fields {
-        if union_types
+    if let LuaType::Union(union_types) = &enum_fields
+        && union_types
             .into_vec()
             .iter()
             .all(|t| matches!(t, LuaType::DocIntegerConst(_) | LuaType::IntegerConst(_)))
-            && matches!(
-                compact_type,
-                LuaType::Integer | LuaType::DocIntegerConst(_) | LuaType::IntegerConst(_)
-            )
-        {
-            return Ok(());
-        }
+        && matches!(
+            compact_type,
+            LuaType::Integer | LuaType::DocIntegerConst(_) | LuaType::IntegerConst(_)
+        )
+    {
+        return Ok(());
     }
 
     check_general_type_compact(
@@ -147,23 +144,21 @@ fn check_ref_class(
             }
 
             // `compact`为枚举时的额外处理
-            if let Some(compact_decl) = context.db.get_type_index().get_type_decl(id) {
-                if compact_decl.is_enum() {
-                    if let Some(LuaType::Union(enum_fields)) =
-                        compact_decl.get_enum_field_type(context.db)
-                    {
-                        let source = LuaType::Ref(source_id.clone());
-                        for field in enum_fields.into_vec() {
-                            check_general_type_compact(
-                                context,
-                                &source,
-                                &field,
-                                check_guard.next_level()?,
-                            )?;
-                        }
-                        return Ok(());
-                    }
+            if let Some(compact_decl) = context.db.get_type_index().get_type_decl(id)
+                && compact_decl.is_enum()
+                && let Some(LuaType::Union(enum_fields)) =
+                    compact_decl.get_enum_field_type(context.db)
+            {
+                let source = LuaType::Ref(source_id.clone());
+                for field in enum_fields.into_vec() {
+                    check_general_type_compact(
+                        context,
+                        &source,
+                        &field,
+                        check_guard.next_level()?,
+                    )?;
                 }
+                return Ok(());
             }
 
             Err(TypeCheckFailReason::TypeNotMatch)
@@ -235,7 +230,7 @@ fn check_ref_type_compact_table(
         .map(|members| {
             members
                 .iter()
-                .map(|m| (m.get_key().clone(), m.get_id().clone()))
+                .map(|m| (m.get_key().clone(), m.get_id()))
                 .collect()
         })
         .unwrap_or_default();
@@ -269,8 +264,8 @@ fn check_ref_type_compact_table(
 
                 if let Err(err) = check_general_type_compact(
                     context,
-                    &source_member_type,
-                    &table_member_type,
+                    source_member_type,
+                    table_member_type,
                     check_guard.next_level()?,
                 ) && err.is_type_not_match()
                 {
@@ -283,9 +278,8 @@ fn check_ref_type_compact_table(
                             "member %{name} type not match, expect %{expect}, got %{got}",
                             name = key.to_path(),
                             expect =
-                                humanize_type(context.db, &source_member_type, RenderLevel::Simple),
-                            got =
-                                humanize_type(context.db, &table_member_type, RenderLevel::Simple)
+                                humanize_type(context.db, source_member_type, RenderLevel::Simple),
+                            got = humanize_type(context.db, table_member_type, RenderLevel::Simple)
                         )
                         .to_string(),
                     ));

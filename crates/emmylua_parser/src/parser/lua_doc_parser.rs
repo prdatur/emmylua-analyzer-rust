@@ -281,8 +281,5 @@ impl<'b> LuaDocParser<'_, 'b> {
 }
 
 fn is_invalid_kind(kind: LuaTokenKind) -> bool {
-    match kind {
-        LuaTokenKind::None | LuaTokenKind::TkEof => true,
-        _ => false,
-    }
+    matches!(kind, LuaTokenKind::None | LuaTokenKind::TkEof)
 }

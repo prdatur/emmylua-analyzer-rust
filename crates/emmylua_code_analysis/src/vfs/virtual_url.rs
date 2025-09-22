@@ -10,15 +10,21 @@ pub struct VirtualUrlGenerator {
 }
 
 #[allow(unused)]
+impl Default for VirtualUrlGenerator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl VirtualUrlGenerator {
     pub fn new() -> Self {
-        let env_path = std::env::current_dir().unwrap();
+        let env_path = std::env::current_dir().expect("Current dir should be set");
         VirtualUrlGenerator { base: env_path }
     }
 
     pub fn new_uri(&self, path: &str) -> Uri {
         let path = self.base.join(path);
-        file_path_to_uri(&path).unwrap()
+        file_path_to_uri(&path).expect("File should give a valid URI")
     }
 
     pub fn new_path(&self, path: &str) -> PathBuf {

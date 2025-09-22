@@ -42,11 +42,11 @@ pub fn instantiate_alias_call(
                 return LuaType::Unknown;
             }
 
-            let members = find_members(db, &operands[0]).unwrap_or(Vec::new());
+            let members = find_members(db, &operands[0]).unwrap_or_default();
             let member_key_types = members
                 .iter()
                 .filter_map(|m| match &m.key {
-                    LuaMemberKey::Integer(i) => Some(LuaType::DocIntegerConst(i.clone())),
+                    LuaMemberKey::Integer(i) => Some(LuaType::DocIntegerConst(*i)),
                     LuaMemberKey::Name(s) => Some(LuaType::DocStringConst(s.clone().into())),
                     _ => None,
                 })
@@ -157,7 +157,7 @@ fn instantiate_select_call(source: &LuaType, index: &LuaType) -> LuaType {
 }
 
 fn instantiate_unpack_call(db: &DbIndex, operands: &[LuaType]) -> LuaType {
-    if operands.len() < 1 {
+    if operands.is_empty() {
         return LuaType::Unknown;
     }
 
@@ -243,8 +243,8 @@ fn instantiate_rawget_call(db: &DbIndex, owner: &LuaType, key: &LuaType) -> LuaT
     let member_key = match key {
         LuaType::DocStringConst(s) => LuaMemberKey::Name(s.deref().clone()),
         LuaType::StringConst(s) => LuaMemberKey::Name(s.deref().clone()),
-        LuaType::DocIntegerConst(i) => LuaMemberKey::Integer(i.clone()),
-        LuaType::IntegerConst(i) => LuaMemberKey::Integer(i.clone()),
+        LuaType::DocIntegerConst(i) => LuaMemberKey::Integer(*i),
+        LuaType::IntegerConst(i) => LuaMemberKey::Integer(*i),
         _ => return LuaType::Unknown,
     };
 

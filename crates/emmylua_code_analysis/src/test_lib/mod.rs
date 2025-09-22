@@ -19,6 +19,12 @@ pub struct VirtualWorkspace {
 }
 
 #[allow(unused, clippy::unwrap_used)]
+impl Default for VirtualWorkspace {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl VirtualWorkspace {
     pub fn new() -> Self {
         let generator = VirtualUrlGenerator::new();
@@ -51,20 +57,18 @@ impl VirtualWorkspace {
         let uri = self
             .virtual_url_generator
             .new_uri(&format!("virtual_{}.lua", id));
-        let file_id = self
-            .analysis
+
+        self.analysis
             .update_file_by_uri(&uri, Some(content.to_string()))
-            .unwrap();
-        file_id
+            .expect("File ID must be present")
     }
 
     pub fn def_file(&mut self, file_name: &str, content: &str) -> FileId {
         let uri = self.virtual_url_generator.new_uri(file_name);
-        let file_id = self
-            .analysis
+
+        self.analysis
             .update_file_by_uri(&uri, Some(content.to_string()))
-            .unwrap();
-        file_id
+            .expect("File ID must be present")
     }
 
     pub fn def_files(&mut self, files: Vec<(&str, &str)>) -> Vec<FileId> {
@@ -97,8 +101,11 @@ impl VirtualWorkspace {
             .get_db()
             .get_vfs()
             .get_syntax_tree(&file_id)
-            .unwrap();
-        tree.get_chunk_node().descendants::<Ast>().next().unwrap()
+            .expect("Tree must exist");
+        tree.get_chunk_node()
+            .descendants::<Ast>()
+            .next()
+            .expect("Node must exist")
     }
 
     pub fn ty(&mut self, type_repr: &str) -> LuaType {
@@ -109,11 +116,11 @@ impl VirtualWorkspace {
             .analysis
             .compilation
             .get_semantic_model(file_id)
-            .unwrap();
-        let token = local_name.get_name_token().unwrap();
+            .expect("Semantic model must exist");
+        let token = local_name.get_name_token().expect("Name token must exist");
         let info = semantic_model
             .get_semantic_info(token.syntax().clone().into())
-            .unwrap();
+            .expect("Semantic info must exist");
         info.typ
     }
 
@@ -125,11 +132,11 @@ impl VirtualWorkspace {
             .analysis
             .compilation
             .get_semantic_model(file_id)
-            .unwrap();
-        let token = local_name.get_name_token().unwrap();
+            .expect("Model must exist");
+        let token = local_name.get_name_token().expect("Name token must exist");
         let info = semantic_model
             .get_semantic_info(token.syntax().clone().into())
-            .unwrap();
+            .expect("Semantic info must exist");
         info.typ
     }
 
@@ -188,13 +195,11 @@ impl VirtualWorkspace {
 
     pub fn humanize_type(&self, ty: LuaType) -> String {
         let db = &self.analysis.compilation.get_db();
-        let level = 0;
         humanize_type(db, &ty, RenderLevel::Brief)
     }
 
     pub fn get_db_mut(&mut self) -> &mut DbIndex {
-        let db = self.analysis.compilation.get_db_mut();
-        db
+        (self.analysis.compilation.get_db_mut()) as _
     }
 }
 
@@ -219,7 +224,7 @@ mod tests {
             LuaType::Ref(i) => {
                 assert_eq!(i.get_name(), "a");
             }
-            _ => assert!(false),
+            _ => unreachable!(),
         }
     }
 }

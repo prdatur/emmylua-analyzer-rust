@@ -186,9 +186,7 @@ fn check_tuple_type_compact_table(
 ) -> TypeCheckResult {
     let member_index = context.db.get_member_index();
     let tuple_members = source_tuple.get_types();
-    let size = tuple_members.len();
-    for i in 0..size {
-        let source_tuple_member_type = &tuple_members[i];
+    for (i, source_tuple_member_type) in tuple_members.iter().enumerate() {
         let key = LuaMemberKey::Integer((i + 1) as i64);
         if let Some(member_item) = member_index.get_member_item(&table_owner, &key) {
             let member_type = member_item
@@ -241,9 +239,8 @@ fn check_tuple_type_compact_object_type(
     let object_members = object_type.get_fields();
 
     let tuple_members = source_tuple.get_types();
-    let size = tuple_members.len();
-    for i in 0..size {
-        let source_tuple_member_type = &tuple_members[i];
+    // for i in 0..size {
+    for (i, source_tuple_member_type) in tuple_members.iter().enumerate() {
         let key = LuaMemberKey::Integer((i + 1) as i64);
         if let Some(object_member_type) = object_members.get(&key) {
             match check_general_type_compact(

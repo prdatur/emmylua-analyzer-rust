@@ -32,7 +32,7 @@ fn check_sub_type_of_iterative(
             continue;
         }
 
-        let supers_iter = match type_index.get_super_types_iter(&current_id) {
+        let supers_iter = match type_index.get_super_types_iter(current_id) {
             Some(iter) => iter,
             None => continue,
         };
@@ -59,10 +59,10 @@ fn check_sub_type_of_iterative(
                     }
                 }
                 _ => {
-                    if let Some(base_id) = get_base_type_id(super_type) {
-                        if base_id == *super_type_ref_id {
-                            return Some(true);
-                        }
+                    if let Some(base_id) = get_base_type_id(super_type)
+                        && base_id == *super_type_ref_id
+                    {
+                        return Some(true);
                     }
                 }
             }

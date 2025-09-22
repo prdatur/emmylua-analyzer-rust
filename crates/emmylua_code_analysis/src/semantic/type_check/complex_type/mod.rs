@@ -37,7 +37,7 @@ pub fn check_complex_type_compact(
             }
         }
         LuaType::Tuple(tuple) => {
-            match check_tuple_type_compact(context, &tuple, compact_type, check_guard) {
+            match check_tuple_type_compact(context, tuple, compact_type, check_guard) {
                 Err(TypeCheckFailReason::DonotCheck) => {}
                 result => return result,
             }
@@ -71,16 +71,13 @@ pub fn check_complex_type_compact(
             }
         }
         LuaType::Union(union_type) => {
-            match compact_type {
-                LuaType::Union(compact_union) => {
-                    return check_union_type_compact_union(
-                        context,
-                        source,
-                        compact_union,
-                        check_guard.next_level()?,
-                    );
-                }
-                _ => {}
+            if let LuaType::Union(compact_union) = compact_type {
+                return check_union_type_compact_union(
+                    context,
+                    source,
+                    compact_union,
+                    check_guard.next_level()?,
+                );
             }
             for sub_type in union_type.into_vec() {
                 match check_general_type_compact(
@@ -106,7 +103,7 @@ pub fn check_complex_type_compact(
             return check_complex_type_compact(
                 context,
                 &union,
-                &compact_type,
+                compact_type,
                 check_guard.next_level()?,
             );
         }

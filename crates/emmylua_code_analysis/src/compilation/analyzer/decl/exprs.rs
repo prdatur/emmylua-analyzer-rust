@@ -22,7 +22,7 @@ pub fn analyze_name_expr(analyzer: &mut DeclAnalyzer, expr: LuaNameExpr) -> Opti
     let decl_id = LuaDeclId::new(file_id, position);
     let (decl_id, is_local) = if analyzer.decl.get_decl(&decl_id).is_some() {
         (Some(decl_id), false)
-    } else if let Some(decl) = analyzer.find_decl(&name, position) {
+    } else if let Some(decl) = analyzer.find_decl(name, position) {
         if decl.is_local() {
             // reference local variable
             (Some(decl.get_id()), true)
@@ -197,7 +197,7 @@ fn analyze_closure_params(
     let signature = analyzer
         .db
         .get_signature_index_mut()
-        .get_or_create(signature_id.clone());
+        .get_or_create(*signature_id);
     let params = closure.get_params_list()?.get_params();
     for param in params {
         let name = if let Some(name_token) = param.get_name_token() {
@@ -306,7 +306,7 @@ pub fn analyze_literal_expr(analyzer: &mut DeclAnalyzer, expr: LuaLiteralExpr) -
                 .map(|_| decl_id)
                 .or_else(|| {
                     analyzer
-                        .find_decl(&dots_token.get_text(), position)
+                        .find_decl(dots_token.get_text(), position)
                         .and_then(|decl| decl.is_local().then(|| decl.get_id()))
                 });
 
@@ -326,17 +326,17 @@ pub fn analyze_literal_expr(analyzer: &mut DeclAnalyzer, expr: LuaLiteralExpr) -
 pub fn analyze_call_expr(analyzer: &mut DeclAnalyzer, expr: LuaCallExpr) -> Option<()> {
     if expr.is_require() {
         let args = expr.get_args_list()?;
-        if let Some(LuaExpr::LiteralExpr(literal_expr)) = args.get_args().next() {
-            if let Some(LuaLiteralToken::String(string_token)) = literal_expr.get_literal() {
-                let module_path = string_token.get_value();
-                let file_id = analyzer.get_file_id();
-                let module_info = analyzer.db.get_module_index().find_module(&module_path)?;
-                let module_file_id = module_info.file_id;
-                analyzer
-                    .db
-                    .get_file_dependencies_index_mut()
-                    .add_required_file(file_id, module_file_id);
-            }
+        if let Some(LuaExpr::LiteralExpr(literal_expr)) = args.get_args().next()
+            && let Some(LuaLiteralToken::String(string_token)) = literal_expr.get_literal()
+        {
+            let module_path = string_token.get_value();
+            let file_id = analyzer.get_file_id();
+            let module_info = analyzer.db.get_module_index().find_module(&module_path)?;
+            let module_file_id = module_info.file_id;
+            analyzer
+                .db
+                .get_file_dependencies_index_mut()
+                .add_required_file(file_id, module_file_id);
         }
     }
 

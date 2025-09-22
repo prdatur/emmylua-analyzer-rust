@@ -104,7 +104,7 @@ fn export_globals(db: &DbIndex) -> Vec<Global> {
         .filter_map(|global| {
             let decl = db.get_decl_index().get_decl(&global)?;
             let typ = type_index.get_type_cache(&global.into())?.as_type();
-            let property = export_property(db, &LuaSemanticDeclId::LuaDecl(global.clone()));
+            let property = export_property(db, &LuaSemanticDeclId::LuaDecl(global));
             let loc = export_loc(vfs, decl.get_file_id(), decl.get_range());
             match typ {
                 LuaType::TableConst(table) => {
@@ -187,7 +187,7 @@ fn export_generics(db: &DbIndex, type_decl_id: &LuaTypeDeclId) -> Vec<TypeVar> {
     let type_index = db.get_type_index();
 
     type_index
-        .get_generic_params(&type_decl_id)
+        .get_generic_params(type_decl_id)
         .map(|v| v.as_slice())
         .unwrap_or_default()
         .iter()
@@ -232,12 +232,11 @@ fn export_members(db: &DbIndex, member_owner: LuaMemberOwner) -> Vec<Member> {
                 let loc = export_loc(vfs, member.get_file_id(), member.get_range());
 
                 match typ {
-                    LuaType::Signature(signature_id) => db
-                        .get_signature_index()
-                        .get(&signature_id)
-                        .map(|signature| {
+                    LuaType::Signature(signature_id) => {
+                        db.get_signature_index().get(signature_id).map(|signature| {
                             Member::Fn(export_signature(db, signature, name, property, loc))
-                        }),
+                        })
+                    }
                     _ => Some(Member::Field(export_field(db, typ, name, property, loc))),
                 }
             })

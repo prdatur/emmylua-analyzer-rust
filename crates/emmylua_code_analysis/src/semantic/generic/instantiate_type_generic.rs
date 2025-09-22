@@ -112,9 +112,7 @@ pub fn instantiate_doc_function(
     let colon_define = doc_func.is_colon_define();
 
     let mut new_params = Vec::new();
-    for i in 0..tpl_func_params.len() {
-        let origin_param = &tpl_func_params[i];
-
+    for (i, origin_param) in tpl_func_params.iter().enumerate() {
         let origin_param_type = if let Some(ty) = &origin_param.1 {
             ty
         } else {
@@ -162,7 +160,7 @@ pub fn instantiate_doc_function(
                 VariadicType::Multi(_) => (),
             },
             _ => {
-                let new_type = instantiate_type_generic(db, &origin_param_type, &substitutor);
+                let new_type = instantiate_type_generic(db, origin_param_type, substitutor);
                 new_params.push((origin_param.0.clone(), Some(new_type)));
             }
         }
@@ -171,7 +169,7 @@ pub fn instantiate_doc_function(
     // 将 substitutor 中存储的类型的 def 转为 ref
     let mut modified_substitutor = substitutor.clone();
     modified_substitutor.convert_def_to_ref();
-    let inst_ret_type = instantiate_type_generic(db, &tpl_ret, &modified_substitutor);
+    let inst_ret_type = instantiate_type_generic(db, tpl_ret, &modified_substitutor);
     LuaType::DocFunction(
         LuaFunctionType::new(async_state, colon_define, new_params, inst_ret_type).into(),
     )
@@ -193,8 +191,8 @@ fn instantiate_object(
 
     let mut new_index_access = Vec::new();
     for (key, value) in index_access {
-        let key = instantiate_type_generic(db, &key, substitutor);
-        let value = instantiate_type_generic(db, &value, substitutor);
+        let key = instantiate_type_generic(db, key, substitutor);
+        let value = instantiate_type_generic(db, value, substitutor);
         new_index_access.push((key, value));
     }
 
@@ -236,8 +234,8 @@ fn instantiate_generic(
     let mut new_params = Vec::new();
     for param in generic_params {
         let new_param = instantiate_type_generic(db, param, substitutor);
-        match &new_param {
-            LuaType::Variadic(variadic) => match variadic.deref() {
+        if let LuaType::Variadic(variadic) = &new_param {
+            match variadic.deref() {
                 VariadicType::Base(_) => {}
                 VariadicType::Multi(types) => {
                     for typ in types {
@@ -245,8 +243,7 @@ fn instantiate_generic(
                     }
                     continue;
                 }
-            },
-            _ => {}
+            }
         }
         new_params.push(new_param);
     }
@@ -258,15 +255,13 @@ fn instantiate_generic(
         return LuaType::Unknown;
     };
 
-    if !substitutor.check_recursion(&type_decl_id) {
-        if let Some(type_decl) = db.get_type_index().get_type_decl(&type_decl_id) {
-            if type_decl.is_alias() {
-                let new_substitutor =
-                    TypeSubstitutor::from_alias(new_params.clone(), type_decl_id.clone());
-                if let Some(origin) = type_decl.get_alias_origin(db, Some(&new_substitutor)) {
-                    return origin;
-                }
-            }
+    if !substitutor.check_recursion(&type_decl_id)
+        && let Some(type_decl) = db.get_type_index().get_type_decl(&type_decl_id)
+        && type_decl.is_alias()
+    {
+        let new_substitutor = TypeSubstitutor::from_alias(new_params.clone(), type_decl_id.clone());
+        if let Some(origin) = type_decl.get_alias_origin(db, Some(&new_substitutor)) {
+            return origin;
         }
     }
 
@@ -329,7 +324,7 @@ fn instantiate_signature(
     signature_id: &LuaSignatureId,
     substitutor: &TypeSubstitutor,
 ) -> LuaType {
-    if let Some(signature) = db.get_signature_index().get(&signature_id) {
+    if let Some(signature) = db.get_signature_index().get(signature_id) {
         let origin_type = {
             let fake_doc_function = signature.to_doc_func_type();
             instantiate_doc_function(db, &fake_doc_function, substitutor)
@@ -350,7 +345,7 @@ fn instantiate_signature(
         }
     }
 
-    return LuaType::Signature(signature_id.clone());
+    LuaType::Signature(*signature_id)
 }
 
 fn instantiate_variadic_type(

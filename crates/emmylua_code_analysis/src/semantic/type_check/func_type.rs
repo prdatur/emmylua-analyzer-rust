@@ -54,8 +54,7 @@ fn check_doc_func_type_compact_for_params(
     check_guard: TypeCheckGuard,
 ) -> TypeCheckResult {
     let source_params = source_func.get_params();
-    let mut compact_params: Vec<(String, Option<LuaType>)> =
-        compact_func.get_params().iter().cloned().collect();
+    let mut compact_params: Vec<(String, Option<LuaType>)> = compact_func.get_params().to_vec();
 
     if compact_func.is_colon_define() {
         compact_params.insert(0, ("self".to_string(), None));
@@ -89,28 +88,25 @@ fn check_doc_func_type_compact_for_params(
 
         let compact_param_type = &compact_param.1;
 
-        match (source_param_type, compact_param_type) {
-            (Some(source_type), Some(compact_type)) => {
-                match check_general_type_compact(
-                    context,
-                    source_type,
-                    compact_type,
-                    check_guard.next_level()?,
-                ) {
-                    Ok(()) => {}
-                    Err(e) if e.is_type_not_match() => {
-                        if i == 0 && source_type.is_self_infer() && compact_param.0 == "self" {
-                            continue;
-                        }
-                        // add error message
-                        return Err(e);
+        if let (Some(source_type), Some(compact_type)) = (source_param_type, compact_param_type) {
+            match check_general_type_compact(
+                context,
+                source_type,
+                compact_type,
+                check_guard.next_level()?,
+            ) {
+                Ok(()) => {}
+                Err(e) if e.is_type_not_match() => {
+                    if i == 0 && source_type.is_self_infer() && compact_param.0 == "self" {
+                        continue;
                     }
-                    Err(e) => {
-                        return Err(e);
-                    }
+                    // add error message
+                    return Err(e);
+                }
+                Err(e) => {
+                    return Err(e);
                 }
             }
-            _ => {}
         }
     }
 
@@ -125,11 +121,8 @@ fn check_doc_func_type_compact_for_varargs(
     compact_params: &[(String, Option<LuaType>)],
     check_guard: TypeCheckGuard,
 ) -> TypeCheckResult {
-    if let Some(varargs) = varargs {
-        let varargs_len = compact_params.len();
-        let varargs_type = varargs;
-        for i in 0..varargs_len {
-            let compact_param = &compact_params[i];
+    if let Some(varargs_type) = varargs {
+        for compact_param in compact_params {
             let compact_param_type = &compact_param.1;
             if let Some(compact_param_type) = compact_param_type {
                 check_general_type_compact(
@@ -186,7 +179,7 @@ fn check_doc_func_type_compact_for_signature(
 
     check_doc_func_type_compact_for_params(
         context,
-        &source_func,
+        source_func,
         &fake_doc_func,
         check_guard.next_level()?,
     )

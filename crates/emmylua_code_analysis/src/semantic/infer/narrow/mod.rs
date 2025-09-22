@@ -60,11 +60,10 @@ fn get_var_ref_type(db: &DbIndex, cache: &mut LuaInferCache, var_ref_id: &VarRef
     } else if let Some(member_id) = var_ref_id.get_member_id_ref() {
         find_decl_member_type(db, member_id)
     } else {
-        if let Some(type_cache) = cache.index_ref_origin_type_cache.get(&var_ref_id) {
-            match type_cache {
-                CacheEntry::Cache(ty) => return Ok(ty.clone()),
-                _ => {}
-            }
+        if let Some(type_cache) = cache.index_ref_origin_type_cache.get(var_ref_id)
+            && let CacheEntry::Cache(ty) = type_cache
+        {
+            return Ok(ty.clone());
         }
 
         Err(InferFailReason::None)
@@ -79,7 +78,7 @@ fn get_single_antecedent(tree: &FlowTree, flow: &FlowNode) -> Result<FlowId, Inf
                 let multi_flow = tree
                     .get_multi_antecedents(*multi_id)
                     .ok_or(InferFailReason::None)?;
-                if multi_flow.len() > 0 {
+                if !multi_flow.is_empty() {
                     // If there are multiple antecedents, we need to handle them separately
                     // For now, we just return the first one
                     Ok(multi_flow[0])

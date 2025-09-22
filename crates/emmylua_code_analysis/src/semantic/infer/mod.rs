@@ -42,12 +42,11 @@ pub use infer_call::InferCallFuncResult;
 pub fn infer_expr(db: &DbIndex, cache: &mut LuaInferCache, expr: LuaExpr) -> InferResult {
     let syntax_id = expr.get_syntax_id();
     let key = syntax_id;
-    match cache.expr_cache.get(&key) {
-        Some(cache) => match cache {
+    if let Some(cache) = cache.expr_cache.get(&key) {
+        match cache {
             CacheEntry::Cache(ty) => return Ok(ty.clone()),
             _ => return Err(InferFailReason::RecursiveInfer),
-        },
-        None => {}
+        }
     }
 
     // for @as
@@ -228,8 +227,9 @@ pub fn infer_bind_value_type(
     cache: &mut LuaInferCache,
     expr: LuaExpr,
 ) -> Option<LuaType> {
-    let parent_node = expr.syntax().parent().map(LuaAst::cast).flatten()?;
-    let typ = match parent_node {
+    let parent_node = expr.syntax().parent().and_then(LuaAst::cast)?;
+
+    match parent_node {
         LuaAst::LuaAssignStat(assign) => {
             let (vars, exprs) = assign.get_var_and_expr_list();
             let mut typ = None;
@@ -237,19 +237,13 @@ pub fn infer_bind_value_type(
                 if expr == *assign_expr {
                     let var = vars.get(idx);
                     if let Some(var) = var {
-                        match var {
-                            LuaVarExpr::IndexExpr(index_expr) => {
-                                let prefix_expr = index_expr.get_prefix_expr()?;
-                                let prefix_type = infer_expr(db, cache, prefix_expr).ok()?;
-                                // 如果前缀类型是定义类型, 则不认为存在左值绑定
-                                match prefix_type {
-                                    LuaType::Def(_) => {
-                                        return None;
-                                    }
-                                    _ => {}
-                                }
+                        if let LuaVarExpr::IndexExpr(index_expr) = var {
+                            let prefix_expr = index_expr.get_prefix_expr()?;
+                            let prefix_type = infer_expr(db, cache, prefix_expr).ok()?;
+                            // 如果前缀类型是定义类型, 则不认为存在左值绑定
+                            if let LuaType::Def(_) = prefix_type {
+                                return None;
                             }
-                            _ => {}
                         };
                         typ = Some(infer_expr(db, cache, var.clone().into()).ok()?);
                         break;
@@ -309,10 +303,8 @@ pub fn infer_bind_value_type(
             }
 
             let param_info = func_type.get_params().get(param_pos)?;
-            return param_info.1.clone();
+            param_info.1.clone()
         }
         _ => None,
-    };
-
-    typ
+    }
 }

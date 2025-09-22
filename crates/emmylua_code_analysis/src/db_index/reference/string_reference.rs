@@ -17,7 +17,7 @@ impl StringReference {
     pub fn add_string_reference(&mut self, string: &str, range: TextRange) {
         self.string_references
             .entry(SmolStr::new(string))
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(range);
     }
 
