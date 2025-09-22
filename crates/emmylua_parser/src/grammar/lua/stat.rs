@@ -170,6 +170,20 @@ pub fn parse_stats(p: &mut LuaParser) {
                     p.push_node_end();
                 }
 
+                let mut can_continue = false;
+                // error recover
+                while p.current_token() != LuaTokenKind::TkEof {
+                    if is_statement_start_token(p.current_token()) {
+                        can_continue = true;
+                        break;
+                    }
+
+                    p.bump();
+                }
+
+                if can_continue {
+                    continue;
+                }
                 break;
             }
         }
