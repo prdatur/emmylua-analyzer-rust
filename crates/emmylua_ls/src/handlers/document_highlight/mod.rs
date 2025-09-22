@@ -21,7 +21,7 @@ pub async fn on_document_highlight_handler(
     let analysis = context.analysis().read().await;
     let file_id = analysis.get_file_id(&uri)?;
     let position = params.text_document_position_params.position;
-    let mut semantic_model = analysis.compilation.get_semantic_model(file_id)?;
+    let semantic_model = analysis.compilation.get_semantic_model(file_id)?;
     let root = semantic_model.get_root();
     let position_offset = {
         let document = semantic_model.get_document();
@@ -46,7 +46,7 @@ pub async fn on_document_highlight_handler(
         }
     };
 
-    highlight_tokens(&mut semantic_model, token)
+    highlight_tokens(&semantic_model, token)
 }
 
 pub struct DocumentHighlightCapabilities;

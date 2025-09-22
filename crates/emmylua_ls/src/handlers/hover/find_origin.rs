@@ -24,11 +24,11 @@ impl DeclOriginResult {
         let get_type = |decl: &LuaSemanticDeclId| -> Option<(LuaSemanticDeclId, LuaType)> {
             match decl {
                 LuaSemanticDeclId::Member(member_id) => {
-                    let typ = semantic_model.get_type(member_id.clone().into());
+                    let typ = semantic_model.get_type((*member_id).into());
                     Some((decl.clone(), typ))
                 }
                 LuaSemanticDeclId::LuaDecl(decl_id) => {
-                    let typ = semantic_model.get_type(decl_id.clone().into());
+                    let typ = semantic_model.get_type((*decl_id).into());
                     Some((decl.clone(), typ))
                 }
                 _ => None,
@@ -77,8 +77,8 @@ pub fn find_decl_origin_owners(
     }
 }
 
-pub fn find_member_origin_owners<'a>(
-    compilation: &'a LuaCompilation,
+pub fn find_member_origin_owners(
+    compilation: &LuaCompilation,
     semantic_model: &SemanticModel,
     member_id: LuaMemberId,
     find_all: bool,
@@ -95,7 +95,7 @@ pub fn find_member_origin_owners<'a>(
             break;
         }
 
-        visited_members.insert(current_member_id.clone());
+        visited_members.insert(*current_member_id);
         iteration_count += 1;
 
         match resolve_member_owner(compilation, semantic_model, current_member_id) {
@@ -118,10 +118,10 @@ pub fn find_member_origin_owners<'a>(
     }
 
     // 如果存在多个同名成员, 则返回多个成员
-    if let Some(same_named_members) = find_all_same_named_members(semantic_model, &final_owner) {
-        if same_named_members.len() > 1 {
-            return DeclOriginResult::Multiple(same_named_members);
-        }
+    if let Some(same_named_members) = find_all_same_named_members(semantic_model, &final_owner)
+        && same_named_members.len() > 1
+    {
+        return DeclOriginResult::Multiple(same_named_members);
     }
     // 否则返回单个成员
     DeclOriginResult::Single(final_owner.unwrap_or_else(|| LuaSemanticDeclId::Member(member_id)))
@@ -148,7 +148,7 @@ pub fn find_all_same_named_members(
     let original_member = semantic_model
         .get_db()
         .get_member_index()
-        .get_member(&member_id)?;
+        .get_member(member_id)?;
 
     let target_key = original_member.get_key();
     let current_owner = semantic_model
@@ -186,20 +186,20 @@ fn resolve_member_owner(
     };
 
     let root = semantic_model.get_root().syntax();
-    let current_node = member_id.get_syntax_id().to_node_from_root(&root)?;
+    let current_node = member_id.get_syntax_id().to_node_from_root(root)?;
     let result = match member_id.get_syntax_id().get_kind() {
         LuaSyntaxKind::TableFieldAssign => {
             if LuaTableField::can_cast(current_node.kind().into()) {
                 let table_field = LuaTableField::cast(current_node.clone())?;
                 // 如果表是类, 那么通过类型推断获取 owner
                 if let Some(owner_id) =
-                    resolve_table_field_through_type_inference(&semantic_model, &table_field)
+                    resolve_table_field_through_type_inference(semantic_model, &table_field)
                 {
                     return Some(owner_id);
                 }
                 // 非类, 那么通过右值推断
                 let value_expr = table_field.get_value_expr()?;
-                let value_node = value_expr.get_syntax_id().to_node_from_root(&root)?;
+                let value_node = value_expr.get_syntax_id().to_node_from_root(root)?;
                 semantic_model.find_decl(value_node.into(), SemanticDeclLevel::default())
             } else {
                 None
@@ -213,7 +213,7 @@ fn resolve_member_owner(
             let mut result = None;
             for (var, expr) in vars.iter().zip(exprs.iter()) {
                 if var.syntax().text_range() == current_node.text_range() {
-                    let expr_node = expr.get_syntax_id().to_node_from_root(&root)?;
+                    let expr_node = expr.get_syntax_id().to_node_from_root(root)?;
                     result =
                         semantic_model.find_decl(expr_node.into(), SemanticDeclLevel::default());
                     break;

@@ -53,7 +53,7 @@ fn get_text_edit_range_in_string(
 ) -> Option<lsp_types::Range> {
     let text = string_token.get_text();
     let range = string_token.get_range();
-    if text.len() == 0 {
+    if text.is_empty() {
         return None;
     }
 
@@ -68,10 +68,9 @@ fn get_text_edit_range_in_string(
     }
 
     let new_text_range = TextRange::new(start_offset.into(), end_offset.into());
-    let lsp_range = builder
+
+    builder
         .semantic_model
         .get_document()
-        .to_lsp_range(new_text_range);
-
-    lsp_range
+        .to_lsp_range(new_text_range)
 }

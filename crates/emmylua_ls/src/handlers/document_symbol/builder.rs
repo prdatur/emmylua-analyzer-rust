@@ -46,11 +46,11 @@ impl<'a> DocumentSymbolBuilder<'a> {
     }
 
     pub fn add_node_symbol(&mut self, node: LuaSyntaxNode, symbol: LuaSymbol) {
-        let syntax_id = LuaSyntaxId::new(node.kind().into(), node.text_range());
+        let syntax_id = LuaSyntaxId::new(node.kind(), node.text_range());
         self.document_symbols.insert(syntax_id, Box::new(symbol));
         let mut node = node;
         while let Some(parent) = node.parent() {
-            let parent_syntax_id = LuaSyntaxId::new(parent.kind().into(), parent.text_range());
+            let parent_syntax_id = LuaSyntaxId::new(parent.kind(), parent.text_range());
             if let Some(symbol) = self.document_symbols.get_mut(&parent_syntax_id) {
                 symbol.add_child(syntax_id);
                 break;
@@ -61,13 +61,12 @@ impl<'a> DocumentSymbolBuilder<'a> {
     }
 
     pub fn add_token_symbol(&mut self, token: LuaSyntaxToken, symbol: LuaSymbol) {
-        let syntax_id = LuaSyntaxId::new(token.kind().into(), token.text_range());
+        let syntax_id = LuaSyntaxId::new(token.kind(), token.text_range());
         self.document_symbols.insert(syntax_id, Box::new(symbol));
 
         let mut node = token.parent();
         while let Some(parent_node) = node {
-            let parent_syntax_id =
-                LuaSyntaxId::new(parent_node.kind().into(), parent_node.text_range());
+            let parent_syntax_id = LuaSyntaxId::new(parent_node.kind(), parent_node.text_range());
             if let Some(symbol) = self.document_symbols.get_mut(&parent_syntax_id) {
                 symbol.add_child(syntax_id);
                 break;
@@ -85,7 +84,7 @@ impl<'a> DocumentSymbolBuilder<'a> {
         let lsp_selection_range = lua_symbol
             .selection_range
             .and_then(|range| self.document.to_lsp_range(range))
-            .unwrap_or_else(|| lsp_range.clone());
+            .unwrap_or(lsp_range);
 
         let mut document_symbol = DocumentSymbol {
             name: lua_symbol.name.clone(),
@@ -115,7 +114,7 @@ impl<'a> DocumentSymbolBuilder<'a> {
             let lsp_selection_range = child_symbol
                 .selection_range
                 .and_then(|range| self.document.to_lsp_range(range))
-                .unwrap_or_else(|| lsp_range.clone());
+                .unwrap_or(lsp_range);
 
             let child_symbol_name = if child_symbol.name.is_empty() {
                 "(empty)".to_string()

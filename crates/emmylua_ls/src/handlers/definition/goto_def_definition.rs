@@ -27,12 +27,10 @@ pub fn goto_def_definition(
         .get_db()
         .get_property_index()
         .get_property(&semantic_id)
+        && let Some(source) = property.source()
+        && let Some(location) = goto_source_location(source)
     {
-        if let Some(source) = property.source() {
-            if let Some(location) = goto_source_location(source) {
-                return Some(GotoDefinitionResponse::Scalar(location));
-            }
-        }
+        return Some(GotoDefinitionResponse::Scalar(location));
     }
 
     // 根据不同的语义声明类型处理
@@ -64,13 +62,12 @@ fn handle_decl_definition(
     // 尝试查找函数调用的原始定义
     if let Some(match_semantic_decl) =
         find_function_call_origin(semantic_model, compilation, trigger_token, property_owner)
+        && let LuaSemanticDeclId::LuaDecl(matched_decl_id) = match_semantic_decl
     {
-        if let LuaSemanticDeclId::LuaDecl(matched_decl_id) = match_semantic_decl {
-            return Some(GotoDefinitionResponse::Scalar(get_decl_location(
-                semantic_model,
-                &matched_decl_id,
-            )?));
-        }
+        return Some(GotoDefinitionResponse::Scalar(get_decl_location(
+            semantic_model,
+            &matched_decl_id,
+        )?));
     }
 
     // 返回声明的位置
@@ -104,10 +101,10 @@ fn handle_member_definition(
 
     // 添加原始成员的位置
     for member in same_named_members {
-        if let LuaSemanticDeclId::Member(member_id) = member {
-            if let Some(location) = get_member_location(semantic_model, &member_id) {
-                locations.push(location);
-            }
+        if let LuaSemanticDeclId::Member(member_id) = member
+            && let Some(location) = get_member_location(semantic_model, &member_id)
+        {
+            locations.push(location);
         }
     }
 
@@ -212,10 +209,9 @@ fn add_instance_table_member_locations(
         for table_field_info in table_field_infos {
             if let Some(LuaSemanticDeclId::Member(table_member_id)) =
                 table_field_info.property_owner_id
+                && let Some(location) = get_member_location(semantic_model, &table_member_id)
             {
-                if let Some(location) = get_member_location(semantic_model, &table_member_id) {
-                    locations.push(location);
-                }
+                locations.push(location);
             }
         }
     }
@@ -257,15 +253,10 @@ pub fn goto_str_tpl_ref_definition(
     let arg_exprs = call_expr.get_args_list()?.get_args().collect::<Vec<_>>();
     let string_token_idx = arg_exprs.iter().position(|arg| {
         if let LuaExpr::LiteralExpr(literal_expr) = arg {
-            if literal_expr
+            literal_expr
                 .syntax()
                 .text_range()
                 .contains(string_token.get_range().start())
-            {
-                true
-            } else {
-                false
-            }
         } else {
             false
         }
@@ -315,7 +306,7 @@ pub fn find_instance_table_member(
     let member_key = semantic_model
         .get_db()
         .get_member_index()
-        .get_member(&member_id)?
+        .get_member(member_id)?
         .get_key();
     let parent = trigger_token.parent()?;
 
@@ -384,7 +375,7 @@ fn should_trace_member(semantic_model: &SemanticModel, member_id: &LuaMemberId) 
     if LuaReturnStat::can_cast(parent.kind().into()) {
         return Some(true);
     } else {
-        let typ = semantic_model.get_type(member_id.clone().into());
+        let typ = semantic_model.get_type((*member_id).into());
         if typ.is_signature() {
             return Some(true);
         }
@@ -401,10 +392,7 @@ fn get_member_location(
 }
 
 fn get_decl_location(semantic_model: &SemanticModel, decl_id: &LuaDeclId) -> Option<Location> {
-    let decl = semantic_model
-        .get_db()
-        .get_decl_index()
-        .get_decl(&decl_id)?;
+    let decl = semantic_model.get_db().get_decl_index().get_decl(decl_id)?;
     let document = semantic_model.get_document_by_file_id(decl_id.file_id)?;
     let location = document.to_lsp_location(decl.get_range())?;
     Some(location)

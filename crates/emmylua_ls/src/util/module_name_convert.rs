@@ -18,10 +18,10 @@ pub fn module_name_convert(
         }
         EmmyrcFilenameConvention::Keep => {}
         EmmyrcFilenameConvention::KeepClass => {
-            if let Some(export_type) = &module_info.export_type {
-                if let LuaType::Def(id) = export_type {
-                    module_name = id.get_simple_name().to_string();
-                }
+            if let Some(export_type) = &module_info.export_type
+                && let LuaType::Def(id) = export_type
+            {
+                module_name = id.get_simple_name().to_string();
             }
         }
     }

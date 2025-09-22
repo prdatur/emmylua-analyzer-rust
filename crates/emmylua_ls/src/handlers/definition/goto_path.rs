@@ -23,7 +23,7 @@ pub fn goto_path(
         .into_iter()
         .filter_map(|semantic_info| {
             goto_def_definition(
-                &semantic_model,
+                semantic_model,
                 compilation,
                 semantic_info.semantic_decl?,
                 trigger_token,

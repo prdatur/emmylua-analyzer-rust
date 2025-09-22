@@ -158,10 +158,8 @@ fn generate_text_edits(
     formatted_lines: &[&str],
     document: &LuaDocument,
 ) -> Vec<TextEdit> {
-    let mut edits = Vec::new();
-
     // Pre-allocate capacity to reduce Vec reallocations
-    edits.reserve(diffs.len().min(100)); // Limit max pre-allocation to avoid memory waste
+    let mut edits = Vec::with_capacity(diffs.len().min(100)); // Limit max pre-allocation to avoid memory waste
 
     // Batch consecutive edit operations to reduce the number of TextEdits
     let mut i = 0;
@@ -182,21 +180,19 @@ fn generate_text_edits(
                 }
 
                 // Batch delete: calculate start and end positions
-                if let LineDiff::Deleted(first_line) = diffs[start_idx] {
-                    if let LineDiff::Deleted(last_line) = diffs[i - 1] {
-                        // Get the range from the start of the first line to the end of the last line
-                        if let Some(start_range) = document.get_line_range(first_line) {
-                            if let Some(end_range) = document.get_line_range(last_line) {
-                                let combined_range =
-                                    rowan::TextRange::new(start_range.start(), end_range.end());
-                                if let Some(lsp_range) = document.to_lsp_range(combined_range) {
-                                    edits.push(TextEdit {
-                                        range: lsp_range,
-                                        new_text: String::new(),
-                                    });
-                                }
-                            }
-                        }
+                if let LineDiff::Deleted(first_line) = diffs[start_idx]
+                    && let LineDiff::Deleted(last_line) = diffs[i - 1]
+                    // Get the range from the start of the first line to the end of the last line
+                    && let Some(start_range) = document.get_line_range(first_line)
+                    && let Some(end_range) = document.get_line_range(last_line)
+                {
+                    let combined_range =
+                        rowan::TextRange::new(start_range.start(), end_range.end());
+                    if let Some(lsp_range) = document.to_lsp_range(combined_range) {
+                        edits.push(TextEdit {
+                            range: lsp_range,
+                            new_text: String::new(),
+                        });
                     }
                 }
             }
@@ -254,7 +250,8 @@ pub fn format_diff(
     let formatted_lines: Vec<&str> = formatted_text.lines().collect();
 
     // Early exit: if line count difference is too large, do a global replace
-    let line_diff = (source_lines.len() as i32 - formatted_lines.len() as i32).abs() as usize;
+    let line_diff =
+        (source_lines.len() as i32 - formatted_lines.len() as i32).unsigned_abs() as usize;
     if line_diff >= replace_all_limit {
         let document_range = document.get_document_lsp_range();
         return vec![TextEdit {
@@ -352,8 +349,7 @@ mod performance_tests {
     #[test]
     fn benchmark_identical_files() {
         let line = "function test()\n    return 42\nend";
-        let source = std::iter::repeat(line)
-            .take(1000)
+        let source = std::iter::repeat_n(line, 1000)
             .collect::<Vec<_>>()
             .join("\n");
         let formatted = source.clone();

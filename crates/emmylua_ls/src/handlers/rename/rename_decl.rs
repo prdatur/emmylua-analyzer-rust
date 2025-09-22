@@ -7,6 +7,7 @@ use emmylua_parser::{
 };
 use lsp_types::Uri;
 
+#[allow(clippy::mutable_key_type)]
 pub fn rename_decl_references(
     semantic_model: &SemanticModel,
     compilation: &LuaCompilation,
@@ -27,10 +28,10 @@ pub fn rename_decl_references(
         let uri = document.get_uri();
         if let Some(decl_refs) = local_references {
             for decl_ref in &decl_refs.cells {
-                let range = document.to_lsp_range(decl_ref.range.clone())?;
+                let range = document.to_lsp_range(decl_ref.range)?;
                 result
                     .entry(uri.clone())
-                    .or_insert_with(HashMap::new)
+                    .or_default()
                     .insert(range, new_name.clone());
             }
         }
@@ -38,7 +39,7 @@ pub fn rename_decl_references(
         let decl_range = get_decl_name_token_lsp_range(semantic_model, decl_id)?;
         result
             .entry(uri)
-            .or_insert_with(HashMap::new)
+            .or_default()
             .insert(decl_range, new_name.clone());
 
         if decl.is_param() {
@@ -69,7 +70,7 @@ pub fn rename_decl_references(
             let range = document.to_lsp_range(in_filed_syntax_id.value.get_range())?;
             result
                 .entry(uri)
-                .or_insert_with(HashMap::new)
+                .or_default()
                 .insert(range, new_name.clone());
         }
     }
@@ -89,6 +90,7 @@ fn get_decl_name_token_lsp_range(
     document.to_lsp_range(decl.get_range())
 }
 
+#[allow(clippy::mutable_key_type)]
 fn rename_doc_param(
     semantic_model: &SemanticModel,
     decl_id: LuaDeclId,
@@ -116,18 +118,18 @@ fn rename_doc_param(
     let uri = document.get_uri();
     for comment in comments {
         for tag_doc in comment.get_doc_tags() {
-            if let Some(doc_param) = LuaDocTagParam::cast(tag_doc.syntax().clone()) {
-                if let Some(name_token) = doc_param.get_name_token() {
-                    if name_token.get_text() != name {
-                        continue;
-                    }
-
-                    let range = document.to_lsp_range(name_token.get_range())?;
-                    result
-                        .entry(uri.clone())
-                        .or_insert_with(HashMap::new)
-                        .insert(range, new_name.clone());
+            if let Some(doc_param) = LuaDocTagParam::cast(tag_doc.syntax().clone())
+                && let Some(name_token) = doc_param.get_name_token()
+            {
+                if name_token.get_text() != name {
+                    continue;
                 }
+
+                let range = document.to_lsp_range(name_token.get_range())?;
+                result
+                    .entry(uri.clone())
+                    .or_default()
+                    .insert(range, new_name.clone());
             }
         }
     }

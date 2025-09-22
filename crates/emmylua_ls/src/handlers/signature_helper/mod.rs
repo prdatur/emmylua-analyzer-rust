@@ -40,7 +40,7 @@ pub fn signature_help(
     position: Position,
     param_context: SignatureHelpContext,
 ) -> Option<SignatureHelp> {
-    let mut semantic_model = analysis.compilation.get_semantic_model(file_id)?;
+    let semantic_model = analysis.compilation.get_semantic_model(file_id)?;
     let root = semantic_model.get_root();
     let position_offset = {
         let document = semantic_model.get_document();
@@ -63,7 +63,7 @@ pub fn signature_help(
         match node.kind().into() {
             LuaSyntaxKind::CallArgList => {
                 let call_expr = LuaCallExpr::cast(node.parent()?)?;
-                build_signature_helper(&mut semantic_model, &analysis.compilation, call_expr, token)
+                build_signature_helper(&semantic_model, &analysis.compilation, call_expr, token)
             }
             // todo
             LuaSyntaxKind::TypeGeneric | LuaSyntaxKind::DocTypeList => None,
@@ -90,7 +90,7 @@ pub fn signature_help(
         match node.kind().into() {
             LuaSyntaxKind::CallArgList => {
                 let call_expr = LuaCallExpr::cast(node.parent()?)?;
-                build_signature_helper(&mut semantic_model, &analysis.compilation, call_expr, token)
+                build_signature_helper(&semantic_model, &analysis.compilation, call_expr, token)
             }
             // todo
             LuaSyntaxKind::TypeGeneric | LuaSyntaxKind::DocTypeList => None,
@@ -104,8 +104,8 @@ pub struct SignatureHelperCapabilities;
 impl RegisterCapabilities for SignatureHelperCapabilities {
     fn register_capabilities(server_capabilities: &mut ServerCapabilities, _: &ClientCapabilities) {
         server_capabilities.signature_help_provider = Some(SignatureHelpOptions {
-            trigger_characters: Some(vec!["(", ","].iter().map(|s| s.to_string()).collect()),
-            retrigger_characters: Some(vec!["(", ","].iter().map(|s| s.to_string()).collect()),
+            trigger_characters: Some(["(", ","].iter().map(|s| s.to_string()).collect()),
+            retrigger_characters: Some(["(", ","].iter().map(|s| s.to_string()).collect()),
             ..Default::default()
         });
     }

@@ -5,7 +5,6 @@ use std::{path::PathBuf, sync::Arc, time::Duration};
 
 use super::{ClientProxy, FileDiagnostic, StatusBar};
 use crate::handlers::{ClientConfig, init_analysis};
-use dirs;
 use emmylua_code_analysis::{EmmyLuaAnalysis, Emmyrc, load_configs};
 use emmylua_code_analysis::{update_code_style, uri_to_file_path};
 use log::{debug, info};
@@ -114,10 +113,7 @@ impl WorkspaceManager {
     }
 
     pub async fn reload_workspace(&self) -> Option<()> {
-        let config_root: Option<PathBuf> = match self.workspace_folders.first() {
-            Some(root) => Some(PathBuf::from(root)),
-            None => None,
-        };
+        let config_root: Option<PathBuf> = self.workspace_folders.first().map(PathBuf::from);
 
         let emmyrc = load_emmy_config(config_root, self.client_config.clone());
         let analysis = self.analysis.clone();
@@ -183,7 +179,7 @@ impl WorkspaceManager {
             return true;
         }
 
-        let Some(file_path) = uri_to_file_path(&uri) else {
+        let Some(file_path) = uri_to_file_path(uri) else {
             return true;
         };
 
@@ -217,38 +213,32 @@ pub fn load_emmy_config(config_root: Option<PathBuf>, client_config: ClientConfi
     let mut config_files = Vec::new();
 
     let home_dir = dirs::home_dir();
-    match home_dir {
-        Some(home_dir) => {
-            let global_luarc_path = home_dir.join(luarc_file);
-            if global_luarc_path.exists() {
-                info!("load config from: {:?}", global_luarc_path);
-                config_files.push(global_luarc_path);
-            }
-            let global_emmyrc_path = home_dir.join(emmyrc_file);
-            if global_emmyrc_path.exists() {
-                info!("load config from: {:?}", global_emmyrc_path);
-                config_files.push(global_emmyrc_path);
-            }
+    if let Some(home_dir) = home_dir {
+        let global_luarc_path = home_dir.join(luarc_file);
+        if global_luarc_path.exists() {
+            info!("load config from: {:?}", global_luarc_path);
+            config_files.push(global_luarc_path);
         }
-        None => {}
+        let global_emmyrc_path = home_dir.join(emmyrc_file);
+        if global_emmyrc_path.exists() {
+            info!("load config from: {:?}", global_emmyrc_path);
+            config_files.push(global_emmyrc_path);
+        }
     };
 
     let emmylua_config_dir = "emmylua_ls";
     let config_dir = dirs::config_dir().map(|path| path.join(emmylua_config_dir));
-    match config_dir {
-        Some(config_dir) => {
-            let global_luarc_path = config_dir.join(luarc_file);
-            if global_luarc_path.exists() {
-                info!("load config from: {:?}", global_luarc_path);
-                config_files.push(global_luarc_path);
-            }
-            let global_emmyrc_path = config_dir.join(emmyrc_file);
-            if global_emmyrc_path.exists() {
-                info!("load config from: {:?}", global_emmyrc_path);
-                config_files.push(global_emmyrc_path);
-            }
+    if let Some(config_dir) = config_dir {
+        let global_luarc_path = config_dir.join(luarc_file);
+        if global_luarc_path.exists() {
+            info!("load config from: {:?}", global_luarc_path);
+            config_files.push(global_luarc_path);
         }
-        None => {}
+        let global_emmyrc_path = config_dir.join(emmyrc_file);
+        if global_emmyrc_path.exists() {
+            info!("load config from: {:?}", global_emmyrc_path);
+            config_files.push(global_emmyrc_path);
+        }
     };
 
     std::env::var("EMMYLUALS_CONFIG")
@@ -381,7 +371,7 @@ impl WorkspaceFileMatcher {
             log::error!("Invalid include pattern");
         }
 
-        return true;
+        true
     }
 }
 

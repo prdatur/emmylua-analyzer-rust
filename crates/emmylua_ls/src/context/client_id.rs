@@ -1,17 +1,12 @@
 use lsp_types::ClientInfo;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ClientId {
     VSCode,
     Intellij,
     Neovim,
+    #[default]
     Other,
-}
-
-impl Default for ClientId {
-    fn default() -> Self {
-        ClientId::Other
-    }
 }
 
 #[allow(unused)]
@@ -56,10 +51,7 @@ fn check_vscode(client_info: &ClientInfo) -> bool {
         return true;
     }
 
-    match name.as_str() {
-        "Cursor" | "Windsurf" | "Trae" | "Qoder" => true,
-        _ => false,
-    }
+    matches!(name.as_str(), "Cursor" | "Windsurf" | "Trae" | "Qoder")
 }
 
 fn check_lsp4ij(client_info: &ClientInfo) -> bool {

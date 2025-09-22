@@ -74,15 +74,15 @@ impl<'a> HoverBuilder<'a> {
                 .get_db()
                 .get_member_index()
                 .get_current_owner(&owner_member.get_id());
-            if let Some(LuaMemberOwner::Type(ty)) = owner_id {
-                if ty.get_name() != ty.get_simple_name() {
-                    self.location_path = Some(MarkedString::from_markdown(format!(
-                        "{}{} `{}`",
-                        "&nbsp;&nbsp;",
-                        "in class",
-                        ty.get_name()
-                    )));
-                }
+            if let Some(LuaMemberOwner::Type(ty)) = owner_id
+                && ty.get_name() != ty.get_simple_name()
+            {
+                self.location_path = Some(MarkedString::from_markdown(format!(
+                    "{}{} `{}`",
+                    "&nbsp;&nbsp;",
+                    "in class",
+                    ty.get_name()
+                )));
             }
         }
     }
@@ -165,12 +165,12 @@ impl<'a> HoverBuilder<'a> {
     pub fn add_signature_params_rets_description(&mut self, typ: LuaType) {
         if let LuaType::Signature(signature_id) = typ {
             add_signature_param_description(
-                &self.semantic_model.get_db(),
+                self.semantic_model.get_db(),
                 &mut self.annotation_description,
                 signature_id,
             );
             add_signature_ret_description(
-                &self.semantic_model.get_db(),
+                self.semantic_model.get_db(),
                 &mut self.annotation_description,
                 signature_id,
             );
@@ -182,27 +182,26 @@ impl<'a> HoverBuilder<'a> {
             return None;
         }
         // 根据当前输入的参数, 匹配完全匹配的签名
-        if let Some(token) = self.trigger_token.clone() {
-            if let Some(call_expr) = token.parent()?.parent() {
-                if LuaCallExpr::can_cast(call_expr.kind().into()) {
-                    let call_expr = LuaCallExpr::cast(call_expr)?;
-                    let func = self
-                        .semantic_model
-                        .infer_call_expr_func(call_expr.clone(), None);
-                    if let Some(func) = func {
-                        // TODO: 对比参数类型确定是否完全匹配
-                        // 确定参数量是否与当前输入的参数数量一致, 因为`infer_call_expr_func`必然返回一个有效的类型, 即使不是完全匹配的
-                        let call_expr_args_count = call_expr.get_args_count();
-                        if let Some(mut call_expr_args_count) = call_expr_args_count {
-                            let func_params_count = func.get_params().len();
-                            if !func.is_colon_define() && call_expr.is_colon_call() {
-                                // 不是冒号定义的函数, 但是是冒号调用
-                                call_expr_args_count += 1;
-                            }
-                            if call_expr_args_count == func_params_count {
-                                return Some((*func).clone());
-                            }
-                        }
+        if let Some(token) = self.trigger_token.clone()
+            && let Some(call_expr) = token.parent()?.parent()
+            && LuaCallExpr::can_cast(call_expr.kind().into())
+        {
+            let call_expr = LuaCallExpr::cast(call_expr)?;
+            let func = self
+                .semantic_model
+                .infer_call_expr_func(call_expr.clone(), None);
+            if let Some(func) = func {
+                // TODO: 对比参数类型确定是否完全匹配
+                // 确定参数量是否与当前输入的参数数量一致, 因为`infer_call_expr_func`必然返回一个有效的类型, 即使不是完全匹配的
+                let call_expr_args_count = call_expr.get_args_count();
+                if let Some(mut call_expr_args_count) = call_expr_args_count {
+                    let func_params_count = func.get_params().len();
+                    if !func.is_colon_define() && call_expr.is_colon_call() {
+                        // 不是冒号定义的函数, 但是是冒号调用
+                        call_expr_args_count += 1;
+                    }
+                    if call_expr_args_count == func_params_count {
+                        return Some((*func).clone());
                     }
                 }
             }
@@ -222,13 +221,10 @@ impl<'a> HoverBuilder<'a> {
                     header.push_str(&format!("\n```{}\n{}\n```\n", s.language, s.value));
                 }
             }
-            if let Some(location_path) = &self.location_path {
-                match location_path {
-                    MarkedString::String(s) => {
-                        header.push_str(&format!("\n{}\n", s));
-                    }
-                    _ => {}
-                }
+            if let Some(location_path) = &self.location_path
+                && let MarkedString::String(s) = location_path
+            {
+                header.push_str(&format!("\n{}\n", s));
             }
             header
         };

@@ -31,7 +31,7 @@ pub fn implementation(
     file_id: FileId,
     position: Position,
 ) -> Option<GotoDefinitionResponse> {
-    let mut semantic_model = analysis.compilation.get_semantic_model(file_id)?;
+    let semantic_model = analysis.compilation.get_semantic_model(file_id)?;
 
     let root = semantic_model.get_root();
     let position_offset = {
@@ -49,8 +49,7 @@ pub fn implementation(
         TokenAtOffset::Between(token, _) => token,
     };
 
-    let implementations =
-        search_implementations(&mut semantic_model, &analysis.compilation, token)?;
+    let implementations = search_implementations(&semantic_model, &analysis.compilation, token)?;
 
     if implementations.is_empty() {
         return None;

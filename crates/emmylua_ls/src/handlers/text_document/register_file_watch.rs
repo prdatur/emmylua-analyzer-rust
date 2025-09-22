@@ -27,14 +27,12 @@ pub async fn register_files_watch(
 }
 
 fn is_lsp_client_can_watch_files(client_capabilities: &ClientCapabilities) -> bool {
-    if let Some(workspace) = &client_capabilities.workspace {
-        if let Some(did_change_watched_files) = &workspace.did_change_watched_files {
-            if let Some(dynamic_registration) = &did_change_watched_files.dynamic_registration {
-                return dynamic_registration.clone();
-            }
-        }
-    }
-    false
+    client_capabilities
+        .workspace
+        .as_ref()
+        .and_then(|ws| ws.did_change_watched_files.as_ref())
+        .and_then(|d| d.dynamic_registration)
+        .unwrap_or_default()
 }
 
 fn register_files_watch_use_lsp_client(client: &ClientProxy) {
@@ -76,16 +74,13 @@ async fn register_files_watch_use_fsnotify(context: ServerContextSnapshot) -> Op
     let config = Config::default().with_poll_interval(Duration::from_secs(5));
     let mut watcher = match RecommendedWatcher::new(
         move |res| {
-            match res {
-                Ok(event) => {
-                    match tx.send(event) {
-                        Ok(_) => {}
-                        Err(e) => {
-                            warn!("send notify event failed: {:?}", e);
-                        }
-                    };
-                }
-                _ => {}
+            if let Ok(event) = res {
+                match tx.send(event) {
+                    Ok(_) => {}
+                    Err(e) => {
+                        warn!("send notify event failed: {:?}", e);
+                    }
+                };
             };
         },
         config,
@@ -122,7 +117,7 @@ async fn register_files_watch_use_fsnotify(context: ServerContextSnapshot) -> Op
                     for path in event.paths.iter() {
                         for ext in WATCH_FILE_EXTENSIONS.iter() {
                             if path.as_os_str().to_string_lossy().ends_with(ext) {
-                                if let Some(uri) = file_path_to_uri(&path) {
+                                if let Some(uri) = file_path_to_uri(path) {
                                     file_events.push(FileEvent { uri, typ });
                                 }
                                 break;

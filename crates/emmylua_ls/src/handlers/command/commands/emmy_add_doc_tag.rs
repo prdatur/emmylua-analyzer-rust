@@ -15,7 +15,7 @@ impl CommandSpec for AddDocTagCommand {
     const COMMAND: &str = "emmy.add.doctag";
 
     async fn handle(context: ServerContextSnapshot, args: Vec<Value>) -> Option<()> {
-        let tag_name: String = serde_json::from_value(args.get(0)?.clone()).ok()?;
+        let tag_name: String = serde_json::from_value(args.first()?.clone()).ok()?;
         add_doc_tag(context.workspace_manager(), tag_name).await;
         Some(())
     }
@@ -33,7 +33,7 @@ pub fn make_auto_doc_tag_command(title: &str, tag_name: &str) -> Command {
 
 async fn add_doc_tag(workspace_manager: &RwLock<WorkspaceManager>, tag_name: String) -> Option<()> {
     let workspace_manager = workspace_manager.read().await;
-    let main_workspace = workspace_manager.workspace_folders.get(0)?;
+    let main_workspace = workspace_manager.workspace_folders.first()?;
     let emmyrc_path = main_workspace.join(".emmyrc.json");
     let mut emmyrc = load_configs_raw(vec![emmyrc_path.clone()], None);
     drop(workspace_manager);

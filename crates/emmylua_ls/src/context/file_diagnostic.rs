@@ -40,13 +40,13 @@ impl FileDiagnostic {
 
         // create new token
         let cancel_token = CancellationToken::new();
-        tokens.insert(file_id.clone(), cancel_token.clone());
+        tokens.insert(file_id, cancel_token.clone());
         drop(tokens); // free the lock
 
         let analysis = self.analysis.clone();
         let client = self.client.clone();
         let diagnostic_tokens = self.diagnostic_tokens.clone();
-        let file_id_clone = file_id.clone();
+        let file_id_clone = file_id;
 
         // Spawn a new task to perform diagnostic
         tokio::spawn(async move {
@@ -177,7 +177,7 @@ async fn workspace_diagnostic(
     let mut count = 0;
     if valid_file_count != 0 {
         if silent {
-            while let Some(_) = rx.recv().await {
+            while (rx.recv().await).is_some() {
                 count += 1;
                 if count == valid_file_count {
                     break;
@@ -187,7 +187,7 @@ async fn workspace_diagnostic(
             let text = format!("diagnose {} files", valid_file_count);
             let _p = Profile::new(text.as_str());
             let mut last_percentage = 0;
-            while let Some(_) = rx.recv().await {
+            while (rx.recv().await).is_some() {
                 count += 1;
                 let percentage_done = ((count as f32 / valid_file_count as f32) * 100.0) as u32;
                 if last_percentage != percentage_done {

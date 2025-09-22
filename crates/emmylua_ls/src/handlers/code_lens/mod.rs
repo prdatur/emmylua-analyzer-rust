@@ -22,13 +22,13 @@ pub async fn on_code_lens_handler(
     let uri = params.text_document.uri;
     let analysis = context.analysis().read().await;
     let file_id = analysis.get_file_id(&uri)?;
-    let mut semantic_model = analysis.compilation.get_semantic_model(file_id)?;
+    let semantic_model = analysis.compilation.get_semantic_model(file_id)?;
 
     if !semantic_model.get_emmyrc().code_lens.enable {
         return None;
     }
 
-    build_code_lens(&mut semantic_model)
+    build_code_lens(&semantic_model)
 }
 
 pub async fn on_resolve_code_lens_handler(

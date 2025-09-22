@@ -15,11 +15,9 @@ pub fn add_completion(builder: &mut CompletionBuilder) -> Option<()> {
 
     let string_token = LuaStringToken::cast(builder.trigger_token.clone())?;
     let maybe_file_path = string_token.get_value();
-    if maybe_file_path.find(|c| c == '/' || c == '\\').is_none() {
-        return None;
-    }
+    maybe_file_path.find(['/', '\\'])?;
 
-    let prefix = if let Some(last_sep) = maybe_file_path.rfind(|c| c == '/' || c == '\\') {
+    let prefix = if let Some(last_sep) = maybe_file_path.rfind(['/', '\\']) {
         let (path, _) = maybe_file_path.split_at(last_sep + 1);
         path
     } else {
@@ -34,13 +32,14 @@ pub fn add_completion(builder: &mut CompletionBuilder) -> Option<()> {
     for resource in resources {
         let path = Path::new(&resource);
         let folder = path.join(suffix);
-        if folder.exists() && folder.is_dir() {
-            if let Ok(entries) = std::fs::read_dir(folder) {
-                for entry in entries.flatten() {
-                    let path = entry.path();
-                    if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
-                        add_file_path_completion(builder, &path, name, prefix, text_edit_range);
-                    }
+        if folder.exists()
+            && folder.is_dir()
+            && let Ok(entries) = std::fs::read_dir(folder)
+        {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+                    add_file_path_completion(builder, &path, name, prefix, text_edit_range);
                 }
             }
         }
@@ -64,20 +63,17 @@ fn add_file_path_completion(
         lsp_types::CompletionItemKind::FILE
     };
 
-    let detail = match file_path_to_uri(path) {
-        Some(uri) => Some(uri.to_string()),
-        None => None,
-    };
+    let detail = file_path_to_uri(path).map(|uri| uri.to_string());
 
     let filter_text = format!("{}{}", prefix, name);
     let text_edit = TextEdit {
-        range: text_edit_range.clone(),
+        range: text_edit_range,
         new_text: filter_text.clone(),
     };
     let completion_item = CompletionItem {
         label: name.to_string(),
         kind: Some(kind),
-        filter_text: Some(filter_text.clone()),
+        filter_text: Some(filter_text),
         text_edit: Some(lsp_types::CompletionTextEdit::Edit(text_edit)),
         detail,
         ..Default::default()

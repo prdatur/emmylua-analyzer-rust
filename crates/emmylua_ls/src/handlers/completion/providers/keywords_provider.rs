@@ -25,11 +25,8 @@ pub fn add_completion(builder: &mut CompletionBuilder) -> Option<()> {
         }
         LuaTokenKind::TkWhitespace => {
             let left_token = builder.trigger_token.prev_token()?;
-            match left_token.kind().into() {
-                LuaTokenKind::TkLocal => {
-                    add_function_keyword_completions(builder);
-                }
-                _ => {}
+            if Into::<LuaTokenKind>::into(left_token.kind()) == LuaTokenKind::TkLocal {
+                add_function_keyword_completions(builder);
             }
         }
         _ => {}
@@ -67,10 +64,10 @@ fn add_stat_keyword_completions(
     builder: &mut CompletionBuilder,
     name_expr: Option<LuaNameExpr>,
 ) -> Option<()> {
-    if let Some(name_expr) = name_expr {
-        if name_expr.syntax().parent()?.parent()?.kind() != LuaSyntaxKind::Block.into() {
-            return None;
-        }
+    if let Some(name_expr) = name_expr
+        && name_expr.syntax().parent()?.parent()?.kind() != LuaSyntaxKind::Block.into()
+    {
+        return None;
     }
     let trigger_text = builder.get_trigger_text();
     for keyword_info in KEYWORD_COMPLETIONS {

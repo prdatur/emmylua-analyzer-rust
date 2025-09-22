@@ -12,7 +12,7 @@ pub fn find_matching_function_definitions(
     semantic_model: &SemanticModel,
     compilation: &LuaCompilation,
     trigger_token: &LuaSyntaxToken,
-    semantic_decls: &Vec<LuaSemanticDeclId>,
+    semantic_decls: &[LuaSemanticDeclId],
 ) -> Option<Vec<LuaSemanticDeclId>> {
     let call_expr = LuaCallExpr::cast(trigger_token.parent()?.parent()?)?;
     let call_function = get_call_function(semantic_model, &call_expr)?;
@@ -29,7 +29,7 @@ pub fn find_matching_function_definitions(
     let mut has_match = false;
 
     for (decl, member_id) in member_decls {
-        let typ = semantic_model.get_type(member_id.clone().into());
+        let typ = semantic_model.get_type((*member_id).into());
         match typ {
             LuaType::DocFunction(func) => {
                 if compare_function_types(semantic_model, &call_function, &func, &call_expr)
@@ -106,13 +106,13 @@ fn match_function_with_call(
     call_expr: &LuaCallExpr,
     decl_id: &LuaDeclId,
 ) -> Option<LuaSemanticDeclId> {
-    let typ = semantic_model.get_type(decl_id.clone().into());
+    let typ = semantic_model.get_type((*decl_id).into());
     match typ {
         LuaType::DocFunction(func) => {
             if compare_function_types(semantic_model, call_function, &func, call_expr)
                 .unwrap_or(false)
             {
-                Some(decl_id.clone().into())
+                Some((*decl_id).into())
             } else {
                 None
             }
@@ -160,10 +160,9 @@ pub fn extract_semantic_decl_from_signature(
     let token = match root.syntax().token_at_offset(signature_id.get_position()) {
         TokenAtOffset::Single(token) => Some(token),
         TokenAtOffset::Between(left, right) => {
-            if left.kind() == LuaTokenKind::TkName.into() {
-                Some(left)
-            } else if left.kind() == LuaTokenKind::TkLeftBracket.into()
-                && right.kind() == LuaTokenKind::TkInt.into()
+            if left.kind() == LuaTokenKind::TkName.into()
+                || (left.kind() == LuaTokenKind::TkLeftBracket.into()
+                    && right.kind() == LuaTokenKind::TkInt.into())
             {
                 Some(left)
             } else {
@@ -181,10 +180,10 @@ fn get_call_function(
     call_expr: &LuaCallExpr,
 ) -> Option<Arc<LuaFunctionType>> {
     let func = semantic_model.infer_call_expr_func(call_expr.clone(), None);
-    if let Some(func) = func {
-        if check_params_count_is_match(semantic_model, &func, call_expr.clone()).unwrap_or(false) {
-            return Some(func);
-        }
+    if let Some(func) = func
+        && check_params_count_is_match(semantic_model, &func, call_expr.clone()).unwrap_or(false)
+    {
+        return Some(func);
     }
     None
 }
@@ -211,27 +210,26 @@ fn check_params_count_is_match(
     if call_args_count < fake_params.len() {
         // 调用参数包含 `...`
         for arg in call_args.iter() {
-            if let LuaExpr::LiteralExpr(literal_expr) = arg {
-                if let Some(literal_token) = literal_expr.get_literal() {
-                    if let LuaLiteralToken::Dots(_) = literal_token {
-                        return Some(true);
-                    }
-                }
+            if let LuaExpr::LiteralExpr(literal_expr) = arg
+                && let Some(literal_token) = literal_expr.get_literal()
+                && let LuaLiteralToken::Dots(_) = literal_token
+            {
+                return Some(true);
             }
         }
         // 对调用参数的最后一个参数进行特殊处理
-        if let Some(last_arg) = call_args.last() {
-            if let Ok(LuaType::Variadic(variadic)) = semantic_model.infer_expr(last_arg.clone()) {
-                let len = match variadic.get_max_len() {
-                    Some(len) => len,
-                    None => {
-                        return Some(true);
-                    }
-                };
-                call_args_count = call_args_count + len as usize - 1;
-                if call_args_count >= fake_params.len() {
+        if let Some(last_arg) = call_args.last()
+            && let Ok(LuaType::Variadic(variadic)) = semantic_model.infer_expr(last_arg.clone())
+        {
+            let len = match variadic.get_max_len() {
+                Some(len) => len,
+                None => {
                     return Some(true);
                 }
+            };
+            call_args_count = call_args_count + len - 1;
+            if call_args_count >= fake_params.len() {
+                return Some(true);
             }
         }
 
@@ -242,15 +240,15 @@ fn check_params_count_is_match(
             }
 
             let typ = param_info.1.clone();
-            if let Some(typ) = typ {
-                if !typ.is_optional() {
-                    return Some(false);
-                }
+            if let Some(typ) = typ
+                && !typ.is_optional()
+            {
+                return Some(false);
             }
         }
     } else if call_args_count > fake_params.len() {
         // 参数定义中最后一个参数是 `...`
-        if fake_params.last().map_or(false, |(name, typ)| {
+        if fake_params.last().is_some_and(|(name, typ)| {
             name == "..."
                 || if let Some(typ) = typ {
                     typ.is_variadic()
@@ -280,12 +278,7 @@ fn check_params_count_is_match(
 fn get_signature_functions(signature: &LuaSignature) -> Vec<Arc<LuaFunctionType>> {
     let mut functions = Vec::new();
     functions.push(signature.to_doc_func_type());
-    functions.extend(
-        signature
-            .overloads
-            .iter()
-            .map(|overload| Arc::clone(overload)),
-    );
+    functions.extend(signature.overloads.iter().map(Arc::clone));
     functions
 }
 

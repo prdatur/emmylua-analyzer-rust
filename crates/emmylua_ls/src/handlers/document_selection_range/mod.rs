@@ -36,9 +36,7 @@ pub async fn on_document_selection_range_handle(
 
         let mut ranges = Vec::new();
 
-        let description = token
-            .parent()
-            .and_then(|parent| LuaDocDescription::cast(parent));
+        let description = token.parent().and_then(LuaDocDescription::cast);
         if let Some(description) = description {
             add_detail_ranges(&semantic_model, description, offset, &mut ranges);
         } else {

@@ -40,17 +40,14 @@ pub fn add_modules(
         .runtime
         .version
         .to_lua_version_number();
-    let parts: Vec<&str> = prefix_content
-        .split(|c| c == '.' || c == '/' || c == '\\')
-        .collect();
+    let parts: Vec<&str> = prefix_content.split(['.', '/', '\\']).collect();
     let module_path = if parts.len() > 1 {
         parts[..parts.len() - 1].join(".")
     } else {
         "".to_string()
     };
 
-    let prefix = if let Some(last_sep) = prefix_content.rfind(|c| c == '/' || c == '\\' || c == '.')
-    {
+    let prefix = if let Some(last_sep) = prefix_content.rfind(['/', '\\', '.']) {
         let (path, _) = prefix_content.split_at(last_sep + 1);
         path
     } else {
@@ -65,7 +62,7 @@ pub fn add_modules(
         let filter_text = format!("{}{}", prefix, name);
         let text_edit = text_edit_range.map(|text_edit_range| {
             CompletionTextEdit::Edit(TextEdit {
-                range: text_edit_range.clone(),
+                range: text_edit_range,
                 new_text: filter_text.clone(),
             })
         });
@@ -82,7 +79,7 @@ pub fn add_modules(
                 let completion_item = CompletionItem {
                     label: name.clone(),
                     kind: Some(lsp_types::CompletionItemKind::FILE),
-                    filter_text: Some(filter_text.clone()),
+                    filter_text: Some(filter_text),
                     text_edit,
                     detail: Some(uri.to_string()),
                     data,
@@ -94,7 +91,7 @@ pub fn add_modules(
             let completion_item = CompletionItem {
                 label: name.clone(),
                 kind: Some(lsp_types::CompletionItemKind::FOLDER),
-                filter_text: Some(filter_text.clone()),
+                filter_text: Some(filter_text),
                 text_edit,
                 ..Default::default()
             };

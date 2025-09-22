@@ -2,25 +2,25 @@ use crate::meta_text::meta_keyword;
 use emmylua_parser::{LuaSyntaxToken, LuaTokenKind};
 
 pub fn is_keyword(token: LuaSyntaxToken) -> bool {
-    match token.kind().into() {
-        LuaTokenKind::TkLocal => true,
-        LuaTokenKind::TkFunction => true,
-        LuaTokenKind::TkEnd => true,
-        LuaTokenKind::TkIf => true,
-        LuaTokenKind::TkThen => true,
-        LuaTokenKind::TkElse => true,
-        LuaTokenKind::TkElseIf => true,
-        LuaTokenKind::TkWhile => true,
-        LuaTokenKind::TkDo => true,
-        LuaTokenKind::TkFor => true,
-        LuaTokenKind::TkIn => true,
-        LuaTokenKind::TkRepeat => true,
-        LuaTokenKind::TkUntil => true,
-        LuaTokenKind::TkReturn => true,
-        LuaTokenKind::TkBreak => true,
-        LuaTokenKind::TkGoto => true,
-        _ => false,
-    }
+    matches!(
+        token.kind().into(),
+        LuaTokenKind::TkLocal
+            | LuaTokenKind::TkFunction
+            | LuaTokenKind::TkEnd
+            | LuaTokenKind::TkIf
+            | LuaTokenKind::TkThen
+            | LuaTokenKind::TkElse
+            | LuaTokenKind::TkElseIf
+            | LuaTokenKind::TkWhile
+            | LuaTokenKind::TkDo
+            | LuaTokenKind::TkFor
+            | LuaTokenKind::TkIn
+            | LuaTokenKind::TkRepeat
+            | LuaTokenKind::TkUntil
+            | LuaTokenKind::TkReturn
+            | LuaTokenKind::TkBreak
+            | LuaTokenKind::TkGoto
+    )
 }
 
 // todo add usage

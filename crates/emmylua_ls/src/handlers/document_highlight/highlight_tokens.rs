@@ -16,7 +16,7 @@ pub fn highlight_tokens(
                 semantic_model.find_decl(token.clone().into(), SemanticDeclLevel::NoTrace);
             match semantic_decl {
                 Some(LuaSemanticDeclId::LuaDecl(decl_id)) => {
-                    highlight_decl_references(&semantic_model, decl_id, token, &mut result);
+                    highlight_decl_references(semantic_model, decl_id, token, &mut result);
                 }
                 _ => {
                     highlight_name(semantic_model, token, &mut result);
@@ -51,7 +51,7 @@ fn highlight_decl_references(
             .get_decl_references(&decl_id.file_id, &decl_id)?;
 
         for decl_ref in &decl_refs.cells {
-            let range: lsp_types::Range = document.to_lsp_range(decl_ref.range.clone())?;
+            let range: lsp_types::Range = document.to_lsp_range(decl_ref.range)?;
             let kind = if decl_ref.is_write {
                 Some(DocumentHighlightKind::WRITE)
             } else {
@@ -80,14 +80,15 @@ fn highlight_name(
     let token_name = token.text();
     let document = semantic_model.get_document();
     for node_or_token in root.syntax().descendants_with_tokens() {
-        if let NodeOrToken::Token(token) = node_or_token {
-            if token.kind() == LuaTokenKind::TkName.into() && token.text() == token_name {
-                let range = document.to_lsp_range(token.text_range())?;
-                result.push(DocumentHighlight {
-                    range,
-                    kind: Some(DocumentHighlightKind::TEXT),
-                });
-            }
+        if let NodeOrToken::Token(token) = node_or_token
+            && token.kind() == LuaTokenKind::TkName.into()
+            && token.text() == token_name
+        {
+            let range = document.to_lsp_range(token.text_range())?;
+            result.push(DocumentHighlight {
+                range,
+                kind: Some(DocumentHighlightKind::TEXT),
+            });
         }
     }
 
@@ -95,26 +96,26 @@ fn highlight_name(
 }
 
 fn is_keyword(kind: LuaTokenKind) -> bool {
-    match kind {
+    matches!(
+        kind,
         LuaTokenKind::TkAnd
-        | LuaTokenKind::TkBreak
-        | LuaTokenKind::TkDo
-        | LuaTokenKind::TkElse
-        | LuaTokenKind::TkElseIf
-        | LuaTokenKind::TkEnd
-        | LuaTokenKind::TkFor
-        | LuaTokenKind::TkFunction
-        | LuaTokenKind::TkGoto
-        | LuaTokenKind::TkIf
-        | LuaTokenKind::TkIn
-        | LuaTokenKind::TkLocal
-        | LuaTokenKind::TkRepeat
-        | LuaTokenKind::TkReturn
-        | LuaTokenKind::TkThen
-        | LuaTokenKind::TkUntil
-        | LuaTokenKind::TkWhile => true,
-        _ => false,
-    }
+            | LuaTokenKind::TkBreak
+            | LuaTokenKind::TkDo
+            | LuaTokenKind::TkElse
+            | LuaTokenKind::TkElseIf
+            | LuaTokenKind::TkEnd
+            | LuaTokenKind::TkFor
+            | LuaTokenKind::TkFunction
+            | LuaTokenKind::TkGoto
+            | LuaTokenKind::TkIf
+            | LuaTokenKind::TkIn
+            | LuaTokenKind::TkLocal
+            | LuaTokenKind::TkRepeat
+            | LuaTokenKind::TkReturn
+            | LuaTokenKind::TkThen
+            | LuaTokenKind::TkUntil
+            | LuaTokenKind::TkWhile
+    )
 }
 
 fn highlight_keywords(
@@ -146,14 +147,14 @@ fn highlight_node_keywords(
     result: &mut Vec<DocumentHighlight>,
 ) -> Option<()> {
     for node_or_token in node.children_with_tokens() {
-        if let NodeOrToken::Token(token) = node_or_token {
-            if is_keyword(token.kind().into()) {
-                let range = document.to_lsp_range(token.text_range())?;
-                result.push(DocumentHighlight {
-                    range,
-                    kind: Some(DocumentHighlightKind::TEXT),
-                });
-            }
+        if let NodeOrToken::Token(token) = node_or_token
+            && is_keyword(token.kind().into())
+        {
+            let range = document.to_lsp_range(token.text_range())?;
+            result.push(DocumentHighlight {
+                range,
+                kind: Some(DocumentHighlightKind::TEXT),
+            });
         }
     }
 

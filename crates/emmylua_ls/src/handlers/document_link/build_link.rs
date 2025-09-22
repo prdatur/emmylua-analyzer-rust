@@ -16,11 +16,11 @@ pub fn build_links(
     let string_tokens = root
         .descendants_with_tokens()
         .filter_map(|it| it.into_token())
-        .filter_map(|it| LuaStringToken::cast(it));
+        .filter_map(LuaStringToken::cast);
 
     let mut result = vec![];
     for token in string_tokens {
-        try_build_file_link(db, token, document, &mut result, &emmyrc);
+        try_build_file_link(db, token, document, &mut result, emmyrc);
     }
 
     Some(result)
@@ -39,7 +39,7 @@ fn try_build_file_link(
     }
 
     let file_path = token.get_value();
-    if file_path.find(|c| c == '\\' || c == '/').is_some() {
+    if file_path.find(['\\', '/']).is_some() {
         let suffix_path = PathBuf::from(file_path);
         if suffix_path.exists() {
             if let Some(uri) = file_path_to_uri(&suffix_path) {

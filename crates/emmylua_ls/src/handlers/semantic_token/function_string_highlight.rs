@@ -24,9 +24,7 @@ pub fn fun_string_highlight(
 
     match (colon_define, colon_call) {
         (true, false) => {
-            if param_idx > 0 {
-                param_idx -= 1
-            }
+            param_idx = param_idx.saturating_sub(1);
         }
         (false, true) => {
             param_idx += 1;
@@ -39,7 +37,7 @@ pub fn fun_string_highlight(
     let lang_name = get_lang_str_from_type(param_type)?;
     match CodeBlockLang::try_parse(&lang_name) {
         Some(lang) => {
-            process_inject_lang_string_token(builder, lang, &string_token);
+            process_inject_lang_string_token(builder, lang, string_token);
         }
         None => {
             // TODO

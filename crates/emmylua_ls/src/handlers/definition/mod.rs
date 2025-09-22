@@ -58,10 +58,9 @@ pub fn definition(
     let token = match root.syntax().token_at_offset(position_offset) {
         TokenAtOffset::Single(token) => token,
         TokenAtOffset::Between(left, right) => {
-            if left.kind() == LuaTokenKind::TkName.into() {
-                left
-            } else if left.kind() == LuaTokenKind::TkLeftBracket.into()
-                && right.kind() == LuaTokenKind::TkInt.into()
+            if left.kind() == LuaTokenKind::TkName.into()
+                || (left.kind() == LuaTokenKind::TkLeftBracket.into()
+                    && right.kind() == LuaTokenKind::TkInt.into())
             {
                 left
             } else {
@@ -93,7 +92,7 @@ pub fn definition(
         }
     } else if token.kind() == LuaTokenKind::TkDocSeeContent.into() {
         let general_token = LuaGeneralToken::cast(token.clone())?;
-        if let Some(_) = general_token.get_parent::<LuaDocTagSee>() {
+        if general_token.get_parent::<LuaDocTagSee>().is_some() {
             return goto_doc_see(
                 &semantic_model,
                 &analysis.compilation,

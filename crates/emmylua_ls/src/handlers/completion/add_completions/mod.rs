@@ -51,10 +51,10 @@ pub fn is_deprecated(builder: &CompletionBuilder, id: LuaSemanticDeclId) -> bool
         .get_property_index()
         .get_property(&id);
 
-    if let Some(property) = property {
-        if property.deprecated().is_some() {
-            return true;
-        }
+    if let Some(property) = property
+        && property.deprecated().is_some()
+    {
+        return true;
     }
 
     false
@@ -78,7 +78,7 @@ pub fn get_detail(
                 .semantic_model
                 .get_db()
                 .get_signature_index()
-                .get(&signature_id)?;
+                .get(signature_id)?;
 
             let mut params_str = signature
                 .get_type_params()
@@ -142,7 +142,7 @@ pub fn get_detail(
                 _ => {
                     let type_detail = humanize_type(
                         builder.semantic_model.get_db(),
-                        &ret_type,
+                        ret_type,
                         RenderLevel::Minimal,
                     );
                     format!("-> {}", type_detail)

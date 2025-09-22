@@ -143,8 +143,8 @@ impl<'a> SemanticBuilder<'a> {
             self.data.insert(
                 position,
                 SemanticTokenData::Basic(BasicSemanticTokenData {
-                    line: start_line as u32,
-                    col: start_col as u32,
+                    line: start_line,
+                    col: start_col,
                     length,
                     typ,
                     modifiers,
@@ -191,8 +191,8 @@ impl<'a> SemanticBuilder<'a> {
         self.data.insert(
             position,
             SemanticTokenData::Basic(BasicSemanticTokenData {
-                line: start_line as u32,
-                col: start_col as u32,
+                line: start_line,
+                col: start_col,
                 length,
                 typ: *self.type_to_id.get(&ty)?,
                 modifiers: modifiers.map_or(0, |m| 1 << *self.modifier_to_id.get(&m).unwrap_or(&0)),
@@ -210,7 +210,7 @@ impl<'a> SemanticBuilder<'a> {
     ) -> Option<()> {
         let mut modifier = 0;
         for m in modifiers {
-            modifier |= 1 << *self.modifier_to_id.get(&m)?;
+            modifier |= 1 << *self.modifier_to_id.get(m)?;
         }
         self.push_data(range, token_text, *self.type_to_id.get(&ty)?, modifier);
         Some(())
@@ -226,7 +226,7 @@ impl<'a> SemanticBuilder<'a> {
         let typ = *self.type_to_id.get(&ty)?;
         let mut modifier = 0;
         for m in modifiers {
-            modifier |= 1 << *self.modifier_to_id.get(&m)?;
+            modifier |= 1 << *self.modifier_to_id.get(m)?;
         }
         self.push_data(token.text_range(), token.text(), typ, modifier);
 

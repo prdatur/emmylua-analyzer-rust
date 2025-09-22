@@ -25,7 +25,7 @@ pub async fn on_document_link_handler(
     let db = semantic_model.get_db();
     let emmyrc = analysis.get_emmyrc();
 
-    build_links(&db, root.syntax().clone(), &document, &emmyrc)
+    build_links(db, root.syntax().clone(), &document, &emmyrc)
 }
 
 #[allow(unused_variables)]

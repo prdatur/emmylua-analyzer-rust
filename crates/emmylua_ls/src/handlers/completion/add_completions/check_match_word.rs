@@ -56,53 +56,53 @@ mod tests {
 
     #[test]
     fn test_match_keyword_english() {
-        assert_eq!(check_match_word("_", "_VERSION"), true);
-        assert_eq!(check_match_word("local", "local_aa"), true);
-        assert_eq!(check_match_word("i", "if"), true);
-        assert_eq!(check_match_word("i", "_if"), true);
-        assert_eq!(check_match_word("i", "notIf"), true);
-        assert_eq!(check_match_word("i", "this_if"), true);
-        assert_eq!(check_match_word("i", "this_not"), false);
-        assert_eq!(check_match_word("I", "If"), true);
-        assert_eq!(check_match_word("I", "if"), true);
-        assert_eq!(check_match_word("i", "IF"), true);
-        assert_eq!(check_match_word("n", "not"), true);
-        assert_eq!(check_match_word("t", "this"), true);
-        assert_eq!(check_match_word("f", "functionName"), true);
-        assert_eq!(check_match_word("n", "functionName"), true);
-        assert_eq!(check_match_word("g", "_G"), true);
-        assert_eq!(check_match_word("u", "___multiple___underscores___"), true);
+        assert!(check_match_word("_", "_VERSION"));
+        assert!(check_match_word("local", "local_aa"));
+        assert!(check_match_word("i", "if"));
+        assert!(check_match_word("i", "_if"));
+        assert!(check_match_word("i", "notIf"));
+        assert!(check_match_word("i", "this_if"));
+        assert!(!check_match_word("i", "this_not"));
+        assert!(check_match_word("I", "If"));
+        assert!(check_match_word("I", "if"));
+        assert!(check_match_word("i", "IF"));
+        assert!(check_match_word("n", "not"));
+        assert!(check_match_word("t", "this"));
+        assert!(check_match_word("f", "functionName"));
+        assert!(check_match_word("n", "functionName"));
+        assert!(check_match_word("g", "_G"));
+        assert!(check_match_word("u", "___multiple___underscores___"));
     }
 
     #[test]
     fn test_match_keyword_chinese() {
-        assert_eq!(check_match_word("如", "_如果"), true);
-        assert_eq!(check_match_word("如", "_______如果"), true);
-        assert_eq!(check_match_word("_", "_______如果"), true);
-        assert_eq!(check_match_word("如", "如果"), true);
-        assert_eq!(check_match_word("如", "Not如果"), true);
-        assert_eq!(check_match_word("n", "Not如果"), true);
-        assert_eq!(check_match_word("如", "This_如果"), true);
-        assert_eq!(check_match_word("R", "如果"), false);
-        assert_eq!(check_match_word("r", "如果"), false);
-        assert_eq!(check_match_word("如", "如果If"), true);
-        assert_eq!(check_match_word("果", "水果"), false);
+        assert!(check_match_word("如", "_如果"));
+        assert!(check_match_word("如", "_______如果"));
+        assert!(check_match_word("_", "_______如果"));
+        assert!(check_match_word("如", "如果"));
+        assert!(check_match_word("如", "Not如果"));
+        assert!(check_match_word("n", "Not如果"));
+        assert!(check_match_word("如", "This_如果"));
+        assert!(!check_match_word("R", "如果"));
+        assert!(!check_match_word("r", "如果"));
+        assert!(check_match_word("如", "如果If"));
+        assert!(!check_match_word("果", "水果"));
     }
 
     #[test]
     fn test_match_keyword_mixed() {
-        assert_eq!(check_match_word("i", "如果If"), true);
-        assert_eq!(check_match_word("r", "Not如果"), false);
-        assert_eq!(check_match_word("t", "This_如果"), true);
-        assert_eq!(check_match_word("n", "not如果"), true);
-        assert_eq!(check_match_word("f", "Function如果"), true);
-        assert_eq!(check_match_word("果", "Function如果"), false);
+        assert!(check_match_word("i", "如果If"));
+        assert!(!check_match_word("r", "Not如果"));
+        assert!(check_match_word("t", "This_如果"));
+        assert!(check_match_word("n", "not如果"));
+        assert!(check_match_word("f", "Function如果"));
+        assert!(!check_match_word("果", "Function如果"));
     }
 
     #[test]
     fn test_match_keyword_empty_input() {
-        assert_eq!(check_match_word("", "if"), true);
-        assert_eq!(check_match_word("i", ""), false);
-        assert_eq!(check_match_word("", ""), true);
+        assert!(check_match_word("", "if"));
+        assert!(!check_match_word("i", ""));
+        assert!(check_match_word("", ""));
     }
 }

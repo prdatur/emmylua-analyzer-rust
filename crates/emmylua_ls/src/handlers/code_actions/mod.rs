@@ -31,9 +31,9 @@ pub fn code_action(
     file_id: FileId,
     diagnostics: Vec<Diagnostic>,
 ) -> Option<CodeActionResponse> {
-    let mut semantic_model = analysis.compilation.get_semantic_model(file_id)?;
+    let semantic_model = analysis.compilation.get_semantic_model(file_id)?;
 
-    build_actions(&mut semantic_model, diagnostics)
+    build_actions(&semantic_model, diagnostics)
 }
 
 pub struct CodeActionsCapabilities;

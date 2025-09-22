@@ -24,13 +24,11 @@ pub fn resolve_code_lens(
     match data {
         CodeLensData::Member(member_id) => {
             let file_id = member_id.file_id;
-            let mut semantic_model = compilation.get_semantic_model(file_id)?;
+            let semantic_model = compilation.get_semantic_model(file_id)?;
             let mut results = Vec::new();
-            search_member_references(&mut semantic_model, compilation, member_id, &mut results);
+            search_member_references(&semantic_model, compilation, member_id, &mut results);
             let mut ref_count = results.len();
-            if ref_count > 0 {
-                ref_count -= 1;
-            }
+            ref_count = ref_count.saturating_sub(1);
             let uri = semantic_model.get_document().get_uri();
             let command = make_usage_command(uri, code_lens.range, ref_count, client_id, results);
 
@@ -42,9 +40,9 @@ pub fn resolve_code_lens(
         }
         CodeLensData::DeclId(decl_id) => {
             let file_id = decl_id.file_id;
-            let mut semantic_model = compilation.get_semantic_model(file_id)?;
+            let semantic_model = compilation.get_semantic_model(file_id)?;
             let mut results = Vec::new();
-            search_decl_references(&mut semantic_model, compilation, decl_id, &mut results);
+            search_decl_references(&semantic_model, compilation, decl_id, &mut results);
             let ref_count = results.len();
             let uri = semantic_model.get_document().get_uri();
             let command = make_usage_command(uri, code_lens.range, ref_count, client_id, results);
@@ -76,10 +74,11 @@ fn make_usage_command(
         ref_count,
         if ref_count == 1 { "" } else { "s" }
     );
-    let mut args = Vec::new();
-    args.push(serde_json::to_value(uri).unwrap());
-    args.push(serde_json::to_value(range.start).unwrap());
-    args.push(serde_json::to_value(refs).unwrap());
+    let args = vec![
+        serde_json::to_value(uri).unwrap(),
+        serde_json::to_value(range.start).unwrap(),
+        serde_json::to_value(refs).unwrap(),
+    ];
 
     Command {
         title,

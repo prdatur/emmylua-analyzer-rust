@@ -29,8 +29,8 @@ pub async fn on_document_symbol(
     let uri = params.text_document.uri;
     let analysis = context.analysis().read().await;
     let file_id = analysis.get_file_id(&uri)?;
-    let mut semantic_model = analysis.compilation.get_semantic_model(file_id)?;
-    let document_symbol_root = build_document_symbol(&mut semantic_model)?;
+    let semantic_model = analysis.compilation.get_semantic_model(file_id)?;
+    let document_symbol_root = build_document_symbol(&semantic_model)?;
     // remove root file symbol
     let children = document_symbol_root.children?;
     let response = DocumentSymbolResponse::Nested(children);

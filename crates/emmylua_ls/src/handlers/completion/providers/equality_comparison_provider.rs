@@ -18,7 +18,7 @@ pub fn add_completion(builder: &mut CompletionBuilder) -> Option<()> {
     for typ in &types {
         dispatch_type(builder, typ.clone(), &mut InferGuard::new());
     }
-    if types.len() > 0 && !builder.is_invoked() {
+    if !types.is_empty() && !builder.is_invoked() {
         builder.stop_here();
     }
     Some(())
@@ -30,18 +30,18 @@ fn check_can_add_completion(builder: &CompletionBuilder) -> bool {
         return true;
     }
 
-    return true;
+    true
 }
 
 fn get_token_should_type(builder: &mut CompletionBuilder) -> Option<Vec<LuaType>> {
     let token = builder.trigger_token.clone();
     let mut parent_node = token.parent()?;
     // 如果父节点是块, 则可能是输入未完全, 语法树缺失
-    if let Some(_) = LuaBlock::cast(parent_node.clone()) {
-        if let Some(node) = token.prev_token()?.parent() {
-            if LuaBinaryExpr::can_cast(node.kind().into()) {
-                parent_node = node;
-            }
+    if LuaBlock::cast(parent_node.clone()).is_some() {
+        if let Some(node) = token.prev_token()?.parent()
+            && LuaBinaryExpr::can_cast(node.kind().into())
+        {
+            parent_node = node;
         }
     } else {
         // 输入`""`时允许往上找
@@ -50,24 +50,18 @@ fn get_token_should_type(builder: &mut CompletionBuilder) -> Option<Vec<LuaType>
         }
     }
 
-    match parent_node.kind().into() {
-        LuaSyntaxKind::BinaryExpr => {
-            let binary_expr = LuaBinaryExpr::cast(parent_node)?;
-            let op_token = binary_expr.get_op_token()?;
-            let op = op_token.get_op();
-            if op == BinaryOperator::OpEq || op == BinaryOperator::OpNe {
-                let left = binary_expr.get_left_expr()?;
-                let left_type = builder.semantic_model.infer_expr(left);
+    if Into::<LuaSyntaxKind>::into(parent_node.kind()) == LuaSyntaxKind::BinaryExpr {
+        let binary_expr = LuaBinaryExpr::cast(parent_node)?;
+        let op_token = binary_expr.get_op_token()?;
+        let op = op_token.get_op();
+        if op == BinaryOperator::OpEq || op == BinaryOperator::OpNe {
+            let left = binary_expr.get_left_expr()?;
+            let left_type = builder.semantic_model.infer_expr(left);
 
-                match left_type {
-                    Ok(typ) => {
-                        return Some(vec![typ]);
-                    }
-                    Err(_) => {}
-                }
+            if let Ok(typ) = left_type {
+                return Some(vec![typ]);
             }
         }
-        _ => {}
     }
 
     None

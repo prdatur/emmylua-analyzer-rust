@@ -22,7 +22,7 @@ pub fn goto_doc_see(
         2 if !name_parts[1].is_empty() && !name_parts[1].starts_with([' ', '\t']) => {
             let type_name = &name_parts[0];
             let member_name = &name_parts[1];
-            return goto_type_member(semantic_model, &type_name, &member_name);
+            return goto_type_member(semantic_model, type_name, member_name);
         }
         _ => {
             let path = parse_ref_target(

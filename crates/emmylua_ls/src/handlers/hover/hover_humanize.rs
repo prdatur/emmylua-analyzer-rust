@@ -31,18 +31,17 @@ pub fn hover_humanize_type(
     let db = builder.semantic_model.get_db();
     match ty {
         LuaType::Ref(type_decl_id) => {
-            if let Some(type_decl) = db.get_type_index().get_type_decl(type_decl_id) {
-                if let Some(LuaType::MultiLineUnion(multi_union)) =
+            if let Some(type_decl) = db.get_type_index().get_type_decl(type_decl_id)
+                && let Some(LuaType::MultiLineUnion(multi_union)) =
                     type_decl.get_alias_origin(db, None)
-                {
-                    return hover_multi_line_union_type(
-                        builder,
-                        db,
-                        multi_union.as_ref(),
-                        Some(type_decl.get_full_name()),
-                    )
-                    .unwrap_or_default();
-                }
+            {
+                return hover_multi_line_union_type(
+                    builder,
+                    db,
+                    multi_union.as_ref(),
+                    Some(type_decl.get_full_name()),
+                )
+                .unwrap_or_default();
             }
             humanize_type(db, ty, fallback_level.unwrap_or(RenderLevel::Simple))
         }
@@ -85,7 +84,7 @@ fn hover_multi_line_union_type(
     };
     let mut text = format!("{}:\n", type_name.clone().unwrap_or_default());
     for (typ, description) in members {
-        let type_humanize_text = humanize_type(db, &typ, RenderLevel::Minimal);
+        let type_humanize_text = humanize_type(db, typ, RenderLevel::Minimal);
         if let Some(description) = description {
             text.push_str(&format!(
                 "    | {} -- {}\n",
@@ -111,29 +110,23 @@ pub fn infer_prefix_global_name<'a>(
         .get_red_root();
     let cur_node = member.get_syntax_id().to_node_from_root(&root)?;
 
-    match cur_node.kind().into() {
-        LuaSyntaxKind::IndexExpr => {
-            let index_expr = LuaIndexExpr::cast(cur_node)?;
-            let semantic_decl = semantic_model.find_decl(
-                index_expr
-                    .get_prefix_expr()?
-                    .get_syntax_id()
-                    .to_node_from_root(&root)
-                    .unwrap()
-                    .into(),
-                SemanticDeclLevel::default(),
-            );
-            if let Some(property_owner) = semantic_decl {
-                if let LuaSemanticDeclId::LuaDecl(id) = property_owner {
-                    if let Some(decl) = semantic_model.get_db().get_decl_index().get_decl(&id) {
-                        if decl.is_global() {
-                            return Some(decl.get_name());
-                        }
-                    }
-                }
-            }
+    if Into::<LuaSyntaxKind>::into(cur_node.kind()) == LuaSyntaxKind::IndexExpr {
+        let index_expr = LuaIndexExpr::cast(cur_node)?;
+        let semantic_decl = semantic_model.find_decl(
+            index_expr
+                .get_prefix_expr()?
+                .get_syntax_id()
+                .to_node_from_root(&root)
+                .unwrap()
+                .into(),
+            SemanticDeclLevel::default(),
+        );
+        if let Some(LuaSemanticDeclId::LuaDecl(id)) = semantic_decl
+            && let Some(decl) = semantic_model.get_db().get_decl_index().get_decl(&id)
+            && decl.is_global()
+        {
+            return Some(decl.get_name());
         }
-        _ => {}
     }
     None
 }
@@ -166,7 +159,7 @@ pub fn extract_description_from_property_owner(
     let property = semantic_model
         .get_db()
         .get_property_index()
-        .get_property(&property_owner)?;
+        .get_property(property_owner)?;
 
     let mut result = DescriptionInfo::new();
 
@@ -175,29 +168,27 @@ pub fn extract_description_from_property_owner(
 
         match property_owner {
             LuaSemanticDeclId::Member(id) => {
-                if let Some(member) = semantic_model.get_db().get_member_index().get_member(&id) {
-                    if let Some(LuaMemberOwner::Type(ty)) = semantic_model
+                if let Some(member) = semantic_model.get_db().get_member_index().get_member(id)
+                    && let Some(LuaMemberOwner::Type(ty)) = semantic_model
                         .get_db()
                         .get_member_index()
-                        .get_current_owner(&id)
-                    {
-                        if is_std(semantic_model.get_db(), member.get_file_id()) {
-                            let std_desc =
-                                hover_std_description(ty.get_name(), member.get_key().get_name());
-                            if !std_desc.is_empty() {
-                                description = std_desc;
-                            }
-                        }
+                        .get_current_owner(id)
+                    && is_std(semantic_model.get_db(), member.get_file_id())
+                {
+                    let std_desc =
+                        hover_std_description(ty.get_name(), member.get_key().get_name());
+                    if !std_desc.is_empty() {
+                        description = std_desc;
                     }
                 }
             }
             LuaSemanticDeclId::LuaDecl(id) => {
-                if let Some(decl) = semantic_model.get_db().get_decl_index().get_decl(&id) {
-                    if is_std(semantic_model.get_db(), decl.get_file_id()) {
-                        let std_desc = hover_std_description(decl.get_name(), None);
-                        if !std_desc.is_empty() {
-                            description = std_desc;
-                        }
+                if let Some(decl) = semantic_model.get_db().get_decl_index().get_decl(id)
+                    && is_std(semantic_model.get_db(), decl.get_file_id())
+                {
+                    let std_desc = hover_std_description(decl.get_name(), None);
+                    if !std_desc.is_empty() {
+                        description = std_desc;
                     }
                 }
             }
@@ -239,15 +230,12 @@ pub fn extract_owner_name_from_element(
     // 通过 TextRange 找到对应的 AST 节点
     let node = LuaSyntaxId::to_node_at_range(&root, element_id.value)?;
     let stat = LuaStat::cast(node.clone().parent()?)?;
-    match stat {
-        LuaStat::LocalStat(local_stat) => {
-            let value = LuaExpr::cast(node)?;
-            let local_name = local_stat.get_local_name_by_value(value);
-            if let Some(local_name) = local_name {
-                return Some(local_name.get_name_token()?.get_name_text().to_string());
-            }
+    if let LuaStat::LocalStat(local_stat) = stat {
+        let value = LuaExpr::cast(node)?;
+        let local_name = local_stat.get_local_name_by_value(value);
+        if let Some(local_name) = local_name {
+            return Some(local_name.get_name_token()?.get_name_text().to_string());
         }
-        _ => {}
     }
 
     None

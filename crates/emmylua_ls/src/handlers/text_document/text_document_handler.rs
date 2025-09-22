@@ -109,19 +109,19 @@ pub async fn on_did_close_document(
     drop(workspace);
 
     // 如果关闭后文件不存在, 则移除
-    if let Some(file_path) = uri_to_file_path(uri) {
-        if !file_path.exists() {
-            let mut mut_analysis = context.analysis().write().await;
-            mut_analysis.remove_file_by_uri(uri);
-            drop(mut_analysis);
+    if let Some(file_path) = uri_to_file_path(uri)
+        && !file_path.exists()
+    {
+        let mut mut_analysis = context.analysis().write().await;
+        mut_analysis.remove_file_by_uri(uri);
+        drop(mut_analysis);
 
-            context
-                .file_diagnostic()
-                .clear_file_diagnostics(uri.clone())
-                .await;
+        context
+            .file_diagnostic()
+            .clear_file_diagnostics(uri.clone())
+            .await;
 
-            return Some(());
-        }
+        return Some(());
     }
 
     let analysis = context.analysis().read().await;

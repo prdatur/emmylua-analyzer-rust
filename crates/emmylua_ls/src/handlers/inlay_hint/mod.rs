@@ -24,8 +24,8 @@ pub async fn on_inlay_hint_handler(
 }
 
 pub fn inlay_hint(analysis: &EmmyLuaAnalysis, file_id: FileId) -> Option<Vec<InlayHint>> {
-    let mut semantic_model = analysis.compilation.get_semantic_model(file_id)?;
-    build_inlay_hints(&mut semantic_model)
+    let semantic_model = analysis.compilation.get_semantic_model(file_id)?;
+    build_inlay_hints(&semantic_model)
 }
 
 #[allow(unused_variables)]
