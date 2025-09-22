@@ -425,6 +425,11 @@
           "description": "preferred-local-alias",
           "type": "string",
           "const": "preferred-local-alias"
+        },
+        {
+          "description": "readonly",
+          "type": "string",
+          "const": "read-only"
         }
       ]
     },

@@ -17,7 +17,7 @@ impl Checker for ReadOnlyChecker {
         for ast_node in root.descendants::<LuaAst>() {
             match ast_node {
                 LuaAst::LuaAssignStat(assign_stat) => {
-                    check_assignt_stat(context, semantic_model, &assign_stat);
+                    check_assign_stat(context, semantic_model, &assign_stat);
                 }
                 // need check?
                 LuaAst::LuaFuncStat(_) => {}
@@ -53,7 +53,7 @@ fn check_and_report_semantic_id(
     Some(())
 }
 
-fn check_assignt_stat(
+fn check_assign_stat(
     context: &mut DiagnosticContext,
     semantic_model: &SemanticModel,
     assign_stat: &LuaAssignStat,
