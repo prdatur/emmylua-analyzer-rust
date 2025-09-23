@@ -75,8 +75,8 @@ fn infer_name_expr_semantic_decl(
         .get_type_index()
         .get_type_cache(&decl_id.into())
         .unwrap_or(&LuaTypeCache::InferType(LuaType::Unknown));
-    let is_function = decl_type.is_function();
-    if decl.is_local() && !is_function {
+    let is_ref_object = decl_type.is_function() || decl_type.is_table();
+    if decl.is_local() && !is_ref_object {
         return Some(LuaSemanticDeclId::LuaDecl(decl_id));
     }
 
@@ -84,6 +84,7 @@ fn infer_name_expr_semantic_decl(
         return Some(LuaSemanticDeclId::LuaDecl(decl_id));
     }
 
+    // should continue infer require?
     if let Some(value_expr_id) = decl.get_value_syntax_id()
         && matches!(
             value_expr_id.get_kind(),
