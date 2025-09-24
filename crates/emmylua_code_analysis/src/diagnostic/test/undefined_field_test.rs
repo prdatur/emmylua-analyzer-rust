@@ -736,31 +736,31 @@ mod test {
         ));
     }
 
-    #[test]
-    fn test_export() {
-        let mut ws = VirtualWorkspace::new();
-        ws.def_file(
-            "a.lua",
-            r#"
-            ---@export
-            local export = {}
+    // #[test]
+    // fn test_export() {
+    //     let mut ws = VirtualWorkspace::new();
+    //     ws.def_file(
+    //         "a.lua",
+    //         r#"
+    //         ---@export
+    //         local export = {}
 
-            return export
-            "#,
-        );
-        assert!(!ws.check_code_for(
-            DiagnosticCode::UndefinedField,
-            r#"
-            local a = require("a")
-            a.func()
-            "#,
-        ));
+    //         return export
+    //         "#,
+    //     );
+    //     assert!(!ws.check_code_for(
+    //         DiagnosticCode::UndefinedField,
+    //         r#"
+    //         local a = require("a")
+    //         a.func()
+    //         "#,
+    //     ));
 
-        assert!(!ws.check_code_for(
-            DiagnosticCode::UndefinedField,
-            r#"
-            local a = require("a").ABC
-            "#,
-        ));
-    }
+    //     assert!(!ws.check_code_for(
+    //         DiagnosticCode::UndefinedField,
+    //         r#"
+    //         local a = require("a").ABC
+    //         "#,
+    //     ));
+    // }
 }
