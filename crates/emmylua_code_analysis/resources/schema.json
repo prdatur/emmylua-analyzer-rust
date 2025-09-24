@@ -435,6 +435,21 @@
           "description": "Global variable defined in non-module scope",
           "type": "string",
           "const": "global-in-non-module"
+        },
+        {
+          "description": "attribute-param-type-mismatch",
+          "type": "string",
+          "const": "attribute-param-type-mismatch"
+        },
+        {
+          "description": "attribute-missing-parameter",
+          "type": "string",
+          "const": "attribute-missing-parameter"
+        },
+        {
+          "description": "attribute-redundant-parameter",
+          "type": "string",
+          "const": "attribute-redundant-parameter"
         }
       ]
     },
