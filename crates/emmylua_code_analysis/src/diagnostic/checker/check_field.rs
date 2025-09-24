@@ -1,13 +1,14 @@
 use std::collections::HashSet;
 
 use emmylua_parser::{
-    LuaAst, LuaAstNode, LuaElseIfClauseStat, LuaForRangeStat, LuaForStat, LuaIfStat, LuaIndexExpr,
-    LuaIndexKey, LuaRepeatStat, LuaSyntaxKind, LuaTokenKind, LuaVarExpr, LuaWhileStat,
+    LuaAst, LuaAstNode, LuaCallExpr, LuaElseIfClauseStat, LuaForRangeStat, LuaForStat, LuaIfStat,
+    LuaIndexExpr, LuaIndexKey, LuaRepeatStat, LuaSyntaxKind, LuaTokenKind, LuaVarExpr,
+    LuaWhileStat,
 };
 
 use crate::{
     DiagnosticCode, InferFailReason, LuaMemberKey, LuaSemanticDeclId, LuaType, ModuleInfo,
-    SemanticModel, enum_variable_is_param,
+    SemanticModel, enum_variable_is_param, parse_require_module_info,
 };
 
 use super::{Checker, DiagnosticContext, humanize_lint_type};
@@ -63,7 +64,7 @@ fn check_index_expr(
     let prefix_typ = semantic_model
         .infer_expr(index_expr.get_prefix_expr()?)
         .unwrap_or(LuaType::Unknown);
-    // let mut module_info = None;
+    let module_info = None;
 
     if is_invalid_prefix_type(&prefix_typ) {
         // if matches!(prefix_typ, LuaType::TableConst(_)) {
@@ -73,7 +74,7 @@ fn check_index_expr(
         //         return Some(());
         //     }
         // } else {
-
+        //     return Some(());
         // }
         return Some(());
     }
@@ -86,7 +87,7 @@ fn check_index_expr(
         index_expr,
         &index_key,
         code,
-        None,
+        module_info,
     )
     .is_some()
     {
@@ -479,57 +480,59 @@ fn check_enum_is_param(
     )
 }
 
-// /// 检查导入的表常量
-// fn check_require_table_const_with_export<'a>(
-//     semantic_model: &'a SemanticModel,
-//     index_expr: &LuaIndexExpr,
-// ) -> Option<&'a ModuleInfo> {
-//     // 获取前缀表达式的语义信息
-//     let prefix_expr = index_expr.get_prefix_expr()?;
-//     if let Some(call_expr) = LuaCallExpr::cast(prefix_expr.syntax().clone()) {
-//         let module_info = parse_require_expr_module_info(semantic_model, &call_expr)?;
-//         if module_info.is_export(semantic_model.get_db()) {
-//             return Some(module_info);
-//         }
-//     }
+#[allow(unused)]
+/// 检查导入的表常量
+fn check_require_table_const_with_export<'a>(
+    semantic_model: &'a SemanticModel,
+    index_expr: &LuaIndexExpr,
+) -> Option<&'a ModuleInfo> {
+    // 获取前缀表达式的语义信息
+    let prefix_expr = index_expr.get_prefix_expr()?;
+    if let Some(call_expr) = LuaCallExpr::cast(prefix_expr.syntax().clone()) {
+        let module_info = parse_require_expr_module_info(semantic_model, &call_expr)?;
+        if module_info.is_export(semantic_model.get_db()) {
+            return Some(module_info);
+        }
+    }
 
-//     let semantic_info = semantic_model.get_semantic_info(prefix_expr.syntax().clone().into())?;
+    let semantic_info = semantic_model.get_semantic_info(prefix_expr.syntax().clone().into())?;
 
-//     // 检查是否是声明引用
-//     let decl_id = match semantic_info.semantic_decl? {
-//         LuaSemanticDeclId::LuaDecl(decl_id) => decl_id,
-//         _ => return None,
-//     };
+    // 检查是否是声明引用
+    let decl_id = match semantic_info.semantic_decl? {
+        LuaSemanticDeclId::LuaDecl(decl_id) => decl_id,
+        _ => return None,
+    };
 
-//     // 获取声明
-//     let decl = semantic_model
-//         .get_db()
-//         .get_decl_index()
-//         .get_decl(&decl_id)?;
+    // 获取声明
+    let decl = semantic_model
+        .get_db()
+        .get_decl_index()
+        .get_decl(&decl_id)?;
 
-//     let module_info = parse_require_module_info(semantic_model, decl)?;
-//     if module_info.is_export(semantic_model.get_db()) {
-//         return Some(module_info);
-//     }
-//     None
-// }
+    let module_info = parse_require_module_info(semantic_model, decl)?;
+    if module_info.is_export(semantic_model.get_db()) {
+        return Some(module_info);
+    }
+    None
+}
 
-// pub fn parse_require_expr_module_info<'a>(
-//     semantic_model: &'a SemanticModel,
-//     call_expr: &LuaCallExpr,
-// ) -> Option<&'a ModuleInfo> {
-//     let arg_list = call_expr.get_args_list()?;
-//     let first_arg = arg_list.get_args().next()?;
-//     let require_path_type = semantic_model.infer_expr(first_arg.clone()).ok()?;
-//     let module_path: String = match &require_path_type {
-//         LuaType::StringConst(module_path) => module_path.as_ref().to_string(),
-//         _ => {
-//             return None;
-//         }
-//     };
+#[allow(unused)]
+pub fn parse_require_expr_module_info<'a>(
+    semantic_model: &'a SemanticModel,
+    call_expr: &LuaCallExpr,
+) -> Option<&'a ModuleInfo> {
+    let arg_list = call_expr.get_args_list()?;
+    let first_arg = arg_list.get_args().next()?;
+    let require_path_type = semantic_model.infer_expr(first_arg.clone()).ok()?;
+    let module_path: String = match &require_path_type {
+        LuaType::StringConst(module_path) => module_path.as_ref().to_string(),
+        _ => {
+            return None;
+        }
+    };
 
-//     semantic_model
-//         .get_db()
-//         .get_module_index()
-//         .find_module(&module_path)
-// }
+    semantic_model
+        .get_db()
+        .get_module_index()
+        .find_module(&module_path)
+}

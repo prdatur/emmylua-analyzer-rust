@@ -86,7 +86,7 @@ fn infer_name_expr_semantic_decl(
 
     if let Some(value_expr_id) = decl.get_value_syntax_id() {
         match value_expr_id.get_kind() {
-            LuaSyntaxKind::NameExpr | LuaSyntaxKind::IndexExpr => {
+            LuaSyntaxKind::NameExpr | LuaSyntaxKind::IndexExpr if decl_type.is_function() => {
                 let file_id = decl.get_file_id();
                 let tree = db.get_vfs().get_syntax_tree(&file_id)?;
                 // second infer

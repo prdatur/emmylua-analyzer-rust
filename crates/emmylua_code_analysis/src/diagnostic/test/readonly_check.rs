@@ -12,7 +12,7 @@ mod test {
             ---@readonly
             local errorCode = {}
 
-            errorCode.NOT_FOUND = 10 --- show warnings attemp modify readonly variables.
+            errorCode.NOT_FOUND = 10 --- show warnings attempt to modify readonly variables.
         "#
         ));
     }
