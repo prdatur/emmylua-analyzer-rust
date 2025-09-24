@@ -16,6 +16,7 @@ mod missing_fields_test;
 mod missing_parameter_test;
 mod need_check_nil_test;
 mod param_type_check_test;
+mod readonly_check;
 mod redefined_local_test;
 mod redundant_parameter_test;
 mod require_module_visibility_test;
