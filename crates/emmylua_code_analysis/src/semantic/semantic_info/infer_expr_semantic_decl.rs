@@ -1,6 +1,6 @@
 use emmylua_parser::{
-    LuaAstNode, LuaAstToken, LuaClosureExpr, LuaExpr, LuaIndexExpr, LuaNameExpr, LuaStat,
-    LuaSyntaxKind,
+    LuaAstNode, LuaAstToken, LuaCallExpr, LuaClosureExpr, LuaExpr, LuaIndexExpr, LuaLiteralToken,
+    LuaNameExpr, LuaStat, LuaSyntaxKind,
 };
 
 use crate::{
@@ -84,29 +84,61 @@ fn infer_name_expr_semantic_decl(
         return Some(LuaSemanticDeclId::LuaDecl(decl_id));
     }
 
-    // should continue infer require?
-    if let Some(value_expr_id) = decl.get_value_syntax_id()
-        && matches!(
-            value_expr_id.get_kind(),
-            LuaSyntaxKind::NameExpr | LuaSyntaxKind::IndexExpr
-        )
-    {
-        let file_id = decl.get_file_id();
-        let tree = db.get_vfs().get_syntax_tree(&file_id)?;
-        // second infer
-        let value_expr = LuaExpr::cast(value_expr_id.to_node(tree)?)?;
-        if let Some(property_owner_id) = infer_expr_semantic_decl(
-            db,
-            cache,
-            value_expr,
-            semantic_guard.next_level()?,
-            level.next_level()?,
-        ) {
-            return Some(property_owner_id);
+    if let Some(value_expr_id) = decl.get_value_syntax_id() {
+        match value_expr_id.get_kind() {
+            LuaSyntaxKind::NameExpr | LuaSyntaxKind::IndexExpr => {
+                let file_id = decl.get_file_id();
+                let tree = db.get_vfs().get_syntax_tree(&file_id)?;
+                // second infer
+                let value_expr = LuaExpr::cast(value_expr_id.to_node(tree)?)?;
+                if let Some(semantic_id) = infer_expr_semantic_decl(
+                    db,
+                    cache,
+                    value_expr,
+                    semantic_guard.next_level()?,
+                    level.next_level()?,
+                ) {
+                    return Some(semantic_id);
+                }
+            }
+            LuaSyntaxKind::RequireCallExpr => {
+                let file_id = decl.get_file_id();
+                let tree = db.get_vfs().get_syntax_tree(&file_id)?;
+                let call_expr = LuaCallExpr::cast(value_expr_id.to_node(tree)?)?;
+                if call_expr.is_require() {
+                    if let Some(semantic_id) = infer_require_module_semantic_decl(db, call_expr) {
+                        return Some(semantic_id);
+                    }
+                }
+            }
+            _ => {}
         }
     }
 
     Some(LuaSemanticDeclId::LuaDecl(decl_id))
+}
+
+fn infer_require_module_semantic_decl(
+    db: &DbIndex,
+    call_expr: LuaCallExpr,
+) -> Option<LuaSemanticDeclId> {
+    let first_arg = call_expr.get_args_list()?.get_args().next()?;
+    let module_path = match first_arg {
+        LuaExpr::LiteralExpr(literal_expr) => {
+            if let Some(literal_token) = literal_expr.get_literal() {
+                match literal_token {
+                    LuaLiteralToken::String(string_token) => string_token.get_value(),
+                    _ => return None,
+                }
+            } else {
+                return None;
+            }
+        }
+        _ => return None,
+    };
+
+    let module_info = db.get_module_index().find_module(&module_path)?;
+    module_info.semantic_id.clone()
 }
 
 fn get_name_decl_id(
