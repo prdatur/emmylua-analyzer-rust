@@ -7,6 +7,12 @@ use std::{
     vec::Vec,
 };
 
+pub struct CustomSemanticTokenType;
+impl CustomSemanticTokenType {
+    // neovim supports custom semantic token types, we add a custom type for delimiter
+    pub const DELIMITER: SemanticTokenType = SemanticTokenType::new("delimiter");
+}
+
 pub const SEMANTIC_TOKEN_TYPES: &[SemanticTokenType] = &[
     SemanticTokenType::NAMESPACE,
     SemanticTokenType::TYPE,
@@ -31,6 +37,8 @@ pub const SEMANTIC_TOKEN_TYPES: &[SemanticTokenType] = &[
     SemanticTokenType::REGEXP,
     SemanticTokenType::OPERATOR,
     SemanticTokenType::DECORATOR,
+    // Custom types
+    CustomSemanticTokenType::DELIMITER,
 ];
 
 pub const SEMANTIC_TOKEN_MODIFIERS: &[SemanticTokenModifier] = &[

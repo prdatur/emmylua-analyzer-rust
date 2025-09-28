@@ -2,6 +2,7 @@ use super::{
     SEMANTIC_TOKEN_MODIFIERS, SEMANTIC_TOKEN_TYPES, semantic_token_builder::SemanticBuilder,
 };
 use crate::handlers::semantic_token::function_string_highlight::fun_string_highlight;
+use crate::handlers::semantic_token::semantic_token_builder::CustomSemanticTokenType;
 use crate::util::parse_desc;
 use crate::{context::ClientId, handlers::semantic_token::language_injector::inject_language};
 use emmylua_code_analysis::{
@@ -116,15 +117,26 @@ fn build_tokens_semantic_token(
         | LuaTokenKind::TkAssign => {
             builder.push(token, SemanticTokenType::OPERATOR);
         }
-        // 冒号不标记为运算符，让VS Code使用默认的分隔符高亮
-        LuaTokenKind::TkColon
-        | LuaTokenKind::TkLeftBrace
-        | LuaTokenKind::TkRightBrace
-        | LuaTokenKind::TkLeftBracket
+        LuaTokenKind::TkLeftBrace | LuaTokenKind::TkRightBrace => {
+            builder.push(token, SemanticTokenType::OPERATOR);
+        }
+        LuaTokenKind::TkColon => {
+            if let Some(parent) = token.parent()
+                && parent.kind() != LuaSyntaxKind::IndexExpr.into()
+            {
+                builder.push(token, SemanticTokenType::OPERATOR);
+            }
+        }
+        // delimiter
+        LuaTokenKind::TkLeftBracket
         | LuaTokenKind::TkRightBracket
         | LuaTokenKind::TkLeftParen
         | LuaTokenKind::TkRightParen => {
-            builder.push(token, SemanticTokenType::OPERATOR);
+            if client_id.is_neovim() {
+                builder.push(token, CustomSemanticTokenType::DELIMITER);
+            } else {
+                builder.push(token, SemanticTokenType::OPERATOR);
+            }
         }
         LuaTokenKind::TkTrue | LuaTokenKind::TkFalse | LuaTokenKind::TkNil => {
             builder.push_with_modifier(
