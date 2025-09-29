@@ -438,7 +438,7 @@ impl MarkdownRstParser {
         line.eat_till_end();
         self.emit(line, DescItemKind::CodeBlock);
 
-        for (i, line) in lines.iter_mut().enumerate().skip(start) {
+        for (i, line) in lines.iter_mut().enumerate().skip(start + 1) {
             if is_blank(line.tail_text()) {
                 line.eat_till_end();
                 line.reset_buff();
