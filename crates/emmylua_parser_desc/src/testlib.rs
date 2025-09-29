@@ -10,8 +10,7 @@ pub fn test(code: &str, mut parser: Box<dyn LuaDescParser>, expected: &str) -> R
     let Some(desc) = tree
         .get_red_root()
         .descendants()
-        .filter(|node| matches!(node.kind(), LuaKind::Syntax(LuaSyntaxKind::DocDescription)))
-        .next()
+        .find(|node| matches!(node.kind(), LuaKind::Syntax(LuaSyntaxKind::DocDescription)))
     else {
         return fail!("No desc found in {:?}", tree.get_red_root());
     };
@@ -32,8 +31,7 @@ pub fn print_result(code: &str, mut parser: Box<dyn LuaDescParser>) {
     let Some(desc) = tree
         .get_red_root()
         .descendants()
-        .filter(|node| matches!(node.kind(), LuaKind::Syntax(LuaSyntaxKind::DocDescription)))
-        .next()
+        .find(|node| matches!(node.kind(), LuaKind::Syntax(LuaSyntaxKind::DocDescription)))
     else {
         panic!("No desc found in {:?}", tree.get_red_root());
     };
