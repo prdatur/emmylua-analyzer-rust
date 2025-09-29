@@ -23,8 +23,10 @@ pub fn generate_type_markdown(
     check_filter(db, typ)?;
     let mut context = tera::Context::new();
     let typ_name = typ.get_name();
-    let mut doc = Doc::default();
-    doc.name = typ_name.to_string();
+    let mut doc = Doc {
+        name: typ_name.to_string(),
+        ..Default::default()
+    };
 
     if typ.is_class() {
         generate_class_type_markdown(db, tl, typ, &mut doc, &mut context, output, mkdocs_index);

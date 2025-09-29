@@ -25,8 +25,10 @@ pub fn generate_module_markdown(
     check_filter(db, module.file_id)?;
 
     let mut context = tera::Context::new();
-    let mut doc = Doc::default();
-    doc.name = module.full_module_name.clone();
+    let mut doc = Doc {
+        name: module.full_module_name.clone(),
+        ..Default::default()
+    };
     let property_owner_id = module.semantic_id.clone();
     if let Some(property_id) = property_owner_id {
         doc.property = collect_property(db, property_id);
