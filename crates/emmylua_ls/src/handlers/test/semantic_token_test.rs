@@ -1,6 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use crate::handlers::test_lib::{ProviderVirtualWorkspace, VirtualSemanticToken, check};
+    use crate::handlers::{
+        semantic_token::CustomSemanticTokenType,
+        test_lib::{ProviderVirtualWorkspace, VirtualSemanticToken, check},
+    };
     use googletest::prelude::*;
     use lsp_types::{SemanticTokenModifier, SemanticTokenType};
     use std::collections::HashSet;
@@ -90,7 +93,7 @@ mod tests {
                     line: 4,
                     start: 32,
                     length: 1,
-                    token_type: SemanticTokenType::OPERATOR,
+                    token_type: CustomSemanticTokenType::DELIMITER,
                     token_modifier: HashSet::new(),
                 },
                 VirtualSemanticToken {
@@ -104,7 +107,7 @@ mod tests {
                     line: 4,
                     start: 34,
                     length: 1,
-                    token_type: SemanticTokenType::OPERATOR,
+                    token_type: CustomSemanticTokenType::DELIMITER,
                     token_modifier: HashSet::new(),
                 },
                 VirtualSemanticToken {
@@ -153,7 +156,7 @@ mod tests {
                     line: 4,
                     start: 54,
                     length: 1,
-                    token_type: SemanticTokenType::OPERATOR,
+                    token_type: CustomSemanticTokenType::DELIMITER,
                     token_modifier: HashSet::new(),
                 },
                 VirtualSemanticToken {
@@ -167,7 +170,7 @@ mod tests {
                     line: 4,
                     start: 56,
                     length: 1,
-                    token_type: SemanticTokenType::OPERATOR,
+                    token_type: CustomSemanticTokenType::DELIMITER,
                     token_modifier: HashSet::new(),
                 },
             ],

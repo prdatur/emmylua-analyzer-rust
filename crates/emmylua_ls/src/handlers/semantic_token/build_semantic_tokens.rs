@@ -118,7 +118,16 @@ fn build_tokens_semantic_token(
             builder.push(token, SemanticTokenType::OPERATOR);
         }
         LuaTokenKind::TkLeftBrace | LuaTokenKind::TkRightBrace => {
-            builder.push(token, SemanticTokenType::OPERATOR);
+            if let Some(parent) = token.parent()
+                && !matches!(
+                    parent.kind().into(),
+                    LuaSyntaxKind::TableArrayExpr
+                        | LuaSyntaxKind::TableEmptyExpr
+                        | LuaSyntaxKind::TableFieldAssign
+                )
+            {
+                builder.push(token, SemanticTokenType::OPERATOR);
+            }
         }
         LuaTokenKind::TkColon => {
             if let Some(parent) = token.parent()
@@ -128,11 +137,27 @@ fn build_tokens_semantic_token(
             }
         }
         // delimiter
-        LuaTokenKind::TkLeftBracket
-        | LuaTokenKind::TkRightBracket
-        | LuaTokenKind::TkLeftParen
-        | LuaTokenKind::TkRightParen => {
-            if client_id.is_neovim() {
+        LuaTokenKind::TkLeftBracket | LuaTokenKind::TkRightBracket => {
+            if let Some(parent) = token.parent()
+                && matches!(
+                    parent.kind().into(),
+                    LuaSyntaxKind::TableFieldAssign | LuaSyntaxKind::IndexExpr
+                )
+            {
+                builder.push(token, CustomSemanticTokenType::DELIMITER);
+            } else {
+                builder.push(token, SemanticTokenType::OPERATOR);
+            }
+        }
+        LuaTokenKind::TkLeftParen | LuaTokenKind::TkRightParen => {
+            if let Some(parent) = token.parent()
+                && matches!(
+                    parent.kind().into(),
+                    LuaSyntaxKind::ParamList
+                        | LuaSyntaxKind::CallArgList
+                        | LuaSyntaxKind::ParenExpr
+                )
+            {
                 builder.push(token, CustomSemanticTokenType::DELIMITER);
             } else {
                 builder.push(token, SemanticTokenType::OPERATOR);

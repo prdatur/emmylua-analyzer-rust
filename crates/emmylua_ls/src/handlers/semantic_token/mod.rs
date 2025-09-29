@@ -11,7 +11,10 @@ use lsp_types::{
     SemanticTokensOptions, SemanticTokensParams, SemanticTokensResult,
     SemanticTokensServerCapabilities, ServerCapabilities,
 };
-pub use semantic_token_builder::{SEMANTIC_TOKEN_MODIFIERS, SEMANTIC_TOKEN_TYPES};
+#[allow(unused)]
+pub use semantic_token_builder::{
+    CustomSemanticTokenType, SEMANTIC_TOKEN_MODIFIERS, SEMANTIC_TOKEN_TYPES,
+};
 use tokio_util::sync::CancellationToken;
 
 use super::RegisterCapabilities;
