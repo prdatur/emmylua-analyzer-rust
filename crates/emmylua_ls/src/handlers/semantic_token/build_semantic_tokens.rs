@@ -123,7 +123,7 @@ fn build_tokens_semantic_token(
                     parent.kind().into(),
                     LuaSyntaxKind::TableArrayExpr
                         | LuaSyntaxKind::TableEmptyExpr
-                        | LuaSyntaxKind::TableFieldAssign
+                        | LuaSyntaxKind::TableObjectExpr
                 )
             {
                 builder.push(token, SemanticTokenType::OPERATOR);
