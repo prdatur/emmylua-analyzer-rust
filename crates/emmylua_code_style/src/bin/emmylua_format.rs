@@ -134,11 +134,9 @@ fn main() {
                         }
                     }
                 } else if args.write {
-                    if changed {
-                        if let Err(e) = fs::write(path, formatted) {
-                            eprintln!("Failed to write {}: {e}", path.to_string_lossy());
-                            exit_code = 2;
-                        }
+                    if changed && let Err(e) = fs::write(path, formatted) {
+                        eprintln!("Failed to write {}: {e}", path.to_string_lossy());
+                        exit_code = 2;
                     }
                 } else if let Some(out) = &args.output {
                     if let Err(e) = fs::write(out, formatted) {
