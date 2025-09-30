@@ -86,7 +86,7 @@ fn build_doc_function_signature_help(
     func_type: &LuaFunctionType,
     colon_call: bool,
     current_idx: usize,
-    descriotion: Option<String>,
+    description: Option<String>,
 ) -> Option<SignatureHelp> {
     let semantic_model = builder.semantic_model;
     let db = semantic_model.get_db();
@@ -143,7 +143,7 @@ fn build_doc_function_signature_help(
         func_type.get_ret(),
     );
 
-    let documentation = descriotion.map(|description| {
+    let documentation = description.map(|description| {
         Documentation::MarkupContent(MarkupContent {
             kind: MarkupKind::Markdown,
             value: description,
