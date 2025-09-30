@@ -1,11 +1,11 @@
 use emmylua_code_analysis::{
     DbIndex, InFiled, LuaCompilation, LuaFunctionType, LuaGenericType, LuaInstanceType,
-    LuaOperatorMetaMethod, LuaOperatorOwner, LuaSignatureId, LuaType, LuaTypeDeclId, RenderLevel,
-    SemanticModel, TypeSubstitutor,
+    LuaOperatorMetaMethod, LuaOperatorOwner, LuaSemanticDeclId, LuaSignatureId, LuaType,
+    LuaTypeDeclId, RenderLevel, SemanticModel, TypeSubstitutor,
 };
 use emmylua_parser::{LuaAstNode, LuaCallExpr, LuaSyntaxToken, LuaTokenKind};
 use lsp_types::{
-    Documentation, MarkupContent, ParameterInformation, ParameterLabel, SignatureHelp,
+    Documentation, MarkupContent, MarkupKind, ParameterInformation, ParameterLabel, SignatureHelp,
     SignatureInformation,
 };
 use rowan::{NodeOrToken, TextRange};
@@ -27,7 +27,7 @@ pub fn build_signature_helper(
     let current_idx = get_current_param_index(&call_expr, &token)?;
     let help = match prefix_expr_type {
         LuaType::DocFunction(func_type) => {
-            build_doc_function_signature_help(&builder, &func_type, colon_call, current_idx)
+            build_doc_function_signature_help(&builder, &func_type, colon_call, current_idx, None)
         }
         LuaType::Signature(signature_id) => {
             build_sig_id_signature_help(&builder, signature_id, colon_call, current_idx, false)
@@ -86,6 +86,7 @@ fn build_doc_function_signature_help(
     func_type: &LuaFunctionType,
     colon_call: bool,
     current_idx: usize,
+    descriotion: Option<String>,
 ) -> Option<SignatureHelp> {
     let semantic_model = builder.semantic_model;
     let db = semantic_model.get_db();
@@ -142,9 +143,16 @@ fn build_doc_function_signature_help(
         func_type.get_ret(),
     );
 
+    let documentation = descriotion.map(|description| {
+        Documentation::MarkupContent(MarkupContent {
+            kind: MarkupKind::Markdown,
+            value: description,
+        })
+    });
+
     let signature_info = SignatureInformation {
         label,
-        documentation: None,
+        documentation,
         parameters: Some(param_infos),
         active_parameter: Some(current_idx as u32),
     };
@@ -247,8 +255,13 @@ fn build_sig_id_signature_help(
 
     let mut signatures = vec![signature_info];
     for overload in &signature.overloads {
-        let signature =
-            build_doc_function_signature_help(builder, overload, colon_call, origin_current_idx);
+        let signature = build_doc_function_signature_help(
+            builder,
+            overload,
+            colon_call,
+            origin_current_idx,
+            None,
+        );
         if let Some(mut signature) = signature {
             signature.signatures[0].documentation = builder.description.clone();
             signatures.push(signature.signatures[0].clone());
@@ -273,7 +286,20 @@ fn build_type_signature_help(
     if let Some(type_decl) = db.get_type_index().get_type_decl(type_decl_id)
         && let Some(LuaType::DocFunction(f)) = type_decl.get_alias_origin(db, None)
     {
-        return build_doc_function_signature_help(builder, &f, colon_call, current_idx);
+        let semantic_id = LuaSemanticDeclId::TypeDecl(type_decl_id.clone());
+        let description = db
+            .get_property_index()
+            .get_property(&semantic_id)
+            .and_then(|p| p.description.clone())
+            .map(|description| *description);
+
+        return build_doc_function_signature_help(
+            builder,
+            &f,
+            colon_call,
+            current_idx,
+            description,
+        );
     }
 
     let operator_ids = db
@@ -290,6 +316,7 @@ fn build_type_signature_help(
                     &func_type,
                     colon_call,
                     current_idx,
+                    None,
                 );
             }
             LuaType::Signature(signature_id) => {
@@ -345,7 +372,13 @@ fn build_table_call_signature_help(
     let call_type = operator.get_operator_func(db);
     match call_type {
         LuaType::DocFunction(func_type) => {
-            return build_doc_function_signature_help(builder, &func_type, colon_call, current_idx);
+            return build_doc_function_signature_help(
+                builder,
+                &func_type,
+                colon_call,
+                current_idx,
+                None,
+            );
         }
         LuaType::Signature(signature_id) => {
             return build_sig_id_signature_help(
@@ -373,8 +406,13 @@ fn build_union_type_signature_help(
     for typ in union_types {
         match typ {
             LuaType::DocFunction(func_type) => {
-                let sig =
-                    build_doc_function_signature_help(builder, &func_type, colon_call, current_idx);
+                let sig = build_doc_function_signature_help(
+                    builder,
+                    &func_type,
+                    colon_call,
+                    current_idx,
+                    None,
+                );
 
                 if let Some(sig) = sig {
                     signatures.push(sig.signatures[0].clone());
@@ -530,7 +568,20 @@ fn build_generic_signature_help(
     if let Some(type_decl) = db.get_type_index().get_type_decl(type_decl_id) {
         let substitutor = TypeSubstitutor::from_type_array(generic_params.clone());
         if let Some(LuaType::DocFunction(f)) = type_decl.get_alias_origin(db, Some(&substitutor)) {
-            return build_doc_function_signature_help(builder, &f, colon_call, current_idx);
+            let semantic_id = LuaSemanticDeclId::TypeDecl(type_decl_id.clone());
+            let description = db
+                .get_property_index()
+                .get_property(&semantic_id)
+                .and_then(|p| p.description.clone())
+                .map(|description| *description);
+
+            return build_doc_function_signature_help(
+                builder,
+                &f,
+                colon_call,
+                current_idx,
+                description,
+            );
         }
     }
 
@@ -548,6 +599,7 @@ fn build_generic_signature_help(
                     &func_type,
                     colon_call,
                     current_idx,
+                    None,
                 );
             }
             LuaType::Signature(signature_id) => {
