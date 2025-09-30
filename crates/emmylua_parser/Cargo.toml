@@ -10,6 +10,10 @@ readme = "README.md"
 keywords = ["emmylua", "luals", "parser", "lua"]
 categories = ["development-tools", "parsing"]
 
+# Inherit workspace lints configuration
+[lints]
+workspace = true
+
 [dependencies]
 rowan.workspace = true
 rust-i18n.workspace = true

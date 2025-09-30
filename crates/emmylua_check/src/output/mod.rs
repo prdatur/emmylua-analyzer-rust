@@ -12,11 +12,14 @@ use crate::cmd_args::{OutputDestination, OutputFormat};
 
 use crate::terminal_display::TerminalDisplay;
 
+/// Type alias for diagnostic result channel
+type DiagnosticReceiver = Receiver<(FileId, Option<Vec<Diagnostic>>)>;
+
 pub async fn output_result(
     total_count: usize,
     db: &DbIndex,
     workspace: PathBuf,
-    mut receiver: Receiver<(FileId, Option<Vec<Diagnostic>>)>,
+    mut receiver: DiagnosticReceiver,
     output_format: OutputFormat,
     output: OutputDestination,
     warnings_as_errors: bool,

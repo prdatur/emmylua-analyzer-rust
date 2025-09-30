@@ -163,10 +163,10 @@ pub fn collect_files(
     files
 }
 
-pub fn calculate_include_and_exclude(
-    emmyrc: &Emmyrc,
-    ignore: Option<Vec<String>>,
-) -> (Vec<String>, Vec<String>, Vec<PathBuf>) {
+/// File patterns for workspace scanning: (include_patterns, exclude_patterns, exclude_dirs)
+type FilePatterns = (Vec<String>, Vec<String>, Vec<PathBuf>);
+
+pub fn calculate_include_and_exclude(emmyrc: &Emmyrc, ignore: Option<Vec<String>>) -> FilePatterns {
     let mut include = vec!["**/*.lua".to_string(), "**/.editorconfig".to_string()];
     let mut exclude = Vec::new();
     let mut exclude_dirs = Vec::new();

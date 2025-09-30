@@ -15,6 +15,10 @@ include = [
     "resources/**",
 ]
 
+# Inherit workspace lints configuration
+[lints]
+workspace = true
+
 [dependencies]
 # local
 emmylua_parser.workspace = true

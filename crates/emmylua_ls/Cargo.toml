@@ -10,6 +10,10 @@ readme = "README.md"
 keywords = ["emmylua", "doc", "lua"]
 categories = ["development-tools"]
 
+# Inherit workspace lints configuration
+[lints]
+workspace = true
+
 [dependencies]
 # local
 emmylua_code_analysis.workspace = true
