@@ -73,38 +73,35 @@ fn add_global_completions(builder: &mut CompletionBuilder) -> Option<()> {
         builder.semantic_model.get_db(),
         builder.semantic_model.get_file_id(),
         &builder.trigger_token,
-    ) {
-        if let Some(member_info_map) = builder
-            .semantic_model
-            .get_member_info_map(&LuaType::Ref(scope))
-        {
-            seen_types.extend(member_info_map.iter().flat_map(|(_, members)| {
-                members.iter().filter_map(|member| match &member.typ {
-                    LuaType::Def(type_id) => Some(type_id.clone()),
-                    _ => None,
-                })
-            }));
-            add_completions_for_members(builder, &member_info_map, CompletionTriggerStatus::Dot);
-        }
+    ) && let Some(member_info_map) = builder
+        .semantic_model
+        .get_member_info_map(&LuaType::Ref(scope))
+    {
+        seen_types.extend(member_info_map.iter().flat_map(|(_, members)| {
+            members.iter().filter_map(|member| match &member.typ {
+                LuaType::Def(type_id) => Some(type_id.clone()),
+                _ => None,
+            })
+        }));
+        add_completions_for_members(builder, &member_info_map, CompletionTriggerStatus::Dot);
     }
 
     // Types in namespaces.
     complete_types_by_prefix(builder, "", Some(&seen_types));
 
     // Types in current module.
-    if let Some(module) = builder.semantic_model.get_module() {
-        if let Some(member_info_map) = builder
+    if let Some(module) = builder.semantic_model.get_module()
+        && let Some(member_info_map) = builder
             .semantic_model
             .get_member_info_map(module.export_type.as_ref().unwrap_or(&LuaType::Nil))
-        {
-            seen_types.extend(member_info_map.iter().flat_map(|(_, members)| {
-                members.iter().filter_map(|member| match &member.typ {
-                    LuaType::Def(type_id) => Some(type_id.clone()),
-                    _ => None,
-                })
-            }));
-            add_completions_for_members(builder, &member_info_map, CompletionTriggerStatus::Dot);
-        }
+    {
+        seen_types.extend(member_info_map.iter().flat_map(|(_, members)| {
+            members.iter().filter_map(|member| match &member.typ {
+                LuaType::Def(type_id) => Some(type_id.clone()),
+                _ => None,
+            })
+        }));
+        add_completions_for_members(builder, &member_info_map, CompletionTriggerStatus::Dot);
     }
 
     // Globals.

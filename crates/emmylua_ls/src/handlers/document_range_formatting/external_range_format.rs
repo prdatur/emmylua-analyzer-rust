@@ -3,9 +3,9 @@ use emmylua_code_analysis::{
     EmmyrcExternalTool, FormattingOptions, LuaDocument, RangeFormatResult,
 };
 
-pub async fn external_tool_range_format<'a>(
+pub async fn external_tool_range_format(
     emmyrc_external_tool: &EmmyrcExternalTool,
-    document: &'a LuaDocument<'_>,
+    document: &LuaDocument<'_>,
     range: &lsp_types::Range,
     file_path: &str,
     options: FormattingOptions,
@@ -25,7 +25,7 @@ pub async fn external_tool_range_format<'a>(
     let document_range = document.get_document_lsp_range();
     let formatted_text = external_tool_format(
         emmyrc_external_tool,
-        &text,
+        text,
         file_path,
         Some(formatting_range),
         options,

@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use emmylua_code_analysis::{LuaTypeDeclId, SemanticModel};
 use lsp_types::Uri;
 
+#[allow(clippy::mutable_key_type)]
 pub fn rename_type_references(
     semantic_model: &SemanticModel,
     type_decl_id: LuaTypeDeclId,
@@ -15,20 +16,19 @@ pub fn rename_type_references(
     let mut reserved_namespace = String::new();
 
     // 取出`full_name`在当前文件中使用的命名空间
-    if let Some(file_namespace) = type_index.get_file_namespace(&semantic_model.get_file_id()) {
-        if full_name.starts_with(&format!("{}.", file_namespace)) {
-            reserved_namespace = file_namespace.clone();
-        }
+    if let Some(file_namespace) = type_index.get_file_namespace(&semantic_model.get_file_id())
+        && full_name.starts_with(&format!("{}.", file_namespace))
+    {
+        reserved_namespace = file_namespace.clone();
     }
-    if reserved_namespace.is_empty() {
-        if let Some(using_namespaces) =
+    if reserved_namespace.is_empty()
+        && let Some(using_namespaces) =
             type_index.get_file_using_namespace(&semantic_model.get_file_id())
-        {
-            for using_namespace in using_namespaces {
-                if full_name.starts_with(&format!("{}.", using_namespace)) {
-                    reserved_namespace = using_namespace.clone();
-                    break;
-                }
+    {
+        for using_namespace in using_namespaces {
+            if full_name.starts_with(&format!("{}.", using_namespace)) {
+                reserved_namespace = using_namespace.clone();
+                break;
             }
         }
     }
@@ -39,7 +39,7 @@ pub fn rename_type_references(
         let range = document.to_lsp_range(decl_location.range)?;
         result
             .entry(document.get_uri())
-            .or_insert_with(HashMap::new)
+            .or_default()
             .insert(range, new_name.clone());
     }
 
@@ -70,7 +70,7 @@ pub fn rename_type_references(
         let location = document.to_lsp_location(in_filed_reference_range.value)?;
         result
             .entry(location.uri)
-            .or_insert_with(HashMap::new)
+            .or_default()
             .insert(location.range, actual_new_name);
     }
 

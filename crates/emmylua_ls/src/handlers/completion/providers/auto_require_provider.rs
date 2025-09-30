@@ -48,7 +48,7 @@ pub fn add_completion(builder: &mut CompletionBuilder) -> Option<()> {
             add_module_completion_item(
                 builder,
                 &prefix,
-                &module_info,
+                module_info,
                 file_conversion,
                 lsp_position,
                 &mut completions,
@@ -71,7 +71,7 @@ fn add_module_completion_item(
     position: Position,
     completions: &mut Vec<CompletionItem>,
 ) -> Option<()> {
-    if !check_export_visibility(&builder.semantic_model, &module_info).unwrap_or(false) {
+    if !check_export_visibility(&builder.semantic_model, module_info).unwrap_or(false) {
         return None;
     }
 
@@ -129,12 +129,7 @@ fn try_add_member_completion_items(
     completions: &mut Vec<CompletionItem>,
 ) -> Option<()> {
     // 模块必须要有 export 标记
-    if module_info
-        .get_export(builder.semantic_model.get_db())
-        .is_none()
-    {
-        return None;
-    };
+    module_info.get_export(builder.semantic_model.get_db())?;
 
     if let Some(export_type) = &module_info.export_type {
         match export_type {

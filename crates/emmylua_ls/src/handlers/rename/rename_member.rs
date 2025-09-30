@@ -11,6 +11,7 @@ use lsp_types::Uri;
 
 use crate::handlers::hover::find_member_origin_owner;
 
+#[allow(clippy::mutable_key_type)]
 pub fn rename_member_references(
     semantic_model: &SemanticModel,
     compilation: &LuaCompilation,
@@ -27,7 +28,7 @@ pub fn rename_member_references(
         semantic_model
             .get_db()
             .get_reference_index()
-            .get_index_references(&key)?;
+            .get_index_references(key)?;
 
     let origin_property_owner = find_member_origin_owner(compilation, semantic_model, member_id)
         .unwrap_or(LuaSemanticDeclId::Member(member_id));
@@ -57,7 +58,7 @@ pub fn rename_member_references(
             if let Some(range) = range {
                 result
                     .entry(semantic_model.get_document().get_uri())
-                    .or_insert_with(HashMap::new)
+                    .or_default()
                     .insert(range, new_name.clone());
             }
         }
@@ -76,7 +77,7 @@ fn get_member_name_token_lsp_range(
     }
 
     // 此时可能是 [] 访问
-    if let Some(_) = node.token::<LuaIndexToken>() {
+    if node.token::<LuaIndexToken>().is_some() {
         match node {
             LuaAst::LuaDocTagField(tag) => {
                 if let Some(token) = tag.token::<LuaNumberToken>() {

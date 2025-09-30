@@ -19,7 +19,7 @@ pub async fn get_client_config_default(
         .await
         .workspace_folders
         .clone();
-    let main_workspace_folder = workspace_folders.get(0);
+    let main_workspace_folder = workspace_folders.first();
     let client = context.client();
     let scope_uri = main_workspace_folder.map(|p| file_path_to_uri(p).unwrap());
 

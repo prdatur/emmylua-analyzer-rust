@@ -196,7 +196,6 @@ fn build_call_args_for_func_type(
     func_type: &LuaFunctionType,
     params_location: Option<HashMap<String, Location>>,
 ) -> Option<()> {
-    let call_args_len = call_args.len();
     let mut params = func_type
         .get_params()
         .iter()
@@ -209,7 +208,7 @@ fn build_call_args_for_func_type(
             params.insert(0, "self".to_string());
         }
         (true, false) => {
-            if params.len() > 0 {
+            if !params.is_empty() {
                 params.remove(0);
             }
         }
@@ -217,12 +216,12 @@ fn build_call_args_for_func_type(
     }
 
     for (idx, name) in params.iter().enumerate() {
-        if idx >= call_args_len {
+        if idx >= call_args.len() {
             break;
         }
 
         if name == "..." {
-            for i in idx..call_args_len {
+            for (i, arg) in call_args.into_iter().enumerate().skip(idx) {
                 let label_name = format!("var{}:", i - idx);
                 let label = if let Some(params_location) = &params_location {
                     if let Some(location) = params_location.get(name) {
@@ -238,7 +237,6 @@ fn build_call_args_for_func_type(
                     InlayHintLabel::String(label_name)
                 };
 
-                let arg = &call_args[i];
                 let range = arg.get_range();
                 let document = semantic_model.get_document();
                 let lsp_range = document.to_lsp_range(range)?;
@@ -258,13 +256,12 @@ fn build_call_args_for_func_type(
         }
 
         let arg = &call_args[idx];
-        if let LuaExpr::NameExpr(name_expr) = arg {
-            if let Some(param_name) = name_expr.get_name_text() {
-                // optimize like rust analyzer
-                if &param_name == name {
-                    continue;
-                }
-            }
+        if let LuaExpr::NameExpr(name_expr) = arg
+            && let Some(param_name) = name_expr.get_name_text()
+            // optimize like rust analyzer
+            && &param_name == name
+        {
+            continue;
         }
 
         let document = semantic_model.get_document();
@@ -318,12 +315,11 @@ fn build_local_name_hint(
             let local_stat = LuaLocalStat::cast(parent)?;
             let local_names = local_stat.get_local_name_list();
             for (i, ln) in local_names.enumerate() {
-                if local_name == ln {
-                    if let Some(value_expr) = local_stat.get_value_exprs().nth(i) {
-                        if let LuaExpr::ClosureExpr(_) = value_expr {
-                            return Some(());
-                        }
-                    }
+                if local_name == ln
+                    && let Some(value_expr) = local_stat.get_value_exprs().nth(i)
+                    && let LuaExpr::ClosureExpr(_) = value_expr
+                {
+                    return Some(());
                 }
             }
         }
@@ -375,7 +371,7 @@ fn build_func_stat_override_hint(
     let func_name = func_stat.get_func_name()?;
     if let LuaVarExpr::IndexExpr(index_expr) = func_name {
         let prefix_expr = index_expr.get_prefix_expr()?;
-        let prefix_type = semantic_model.infer_expr(prefix_expr.into()).ok()?;
+        let prefix_type = semantic_model.infer_expr(prefix_expr).ok()?;
         if let LuaType::Def(id) = prefix_type {
             let supers = semantic_model
                 .get_db()
@@ -444,7 +440,7 @@ fn get_super_member_id(
     infer_guard.check(super_type_id).ok()?;
     let member_map = semantic_model.get_member_info_map(&super_type)?;
 
-    if let Some(member_infos) = member_map.get(&member_key) {
+    if let Some(member_infos) = member_map.get(member_key) {
         let first_property = member_infos.first()?.property_owner_id.clone()?;
         if let LuaSemanticDeclId::Member(member_id) = first_property {
             return Some(member_id);
@@ -616,7 +612,7 @@ fn find_match_meta_call_operator_id(
                 .unwrap_or(false);
 
         if is_match {
-            return Some((operator_id.clone(), operator_func));
+            return Some((*operator_id, operator_func));
         }
     }
     operator_ids.first().cloned().map(|id| (id, call_func))
@@ -639,7 +635,7 @@ fn build_index_expr_hint(
 
     // 获取前缀表达式的类型信息
     let prefix_expr = index_expr.get_prefix_expr()?;
-    let prefix_type = semantic_model.infer_expr(prefix_expr.into()).ok()?;
+    let prefix_type = semantic_model.infer_expr(prefix_expr).ok()?;
     let member_key = semantic_model.get_member_key(&index_key)?;
 
     let member_infos = semantic_model.get_member_info_with_key(&prefix_type, member_key, false)?;
@@ -782,14 +778,13 @@ fn process_enum_hint_for_arg(
         }
         LuaExpr::IndexExpr(index_expr) => {
             // 对索引访问需要完全匹配尾名称
-            if let Some(index_name_token) = index_expr.get_index_name_token() {
-                if let Some(name_token) =
+            if let Some(index_name_token) = index_expr.get_index_name_token()
+                && let Some(name_token) =
                     emmylua_parser::LuaNameToken::cast(index_name_token.clone())
-                {
-                    let index_name = name_token.get_name_text();
-                    if index_name == member_name {
-                        return None;
-                    }
+            {
+                let index_name = name_token.get_name_text();
+                if index_name == member_name {
+                    return None;
                 }
             }
         }
@@ -839,16 +834,14 @@ fn find_matching_enum_member<'a>(
                 (LuaMemberKey::ExprType(typ), _) => typ == arg_type,
                 _ => false,
             }
+        } else if let Some(type_cache) = semantic_model
+            .get_db()
+            .get_type_index()
+            .get_type_cache(&member_decl.get_id().into())
+        {
+            type_cache.as_type() == arg_type
         } else {
-            if let Some(type_cache) = semantic_model
-                .get_db()
-                .get_type_index()
-                .get_type_cache(&member_decl.get_id().into())
-            {
-                type_cache.as_type() == arg_type
-            } else {
-                false
-            }
+            false
         };
 
         if is_match {

@@ -72,10 +72,10 @@ fn get_token_should_type(builder: &mut CompletionBuilder) -> Option<Vec<LuaType>
             }
             let var = vars.first()?;
             let var_type = builder.semantic_model.infer_expr(var.clone().into()).ok()?;
-            let real_type = get_real_type(&builder.semantic_model.get_db(), &var_type)?;
+            let real_type = get_real_type(builder.semantic_model.get_db(), &var_type)?;
             return Some(vec![get_function_remove_nil(
-                &builder.semantic_model.get_db(),
-                &real_type,
+                builder.semantic_model.get_db(),
+                real_type,
             )?]);
         }
         _ => {}
@@ -170,11 +170,7 @@ fn add_type_ref_completion(
                 builder.add_completion_item(completion_item);
             }
         } else {
-            let locations = type_decl
-                .get_locations()
-                .iter()
-                .map(|it| it.clone())
-                .collect::<Vec<_>>();
+            let locations = type_decl.get_locations().to_vec();
             add_enum_members_completion(builder, &type_ref_id, locations);
         }
 
@@ -250,10 +246,10 @@ fn infer_param_list(
         .collect::<Vec<_>>();
 
     // names 去掉 params 已有的
-    names.retain(|name| !params.contains(&name));
+    names.retain(|name| !params.contains(name));
     if names.len() > 1 {
         builder.add_completion_item(CompletionItem {
-            label: format!("{}", names.iter().join(", ")),
+            label: names.iter().join(", ").to_string(),
             kind: Some(lsp_types::CompletionItemKind::INTERFACE),
             ..Default::default()
         });
@@ -430,10 +426,9 @@ fn push_function_overloads_param(
         for i in 0..param_idx {
             if let (Some(call_param), Some(overload_param)) =
                 (call_params.get(i), overload_params.get(i))
+                && call_param.1 != overload_param.1
             {
-                if call_param.1 != overload_param.1 {
-                    return false;
-                }
+                return false;
             }
         }
 
@@ -458,20 +453,17 @@ fn add_multi_line_union_member_completion(
             }
         };
 
-        let documentation = if let Some(description) = description {
-            Some(Documentation::String(description.clone()))
-        } else {
-            None
-        };
+        let documentation = description
+            .as_ref()
+            .map(|description| Documentation::String(description.clone()));
 
-        let label_details = if let Some(description) = description {
-            Some(lsp_types::CompletionItemLabelDetails {
-                detail: None,
-                description: Some(description.clone()),
-            })
-        } else {
-            None
-        };
+        let label_details =
+            description
+                .as_ref()
+                .map(|description| lsp_types::CompletionItemLabelDetails {
+                    detail: None,
+                    description: Some(description.clone()),
+                });
 
         let completion_item = CompletionItem {
             label: name,
@@ -555,9 +547,7 @@ fn add_enum_members_completion(
             .parent()
             .and_then(LuaLiteralExpr::cast)
             .and_then(|literal_expr| literal_expr.get_literal())
-            .map_or(false, |literal| {
-                matches!(literal, LuaLiteralToken::String(_))
-            });
+            .is_some_and(|literal| matches!(literal, LuaLiteralToken::String(_)));
 
     let file_id = builder.semantic_model.get_file_id();
     let is_same_file = locations.iter().all(|it| it.file_id == file_id);
@@ -577,15 +567,13 @@ fn add_enum_members_completion(
             }
             label
         } else if let Some(ref var_name) = variable_name {
-            let label = match key {
+            match key {
                 LuaMemberKey::Name(str) => format!("{}.{}", var_name, str),
                 LuaMemberKey::Integer(i) => format!("{}[{}]", var_name, i),
                 _ => continue, // 跳过不支持的key类型
-            };
-            label
+            }
         } else {
-            let label = humanize_type(builder.semantic_model.get_db(), &typ, RenderLevel::Minimal);
-            label
+            humanize_type(builder.semantic_model.get_db(), &typ, RenderLevel::Minimal)
         };
 
         let description = type_id.get_name().to_string();
@@ -764,24 +752,21 @@ fn add_special_call_completion(
     builder: &mut CompletionBuilder,
     alias_call: &LuaAliasCallType,
 ) -> Option<()> {
-    match alias_call.get_call_kind() {
-        LuaAliasCallKind::KeyOf => {
-            let trigger_status = if matches!(
-                builder.trigger_token.kind().into(),
-                LuaTokenKind::TkString | LuaTokenKind::TkLongString
-            ) {
-                CompletionTriggerStatus::Dot
-            } else {
-                CompletionTriggerStatus::LeftBracket
-            };
+    if alias_call.get_call_kind() == LuaAliasCallKind::KeyOf {
+        let trigger_status = if matches!(
+            builder.trigger_token.kind().into(),
+            LuaTokenKind::TkString | LuaTokenKind::TkLongString
+        ) {
+            CompletionTriggerStatus::Dot
+        } else {
+            CompletionTriggerStatus::LeftBracket
+        };
 
-            let keys_owner_type = alias_call.get_operands().first()?;
-            let member_info_map = builder
-                .semantic_model
-                .get_member_info_map(&keys_owner_type)?;
-            add_completions_for_members(builder, &member_info_map, trigger_status);
-        }
-        _ => {}
+        let keys_owner_type = alias_call.get_operands().first()?;
+        let member_info_map = builder
+            .semantic_model
+            .get_member_info_map(keys_owner_type)?;
+        add_completions_for_members(builder, &member_info_map, trigger_status);
     }
     Some(())
 }
@@ -847,9 +832,7 @@ pub fn get_function_remove_nil(db: &DbIndex, typ: &LuaType) -> Option<LuaType> {
                 _ => Some(new_type),
             }
         }
-        _ if typ.is_function() => {
-            return Some(typ.clone());
-        }
+        _ if typ.is_function() => Some(typ.clone()),
         _ => None,
     }
 }

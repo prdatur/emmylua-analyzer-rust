@@ -74,10 +74,10 @@ fn can_add_key_completion(builder: &mut CompletionBuilder) -> bool {
         return false;
     }
 
-    if let Some(NodeOrToken::Node(node)) = builder.trigger_token.prev_sibling_or_token() {
-        if let Some(LuaAst::LuaComment(_)) = LuaAst::cast(node) {
-            return false;
-        }
+    if let Some(NodeOrToken::Node(node)) = builder.trigger_token.prev_sibling_or_token()
+        && let Some(LuaAst::LuaComment(_)) = LuaAst::cast(node)
+    {
+        return false;
     }
     true
 }
@@ -132,15 +132,13 @@ fn add_field_key_completion(
     }
 
     let data = if let Some(id) = &property_owner {
-        CompletionData::from_property_owner_id(builder, id.clone().into(), None)
+        CompletionData::from_property_owner_id(builder, id.clone(), None)
     } else {
         None
     };
-    let deprecated = if let Some(id) = &property_owner {
-        Some(is_deprecated(builder, id.clone()))
-    } else {
-        None
-    };
+    let deprecated = property_owner
+        .as_ref()
+        .map(|id| is_deprecated(builder, id.clone()));
 
     let completion_item = CompletionItem {
         label,
@@ -186,7 +184,7 @@ fn in_env(builder: &mut CompletionBuilder, target_name: &str, target_type: &LuaT
             .semantic_model
             .get_db()
             .get_decl_index()
-            .get_decl(&decl_id)?;
+            .get_decl(decl_id)?;
         let (name, typ) = {
             (
                 decl.get_name().to_string(),
@@ -194,18 +192,13 @@ fn in_env(builder: &mut CompletionBuilder, target_name: &str, target_type: &LuaT
                     .semantic_model
                     .get_db()
                     .get_type_index()
-                    .get_type_cache(&decl_id.clone().into())
+                    .get_type_cache(&(*decl_id).into())
                     .map(|cache| cache.as_type().clone())
                     .unwrap_or(LuaType::Unknown),
             )
         };
         // 必须要名称相同 + 类型兼容
-        if name == target_name
-            && builder
-                .semantic_model
-                .type_check(&target_type, &typ)
-                .is_ok()
-        {
+        if name == target_name && builder.semantic_model.type_check(target_type, &typ).is_ok() {
             return Some(());
         }
     }
@@ -246,7 +239,7 @@ fn add_field_value_completion(
     builder: &mut CompletionBuilder,
     member_info: LuaMemberInfo,
 ) -> Option<()> {
-    let real_type = get_real_type(&builder.semantic_model.get_db(), &member_info.typ)?;
+    let real_type = get_real_type(builder.semantic_model.get_db(), &member_info.typ)?;
     if real_type.is_function() {
         let label_detail = get_function_detail(builder, real_type);
         let item = CompletionItem {
@@ -280,7 +273,7 @@ fn get_function_detail(builder: &CompletionBuilder, typ: &LuaType) -> Option<Str
                 .semantic_model
                 .get_db()
                 .get_signature_index()
-                .get(&signature_id)?;
+                .get(signature_id)?;
 
             let params_str = signature
                 .get_type_params()

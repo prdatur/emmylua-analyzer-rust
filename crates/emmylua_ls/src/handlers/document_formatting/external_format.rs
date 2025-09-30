@@ -22,7 +22,7 @@ pub async fn external_tool_format(
 ) -> Option<String> {
     let exe_path = &emmyrc_external_tool.program;
     let args = &emmyrc_external_tool.args;
-    let timeout_duration = Duration::from_millis(emmyrc_external_tool.timeout as u64);
+    let timeout_duration = Duration::from_millis(emmyrc_external_tool.timeout);
 
     let mut cmd = Command::new(exe_path);
 
@@ -108,7 +108,7 @@ fn parse_macro_arg(
             let mut content = String::new();
             let mut brace_count = 1;
 
-            while let Some(inner_ch) = chars.next() {
+            for inner_ch in chars.by_ref() {
                 if inner_ch == '{' {
                     brace_count += 1;
                     if brace_count > 1 {

@@ -32,7 +32,7 @@ pub fn process_inject_lang_string_token(
     lang: CodeBlockLang,
     str_token: &LuaStringToken,
 ) -> Option<()> {
-    let code_block_info = divide_into_quote_and_code_block(&str_token)?;
+    let code_block_info = divide_into_quote_and_code_block(str_token)?;
     let code_block_range = code_block_info.code_block;
     let code_block_source = SourceRange::from_start_end(
         u32::from(code_block_range.start()) as usize,

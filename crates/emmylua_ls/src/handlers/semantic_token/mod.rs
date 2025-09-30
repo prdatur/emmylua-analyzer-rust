@@ -32,12 +32,7 @@ pub async fn on_semantic_token_handler(
     let client_id = workspace_manager.client_config.client_id;
     let _ = workspace_manager;
 
-    semantic_token(
-        &analysis,
-        file_id,
-        &context.client_capabilities(),
-        client_id,
-    )
+    semantic_token(&analysis, file_id, context.client_capabilities(), client_id)
 }
 
 pub fn semantic_token(
@@ -75,8 +70,8 @@ impl RegisterCapabilities for SemanticTokenCapabilities {
         server_capabilities.semantic_tokens_provider = Some(
             SemanticTokensServerCapabilities::SemanticTokensOptions(SemanticTokensOptions {
                 legend: SemanticTokensLegend {
-                    token_modifiers: SEMANTIC_TOKEN_MODIFIERS.iter().cloned().collect(),
-                    token_types: SEMANTIC_TOKEN_TYPES.iter().cloned().collect(),
+                    token_modifiers: SEMANTIC_TOKEN_MODIFIERS.to_vec(),
+                    token_types: SEMANTIC_TOKEN_TYPES.to_vec(),
                 },
                 full: Some(SemanticTokensFullOptions::Bool(true)),
                 ..Default::default()
@@ -86,12 +81,11 @@ impl RegisterCapabilities for SemanticTokenCapabilities {
 }
 
 fn supports_multiline_tokens(client_capability: &ClientCapabilities) -> bool {
-    if let Some(text_document) = &client_capability.text_document {
-        if let Some(support) = &text_document.semantic_tokens {
-            if let Some(support) = &support.multiline_token_support {
-                return *support;
-            }
-        }
+    if let Some(text_document) = &client_capability.text_document
+        && let Some(support) = &text_document.semantic_tokens
+        && let Some(support) = &support.multiline_token_support
+    {
+        return *support;
     }
 
     false

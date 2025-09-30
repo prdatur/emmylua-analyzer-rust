@@ -53,7 +53,7 @@ pub fn search_member_implementations(
     let index_references = semantic_model
         .get_db()
         .get_reference_index()
-        .get_index_references(&member_key)?;
+        .get_index_references(member_key)?;
 
     let mut semantic_cache = HashMap::new();
 
@@ -70,7 +70,7 @@ pub fn search_member_implementations(
             };
         let root = semantic_model.get_root();
         let node = in_filed_syntax_id.value.to_node_from_root(root.syntax())?;
-        if let Some(is_signature) = check_member_reference(&semantic_model, node.clone()) {
+        if let Some(is_signature) = check_member_reference(semantic_model, node.clone()) {
             if !semantic_model.is_reference_to(
                 node,
                 property_owner.clone(),
@@ -98,17 +98,14 @@ fn check_member_reference(semantic_model: &SemanticModel, node: LuaSyntaxNode) -
     match &node {
         expr_node if LuaIndexExpr::can_cast(expr_node.kind().into()) => {
             let expr = LuaIndexExpr::cast(expr_node.clone())?;
-            let prefix_type = semantic_model
-                .infer_expr(expr.get_prefix_expr()?.into())
-                .ok()?;
+            let prefix_type = semantic_model.infer_expr(expr.get_prefix_expr()?).ok()?;
             let mut is_signature = false;
             if let Some(current_type) = semantic_model
                 .infer_expr(LuaExpr::IndexExpr(expr.clone()))
                 .ok()
+                && current_type.is_signature()
             {
-                if current_type.is_signature() {
-                    is_signature = true;
-                }
+                is_signature = true;
             }
             // TODO: 需要实现更复杂的逻辑, 即当为`Ref`时, 针对指定的实例定义到其实现
             /*
@@ -125,11 +122,8 @@ fn check_member_reference(semantic_model: &SemanticModel, node: LuaSyntaxNode) -
                local b = a
                b.a = 2 -- 这里寻找实现不能匹配到`a.a`
             */
-            match prefix_type {
-                LuaType::Ref(_) => {
-                    return None;
-                }
-                _ => {}
+            if let LuaType::Ref(_) = prefix_type {
+                return None;
             };
             // 往上寻找 stat 节点
             let stat = expr.ancestors::<LuaStat>().next()?;
@@ -225,10 +219,10 @@ pub fn search_decl_implementations(
         result.push(location);
 
         for decl_ref in &decl_refs.cells {
-            if decl_ref.is_write {
-                if let Some(location) = document.to_lsp_location(decl_ref.range) {
-                    result.push(location);
-                }
+            if decl_ref.is_write
+                && let Some(location) = document.to_lsp_location(decl_ref.range)
+            {
+                result.push(location);
             }
         }
 
@@ -254,7 +248,7 @@ pub fn search_decl_implementations(
             let Some(decl) = semantic_model
                 .get_db()
                 .get_decl_index()
-                .get_decl(&global_decl_id)
+                .get_decl(global_decl_id)
             else {
                 continue;
             };

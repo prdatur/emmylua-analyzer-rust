@@ -141,8 +141,8 @@ impl RegisterCapabilities for CompletionCapabilities {
         server_capabilities.completion_provider = Some(CompletionOptions {
             resolve_provider: Some(true),
             trigger_characters: Some(
-                vec![".", ":", "(", "[", "\"", "\'", " ", "@", "\\", "/", "|"]
-                    .iter()
+                ['.', ':', '(', '[', '"', '\'', ' ', '@', '\\', '/', '|']
+                    .into_iter()
                     .map(|s| s.to_string())
                     .collect(),
             ),

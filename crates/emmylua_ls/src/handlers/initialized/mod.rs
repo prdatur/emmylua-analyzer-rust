@@ -69,10 +69,7 @@ pub async fn initialized_handler(
 
     // init config
     // todo! support multi config
-    let config_root: Option<PathBuf> = match main_root {
-        Some(root) => Some(PathBuf::from(root)),
-        None => None,
-    };
+    let config_root: Option<PathBuf> = main_root.map(PathBuf::from);
 
     let emmyrc = load_emmy_config(config_root, client_config.clone());
     load_editorconfig(workspace_folders.clone());
@@ -195,7 +192,7 @@ pub fn get_workspace_folders(params: &InitializeParams) -> Vec<PathBuf> {
         // However, most LSP clients still provide this field
         #[allow(deprecated)]
         if let Some(uri) = &params.root_uri {
-            let root_workspace = uri_to_file_path(&uri);
+            let root_workspace = uri_to_file_path(uri);
             if let Some(path) = root_workspace {
                 workspace_folders.push(path);
             }

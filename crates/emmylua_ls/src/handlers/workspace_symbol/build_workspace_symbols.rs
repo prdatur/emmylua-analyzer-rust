@@ -35,7 +35,7 @@ fn add_global_variable_symbols(
         if decl.get_name().contains(query) {
             let typ = db
                 .get_type_index()
-                .get_type_cache(&decl_id.clone().into())
+                .get_type_cache(&decl_id.into())
                 .map(|cache| cache.as_type())
                 .unwrap_or(&LuaType::Unknown);
             let property_owner_id = LuaSemanticDeclId::LuaDecl(decl_id);
@@ -116,11 +116,5 @@ fn get_symbol_kind(typ: &LuaType) -> SymbolKind {
 
 fn is_deprecated(db: &DbIndex, id: LuaSemanticDeclId) -> bool {
     let property = db.get_property_index().get_property(&id);
-    if let Some(property) = property {
-        if property.deprecated().is_some() {
-            return true;
-        }
-    }
-
-    false
+    property.is_some_and(|prop| prop.deprecated().is_some())
 }

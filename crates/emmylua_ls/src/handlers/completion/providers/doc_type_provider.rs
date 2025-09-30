@@ -15,7 +15,7 @@ pub fn add_completion(builder: &mut CompletionBuilder) -> Option<()> {
     check_can_add_type_completion(builder)?;
 
     let prefix_content = builder.trigger_token.text().to_string();
-    let prefix = if let Some(last_sep) = prefix_content.rfind(|c| c == '.') {
+    let prefix = if let Some(last_sep) = prefix_content.rfind('.') {
         let (path, _) = prefix_content.split_at(last_sep + 1);
         path
     } else {
@@ -36,13 +36,12 @@ pub fn complete_types_by_prefix(
     let results = type_index.find_type_decls(file_id, prefix);
 
     for (name, type_decl) in results {
-        if let Some(filter) = filter {
-            if type_decl
+        if let Some(filter) = filter
+            && type_decl
                 .as_ref()
                 .is_some_and(|type_decl| filter.contains(type_decl))
-            {
-                continue;
-            }
+        {
+            continue;
         }
         add_type_completion_item(builder, &name, type_decl);
     }

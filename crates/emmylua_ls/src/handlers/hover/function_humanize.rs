@@ -32,16 +32,14 @@ pub fn hover_function_type(
     semantic_decls: &[(LuaSemanticDeclId, LuaType)],
 ) -> Option<()> {
     let (name, is_local) = {
-        let Some((semantic_decl, _)) = semantic_decls.first() else {
-            return None;
-        };
+        let (semantic_decl, _) = semantic_decls.first()?;
         match semantic_decl {
             LuaSemanticDeclId::LuaDecl(id) => {
-                let decl = db.get_decl_index().get_decl(&id)?;
+                let decl = db.get_decl_index().get_decl(id)?;
                 (decl.get_name().to_string(), decl.is_local())
             }
             LuaSemanticDeclId::Member(id) => {
-                let member = db.get_member_index().get_member(&id)?;
+                let member = db.get_member_index().get_member(id)?;
                 (member.get_key().to_path(), false)
             }
             _ => {
@@ -64,7 +62,7 @@ pub fn hover_function_type(
             type_description: String::new(),
             overloads: None,
             description: if is_new {
-                extract_description_from_property_owner(&builder.semantic_model, semantic_decl_id)
+                extract_description_from_property_owner(builder.semantic_model, semantic_decl_id)
             } else {
                 None
             },
@@ -73,15 +71,16 @@ pub fn hover_function_type(
 
         let function_member = match semantic_decl_id {
             LuaSemanticDeclId::Member(id) => {
-                let member = db.get_member_index().get_member(&id)?;
+                let member = db.get_member_index().get_member(id)?;
                 // 以 @field 定义的 function 描述信息绑定的 id 并不是 member, 需要特殊处理
-                if is_new && function_info.description.is_none() {
-                    if let Some(signature_id) = try_extract_signature_id_from_field(db, &member) {
-                        function_info.description = extract_description_from_property_owner(
-                            &builder.semantic_model,
-                            &LuaSemanticDeclId::Signature(signature_id),
-                        );
-                    }
+                if is_new
+                    && function_info.description.is_none()
+                    && let Some(signature_id) = try_extract_signature_id_from_field(db, member)
+                {
+                    function_info.description = extract_description_from_property_owner(
+                        builder.semantic_model,
+                        &LuaSemanticDeclId::Signature(signature_id),
+                    );
                 }
                 Some(member)
             }
@@ -89,36 +88,31 @@ pub fn hover_function_type(
         };
 
         // 如果函数定义来自于其他文件, 我们需要添加原始的注释信息. 参考`test_other_file_function`
-        if let LuaType::Signature(signature_id) = typ {
-            if let Some(semantic_id) =
-                extract_semantic_decl_from_signature(builder.compilation, &signature_id)
-            {
-                if semantic_id != *semantic_decl_id {
-                    // signature 的原始定义的描述信息
-                    if let Some(origin_description) = extract_description_from_property_owner(
-                        &builder.semantic_model,
-                        &semantic_id,
-                    ) {
-                        match &mut function_info.description {
-                            Some(current_description) => {
-                                // 如果描述不为空, 则合并描述
-                                if let Some(description) = origin_description.description {
-                                    if current_description.description.is_none() {
-                                        current_description.description = Some(description);
-                                    } else {
-                                        current_description.description = Some(format!(
-                                            "{}\n{}",
-                                            current_description.description.take()?,
-                                            description
-                                        ));
-                                    }
-                                }
-                            }
-                            None => {
-                                function_info.description = Some(origin_description);
-                            }
+        if let LuaType::Signature(signature_id) = typ
+            && let Some(semantic_id) =
+                extract_semantic_decl_from_signature(builder.compilation, signature_id)
+            && semantic_id != *semantic_decl_id
+            // signature 的原始定义的描述信息
+            && let Some(origin_description) =
+                extract_description_from_property_owner(builder.semantic_model, &semantic_id)
+        {
+            match &mut function_info.description {
+                Some(current_description) => {
+                    // 如果描述不为空, 则合并描述
+                    if let Some(description) = origin_description.description {
+                        if current_description.description.is_none() {
+                            current_description.description = Some(description);
+                        } else {
+                            current_description.description = Some(format!(
+                                "{}\n{}",
+                                current_description.description.take()?,
+                                description
+                            ));
                         }
                     }
+                }
+                None => {
+                    function_info.description = Some(origin_description);
                 }
             }
         }
@@ -194,14 +188,14 @@ pub fn hover_function_type(
     }
 
     // 此时是函数调用且具有完全匹配的签名, 那么只需要显示对应的签名, 不需要显示重载
-    if let Some(info) = type_descs.first() {
-        if info.is_call_function {
-            builder.signature_overload = None;
-            builder.set_type_description(info.type_description.clone());
+    if let Some(info) = type_descs.first()
+        && info.is_call_function
+    {
+        builder.signature_overload = None;
+        builder.set_type_description(info.type_description.clone());
 
-            builder.add_description_from_info(info.description.clone());
-            return Some(());
-        }
+        builder.add_description_from_info(info.description.clone());
+        return Some(());
     }
 
     // 去重
@@ -288,9 +282,9 @@ fn hover_doc_function_type(
 
         if is_method {
             type_label = "(method) ";
-            name.push_str(":");
+            name.push(':');
         } else {
-            name.push_str(".");
+            name.push('.');
         }
         if let LuaMemberKey::Name(n) = owner_member.get_key() {
             name.push_str(n.as_str());
@@ -372,9 +366,9 @@ fn hover_signature_type(
                 is_method = signature.is_method(builder.semantic_model, Some(&self_real_type));
                 if is_method {
                     type_label = "(method) ";
-                    name.push_str(":");
+                    name.push(':');
                 } else {
-                    name.push_str(".");
+                    name.push('.');
                 }
             }
             Some(LuaMemberOwner::Element(element_id)) => {
@@ -382,7 +376,7 @@ fn hover_signature_type(
                     extract_owner_name_from_element(builder.semantic_model, element_id)
                 {
                     name.push_str(&owner_name);
-                    name.push_str(".");
+                    name.push('.');
                 }
             }
             _ => {}
@@ -429,22 +423,22 @@ fn hover_signature_type(
         let rets = build_signature_rets(builder, signature, builder.is_completion, None);
         let result = format_function_type(type_label, async_label, full_name.clone(), params, rets);
         // 由于 @field 定义的`docfunction`会被视为`signature`, 因此这里额外处理
-        if let Some(call_function) = call_function {
-            if call_function.get_params() == signature.get_type_params() {
-                // 如果具有完全匹配的签名, 那么将其设置为当前签名, 且不显示重载
-                return Some(HoverSignatureResult {
-                    type_description: result,
-                    overloads: None,
-                    call_function: Some(call_function.clone()),
-                });
-            }
+        if let Some(call_function) = call_function
+            && call_function.get_params() == signature.get_type_params()
+        {
+            // 如果具有完全匹配的签名, 那么将其设置为当前签名, 且不显示重载
+            return Some(HoverSignatureResult {
+                type_description: result,
+                overloads: None,
+                call_function: Some(call_function.clone()),
+            });
         }
         result
     };
     // 构建所有重载
     let overloads: Vec<String> = {
         let mut overloads = Vec::new();
-        for (_, overload) in signature.overloads.iter().enumerate() {
+        for overload in &signature.overloads {
             let async_label = match overload.get_async_state() {
                 AsyncState::Async => "async ",
                 AsyncState::Sync => "sync ",
@@ -475,15 +469,15 @@ fn hover_signature_type(
             let result =
                 format_function_type(type_label, async_label, full_name.clone(), params, rets);
 
-            if let Some(call_function) = call_function {
-                if *call_function == **overload {
-                    // 如果具有完全匹配的签名, 那么将其设置为当前签名, 且不显示重载
-                    return Some(HoverSignatureResult {
-                        type_description: result,
-                        overloads: None,
-                        call_function: Some(call_function.clone()),
-                    });
-                }
+            if let Some(call_function) = call_function
+                && *call_function == **overload
+            {
+                // 如果具有完全匹配的签名, 那么将其设置为当前签名, 且不显示重载
+                return Some(HoverSignatureResult {
+                    type_description: result,
+                    overloads: None,
+                    call_function: Some(call_function.clone()),
+                });
             };
             overloads.push(result);
         }
@@ -548,7 +542,7 @@ fn build_signature_rets(
             "".to_string()
         } else {
             let mut rets_string_multiline = String::new();
-            rets_string_multiline.push_str("\n");
+            rets_string_multiline.push('\n');
 
             for (i, ret) in rets.iter().enumerate() {
                 let type_text = build_signature_ret_type(builder, ret, i);
@@ -645,7 +639,7 @@ fn process_single_function_type(
         }),
         LuaType::DocFunction(lua_func) => {
             let type_description =
-                hover_doc_function_type(builder, db, &lua_func, function_member, &name);
+                hover_doc_function_type(builder, db, lua_func, function_member, name);
             let is_call_function = if let Some(call_function) = call_function {
                 call_function.get_params() == lua_func.get_params()
             } else {
@@ -663,7 +657,7 @@ fn process_single_function_type(
             let signature_result = hover_signature_type(
                 builder,
                 db,
-                signature_id.clone(),
+                *signature_id,
                 function_member,
                 name,
                 is_local,
@@ -721,6 +715,7 @@ fn process_single_function_type(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn process_single_function_type_with_exclusions(
     builder: &mut HoverBuilder,
     db: &DbIndex,

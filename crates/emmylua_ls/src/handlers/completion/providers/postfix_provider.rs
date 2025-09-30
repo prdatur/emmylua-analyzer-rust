@@ -155,12 +155,12 @@ fn is_postfix_trigger(trigger_kind: LuaTokenKind, emmyrc: &Emmyrc) -> bool {
     }
 
     let first_char = trigger_string.chars().next().unwrap();
-    return match first_char {
+    match first_char {
         '.' => trigger_kind == LuaTokenKind::TkDot,
         '@' => trigger_kind == LuaTokenKind::TkAt,
         ':' => trigger_kind == LuaTokenKind::TkColon,
         _ => false,
-    };
+    }
 }
 
 fn add_postfix_completion(

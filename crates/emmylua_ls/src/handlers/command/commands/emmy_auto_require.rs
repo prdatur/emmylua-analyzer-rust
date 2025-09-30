@@ -18,7 +18,7 @@ impl CommandSpec for AutoRequireCommand {
     const COMMAND: &str = "emmy.auto.require";
 
     async fn handle(context: ServerContextSnapshot, args: Vec<Value>) -> Option<()> {
-        let add_to: FileId = serde_json::from_value(args.get(0)?.clone()).ok()?;
+        let add_to: FileId = serde_json::from_value(args.first()?.clone()).ok()?;
         let need_require_file_id: FileId = serde_json::from_value(args.get(1)?.clone()).ok()?;
         let position: Position = serde_json::from_value(args.get(2)?.clone()).ok()?;
         let member_name: String = serde_json::from_value(args.get(3)?.clone()).ok()?;
@@ -33,7 +33,7 @@ impl CommandSpec for AutoRequireCommand {
         let require_like_func = &emmyrc.runtime.require_like_function;
         let auto_require_func = emmyrc.completion.auto_require_function.clone();
         let file_conversion = emmyrc.completion.auto_require_naming_convention;
-        let local_name = module_name_convert(&module_info, file_conversion);
+        let local_name = module_name_convert(module_info, file_conversion);
         let require_separator = emmyrc.completion.auto_require_separator.clone();
         let full_module_path = match require_separator.as_str() {
             "." | "" => module_info.full_module_name.clone(),
@@ -66,7 +66,7 @@ impl CommandSpec for AutoRequireCommand {
                 break;
             }
 
-            if is_require_stat(stat.clone(), &require_like_func).unwrap_or(false) {
+            if is_require_stat(stat.clone(), require_like_func).unwrap_or(false) {
                 last_require_stat = Some(stat);
             }
         }
@@ -93,6 +93,7 @@ impl CommandSpec for AutoRequireCommand {
         };
 
         let uri = document.get_uri();
+        #[allow(clippy::mutable_key_type)]
         let mut changes = HashMap::new();
         changes.insert(uri.clone(), vec![text_edit.clone()]);
 
@@ -112,10 +113,10 @@ impl CommandSpec for AutoRequireCommand {
                 .client()
                 .apply_edit(apply_edit_params, cancel_token)
                 .await;
-            if let Some(res) = res {
-                if !res.applied {
-                    log::error!("Failed to apply edit: {:?}", res.failure_reason);
-                }
+            if let Some(res) = res
+                && !res.applied
+            {
+                log::error!("Failed to apply edit: {:?}", res.failure_reason);
             }
         });
 
@@ -123,7 +124,7 @@ impl CommandSpec for AutoRequireCommand {
     }
 }
 
-fn is_require_stat(stat: LuaStat, require_like_func: &Vec<String>) -> Option<bool> {
+fn is_require_stat(stat: LuaStat, require_like_func: &[String]) -> Option<bool> {
     match stat {
         LuaStat::LocalStat(local_stat) => {
             let exprs = local_stat.get_value_exprs();
@@ -153,7 +154,7 @@ fn is_require_stat(stat: LuaStat, require_like_func: &Vec<String>) -> Option<boo
     Some(false)
 }
 
-fn is_require_expr(expr: LuaExpr, require_like_func: &Vec<String>) -> Option<bool> {
+fn is_require_expr(expr: LuaExpr, require_like_func: &[String]) -> Option<bool> {
     if let LuaExpr::CallExpr(call_expr) = expr {
         let name = call_expr.get_prefix_expr()?;
         if let LuaExpr::NameExpr(name_expr) = name {

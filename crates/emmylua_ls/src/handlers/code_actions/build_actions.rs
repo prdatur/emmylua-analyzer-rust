@@ -30,26 +30,25 @@ pub fn build_actions(
             continue;
         }
 
-        if let Some(code) = diagnostic.code {
-            if let NumberOrString::String(action_string) = code {
-                if let Some(diagnostic_code) = DiagnosticCode::from_str(&action_string).ok() {
-                    add_fix_code_action(
-                        &semantic_model,
-                        &mut actions,
-                        diagnostic_code,
-                        file_id,
-                        diagnostic.range,
-                        &diagnostic.data,
-                    );
-                    add_disable_code_action(
-                        &semantic_model,
-                        &mut actions,
-                        diagnostic_code,
-                        file_id,
-                        diagnostic.range,
-                    );
-                }
-            }
+        if let Some(code) = diagnostic.code
+            && let NumberOrString::String(action_string) = code
+            && let Ok(diagnostic_code) = DiagnosticCode::from_str(&action_string)
+        {
+            add_fix_code_action(
+                semantic_model,
+                &mut actions,
+                diagnostic_code,
+                file_id,
+                diagnostic.range,
+                &diagnostic.data,
+            );
+            add_disable_code_action(
+                semantic_model,
+                &mut actions,
+                diagnostic_code,
+                file_id,
+                diagnostic.range,
+            );
         }
     }
 
@@ -124,12 +123,12 @@ fn add_disable_code_action(
         .to_string(),
         kind: Some(CodeActionKind::QUICKFIX),
         command: Some(make_disable_code_command(
-            &t!(
+            t!(
                 "Disable all diagnostics in current project (%{name})",
                 name = diagnostic_code.get_name()
             )
-            .to_string(),
-            DisableAction::DisableProject,
+            .as_ref(),
+            DisableAction::Project,
             diagnostic_code,
             file_id,
             range,

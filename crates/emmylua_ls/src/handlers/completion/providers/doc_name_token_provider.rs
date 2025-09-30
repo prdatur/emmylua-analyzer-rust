@@ -85,7 +85,7 @@ fn get_doc_completion_expected(trigger_token: &LuaSyntaxToken) -> Option<DocComp
                             Some(DocCompletionExpected::DiagnosticCode)
                         }
                         LuaSyntaxKind::DocAttribute => {
-                            let attr = LuaDocAttribute::cast(parent.clone().into())?;
+                            let attr = LuaDocAttribute::cast(parent.clone())?;
                             Some(DocCompletionExpected::ClassAttr(attr))
                         }
                         _ => None,
@@ -106,7 +106,7 @@ fn get_doc_completion_expected(trigger_token: &LuaSyntaxToken) -> Option<DocComp
             match parent.kind().into() {
                 LuaSyntaxKind::DocDiagnosticCodeList => Some(DocCompletionExpected::DiagnosticCode),
                 LuaSyntaxKind::DocAttribute => {
-                    let attr = LuaDocAttribute::cast(parent.clone().into())?;
+                    let attr = LuaDocAttribute::cast(parent.clone())?;
                     Some(DocCompletionExpected::ClassAttr(attr))
                 }
                 _ => None,
@@ -116,13 +116,13 @@ fn get_doc_completion_expected(trigger_token: &LuaSyntaxToken) -> Option<DocComp
             let parent = trigger_token.parent()?;
             match parent.kind().into() {
                 LuaSyntaxKind::DocAttribute => {
-                    let attr = LuaDocAttribute::cast(parent.clone().into())?;
+                    let attr = LuaDocAttribute::cast(parent.clone())?;
                     Some(DocCompletionExpected::ClassAttr(attr))
                 }
                 _ => None,
             }
         }
-        _ => return None,
+        _ => None,
     }
 }
 
@@ -180,7 +180,7 @@ fn add_tag_cast_name_completion(builder: &mut CompletionBuilder) -> Option<()> {
                 .semantic_model
                 .get_db()
                 .get_decl_index()
-                .get_decl(&decl_id)?;
+                .get_decl(decl_id)?;
 
             decl.get_name().to_string()
         };
@@ -201,7 +201,7 @@ fn add_tag_cast_name_completion(builder: &mut CompletionBuilder) -> Option<()> {
 }
 
 fn add_tag_diagnostic_action_completion(builder: &mut CompletionBuilder) {
-    let actions = vec!["disable", "disable-next-line", "disable-line", "enable"];
+    let actions = ["disable", "disable-next-line", "disable-line", "enable"];
     for (sorted_index, action) in actions.iter().enumerate() {
         let completion_item = CompletionItem {
             label: action.to_string(),
@@ -304,7 +304,7 @@ fn add_tag_using_completion(builder: &mut CompletionBuilder) {
             label: format!("using {}", namespace),
             kind: Some(lsp_types::CompletionItemKind::MODULE),
             sort_text: Some(format!("{:03}", sorted_index)),
-            insert_text: Some(format!("{}", namespace)),
+            insert_text: Some(namespace.to_string()),
             ..Default::default()
         };
         builder.add_completion_item(completion_item);
@@ -312,7 +312,7 @@ fn add_tag_using_completion(builder: &mut CompletionBuilder) {
 }
 
 fn add_tag_export_completion(builder: &mut CompletionBuilder) {
-    let key = vec!["namespace", "global"];
+    let key = ["namespace", "global"];
     for (sorted_index, key) in key.iter().enumerate() {
         let completion_item = CompletionItem {
             label: key.to_string(),

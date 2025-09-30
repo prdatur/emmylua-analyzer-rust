@@ -33,7 +33,7 @@ pub fn init_logger(root: Option<&str>, cmd_args: &CmdArgs) {
         "root".to_string()
     } else {
         root.trim_start_matches('/')
-            .split(|c| c == '/' || c == '\\' || c == ':')
+            .split(['/', '\\', ':'])
             .filter(|s| !s.is_empty())
             .collect::<Vec<_>>()
             .join("_")

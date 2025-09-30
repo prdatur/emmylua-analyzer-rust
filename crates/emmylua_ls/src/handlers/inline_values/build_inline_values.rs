@@ -26,10 +26,10 @@ pub fn build_inline_values(
     })?;
 
     let mut node = block;
-    if let Some(closure) = node.parent() {
-        if closure.kind() == LuaSyntaxKind::ClosureExpr.into() {
-            node = closure;
-        }
+    if let Some(closure) = node.parent()
+        && closure.kind() == LuaSyntaxKind::ClosureExpr.into()
+    {
+        node = closure;
     }
 
     let ast_node = LuaAst::cast(node)?;

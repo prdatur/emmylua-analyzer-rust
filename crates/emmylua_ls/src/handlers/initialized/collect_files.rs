@@ -15,7 +15,7 @@ pub fn collect_files(workspaces: &Vec<PathBuf>, emmyrc: &Emmyrc) -> Vec<LuaFileI
     );
     for workspace in workspaces {
         let loaded = load_workspace_files(
-            &workspace,
+            workspace,
             &match_pattern,
             &exclude,
             &exclude_dir,

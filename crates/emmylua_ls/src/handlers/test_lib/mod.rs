@@ -145,11 +145,10 @@ impl ProviderVirtualWorkspace {
 
     pub fn def_file(&mut self, file_name: &str, content: &str) -> FileId {
         let uri = self.virtual_url_generator.new_uri(file_name);
-        let file_id = self
-            .analysis
+
+        self.analysis
             .update_file_by_uri(&uri, Some(content.to_string()))
-            .unwrap();
-        file_id
+            .unwrap()
     }
 
     pub fn get_emmyrc(&self) -> Emmyrc {
@@ -276,7 +275,7 @@ impl ProviderVirtualWorkspace {
             CompletionResponse::List(list) => list.items,
         };
         let param = items
-            .get(0)
+            .first()
             .ok_or("failed to get completion item")
             .or_fail()?;
         let item = completion_resolve(&self.analysis, param.clone(), ClientId::VSCode);
@@ -331,7 +330,7 @@ impl ProviderVirtualWorkspace {
         let mut items = result
             .iter()
             .map(|l| VirtualLocation {
-                file: l.uri.path().segments().last().unwrap().to_string(),
+                file: l.uri.path().segments().next_back().unwrap().to_string(),
                 line: l.range.start.line,
             })
             .collect::<Vec<_>>();
@@ -402,7 +401,7 @@ impl ProviderVirtualWorkspace {
         block_str: &str,
         expected: Vec<VirtualInlayHint>,
     ) -> Result<()> {
-        let file_id = self.def(&block_str);
+        let file_id = self.def(block_str);
         let result = inlay_hint(&self.analysis, file_id)
             .ok_or("failed to get inlay hints")
             .or_fail()?;
@@ -423,7 +422,7 @@ impl ProviderVirtualWorkspace {
                         Some(part) => part
                             .location
                             .as_ref()
-                            .map(|loc| loc.uri.path().segments().last().unwrap().to_string()),
+                            .map(|loc| loc.uri.path().segments().next_back().unwrap().to_string()),
                         None => None,
                     },
                     InlayHintLabel::String(_) => None,
@@ -568,7 +567,12 @@ impl ProviderVirtualWorkspace {
             .changes
             .or_fail()?
             .into_iter()
-            .map(|(uri, edits)| Ok((uri.path().segments().last().or_fail()?.to_string(), edits)))
+            .map(|(uri, edits)| {
+                Ok((
+                    uri.path().segments().next_back().or_fail()?.to_string(),
+                    edits,
+                ))
+            })
             .collect::<Result<Vec<_>>>()?;
         items.sort_by_key(|(path, _)| path.clone());
         for (_, edits) in &mut items {

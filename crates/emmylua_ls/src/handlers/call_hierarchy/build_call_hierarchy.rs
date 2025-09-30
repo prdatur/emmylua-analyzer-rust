@@ -78,13 +78,13 @@ fn get_kind(db: &DbIndex, type_owner: LuaTypeOwner) -> SymbolKind {
     match type_cache {
         Some(typ) => {
             if typ.is_function() {
-                return SymbolKind::FUNCTION;
+                SymbolKind::FUNCTION
             } else if typ.is_ref() || typ.is_def() {
-                return SymbolKind::CLASS;
+                SymbolKind::CLASS
             } else if typ.is_const() {
-                return SymbolKind::CONSTANT;
+                SymbolKind::CONSTANT
             } else {
-                return SymbolKind::VARIABLE;
+                SymbolKind::VARIABLE
             }
         }
         None => SymbolKind::VARIABLE,

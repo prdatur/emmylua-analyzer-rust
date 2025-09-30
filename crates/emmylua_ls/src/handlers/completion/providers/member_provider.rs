@@ -36,7 +36,7 @@ pub fn add_completion(builder: &mut CompletionBuilder) -> Option<()> {
         LuaType::TplRef(tpl) => get_tpl_ref_extend_type(
             builder.semantic_model.get_db(),
             &mut builder.semantic_model.get_cache().borrow_mut(),
-            &LuaType::TplRef(tpl.clone().into()),
+            &LuaType::TplRef(tpl.clone()),
             prefix_expr.clone(),
             0,
         )?,
@@ -69,7 +69,7 @@ pub fn add_completions_for_members(
     sorted_entries.sort_unstable_by(|(name1, _), (name2, _)| name1.cmp(name2));
 
     for (_, member_infos) in sorted_entries {
-        add_resolve_member_infos(builder, &member_infos, completion_status);
+        add_resolve_member_infos(builder, member_infos, completion_status);
     }
 
     Some(())
@@ -89,7 +89,7 @@ fn add_resolve_member_infos(
                     .semantic_model
                     .get_db()
                     .get_signature_index()
-                    .get(&id)
+                    .get(id)
                 {
                     let count = signature.overloads.len();
                     if count == 0 { None } else { Some(count) }
@@ -124,27 +124,27 @@ fn add_resolve_member_infos(
                 );
             }
             MemberResolveState::Meta => {
-                if let Some(feature) = member_info.feature {
-                    if feature.is_meta_decl() {
-                        add_member_completion(
-                            builder,
-                            member_info.clone(),
-                            completion_status,
-                            overload_count,
-                        );
-                    }
+                if let Some(feature) = member_info.feature
+                    && feature.is_meta_decl()
+                {
+                    add_member_completion(
+                        builder,
+                        member_info.clone(),
+                        completion_status,
+                        overload_count,
+                    );
                 }
             }
             MemberResolveState::FileDecl => {
-                if let Some(feature) = member_info.feature {
-                    if feature.is_file_decl() {
-                        add_member_completion(
-                            builder,
-                            member_info.clone(),
-                            completion_status,
-                            overload_count,
-                        );
-                    }
+                if let Some(feature) = member_info.feature
+                    && feature.is_file_decl()
+                {
+                    add_member_completion(
+                        builder,
+                        member_info.clone(),
+                        completion_status,
+                        overload_count,
+                    );
                 }
             }
         }
@@ -174,12 +174,11 @@ fn filter_member_infos<'a>(
         member_with_owners.push((member_info, owner_id.clone()));
 
         // 寻找第一个 file_decl 作为参考，如果没有则使用第一个
-        if file_decl_member.is_none() {
-            if let Some(feature) = member_info.feature {
-                if feature.is_file_decl() {
-                    file_decl_member = Some(member_info);
-                }
-            }
+        if file_decl_member.is_none()
+            && let Some(feature) = member_info.feature
+            && feature.is_file_decl()
+        {
+            file_decl_member = Some(member_info);
         }
 
         // 检查是否全为 DocFunction，同时计算重载数量
@@ -190,7 +189,7 @@ fn filter_member_infos<'a>(
             LuaType::Signature(id) => {
                 all_doc_function = false;
                 overload_count += 1;
-                if let Some(signature) = semantic_model.get_db().get_signature_index().get(&id) {
+                if let Some(signature) = semantic_model.get_db().get_signature_index().get(id) {
                     overload_count += signature.overloads.len();
                 }
             }
@@ -218,8 +217,7 @@ fn filter_member_infos<'a>(
         // 没有找到 file_decl，使用第一个成员作为参考
         member_with_owners
             .first()
-            .map(|(_, owner)| owner.clone())
-            .flatten()
+            .and_then(|(_, owner)| owner.clone())
     };
 
     // 过滤出相同 owner_type_id 的成员
@@ -272,16 +270,13 @@ fn get_resolve_state(db: &DbIndex, member_infos: &Vec<&LuaMemberInfo>) -> Member
     let mut resolve_state = MemberResolveState::All;
     if db.get_emmyrc().strict.meta_override_file_define {
         for member_info in member_infos.iter() {
-            match member_info.feature {
-                Some(feature) => {
-                    if feature.is_meta_decl() {
-                        resolve_state = MemberResolveState::Meta;
-                        break;
-                    } else if feature.is_file_decl() {
-                        resolve_state = MemberResolveState::FileDecl;
-                    }
+            if let Some(feature) = member_info.feature {
+                if feature.is_meta_decl() {
+                    resolve_state = MemberResolveState::Meta;
+                    break;
+                } else if feature.is_file_decl() {
+                    resolve_state = MemberResolveState::FileDecl;
                 }
-                None => {}
             }
         }
     }

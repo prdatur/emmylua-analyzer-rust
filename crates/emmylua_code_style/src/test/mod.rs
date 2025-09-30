@@ -1,3 +1,4 @@
+#[allow(clippy::module_inception)]
 #[cfg(test)]
 mod test {
     use crate::{reformat_lua_code, styles::LuaCodeStyle};

@@ -87,7 +87,7 @@ pub fn rename(
     position: lsp_types::Position,
     new_name: String,
 ) -> Option<WorkspaceEdit> {
-    let mut semantic_model = analysis.compilation.get_semantic_model(file_id)?;
+    let semantic_model = analysis.compilation.get_semantic_model(file_id)?;
     let root = semantic_model.get_root();
     let position_offset = {
         let document = semantic_model.get_document();
@@ -112,9 +112,10 @@ pub fn rename(
         }
     };
 
-    rename_references(&mut semantic_model, &analysis.compilation, token, new_name)
+    rename_references(&semantic_model, &analysis.compilation, token, new_name)
 }
 
+#[allow(clippy::mutable_key_type)]
 fn rename_references(
     semantic_model: &SemanticModel,
     compilation: &LuaCompilation,
@@ -176,7 +177,7 @@ fn get_target_node(token: LuaSyntaxToken) -> Option<LuaSyntaxNode> {
     match parent.kind().into() {
         LuaSyntaxKind::LiteralExpr => {
             let literal_expr = LuaLiteralExpr::cast(parent)?;
-            return literal_expr.syntax().parent();
+            literal_expr.syntax().parent()
         }
         LuaSyntaxKind::DocTagParam => {
             let doc_tag_param = LuaDocTagParam::cast(parent)?;
@@ -195,7 +196,7 @@ fn get_target_node(token: LuaSyntaxToken) -> Option<LuaSyntaxNode> {
                             false
                         }
                     })?;
-                    return Some(param_name.syntax().clone());
+                    Some(param_name.syntax().clone())
                 }
                 LuaAst::LuaFuncStat(func_stat) => {
                     let closure_expr = func_stat.get_closure()?;
@@ -207,12 +208,12 @@ fn get_target_node(token: LuaSyntaxToken) -> Option<LuaSyntaxNode> {
                             false
                         }
                     })?;
-                    return Some(param_name.syntax().clone());
+                    Some(param_name.syntax().clone())
                 }
-                _ => return None,
+                _ => None,
             }
         }
-        _ => return None,
+        _ => None,
     }
 }
 

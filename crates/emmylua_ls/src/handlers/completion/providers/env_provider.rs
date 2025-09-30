@@ -48,12 +48,11 @@ fn check_can_add_completion(builder: &CompletionBuilder) -> Option<()> {
     if builder.trigger_kind == CompletionTriggerKind::TRIGGER_CHARACTER {
         let parent = builder.trigger_token.parent()?;
 
-        if trigger_text == "(" {
-            if LuaCallArgList::can_cast(parent.kind().into())
-                || LuaParamList::can_cast(parent.kind().into())
-            {
-                return None;
-            }
+        if trigger_text == "("
+            && (LuaCallArgList::can_cast(parent.kind().into())
+                || LuaParamList::can_cast(parent.kind().into()))
+        {
+            return None;
         }
     } else if builder.trigger_kind == CompletionTriggerKind::INVOKED {
         let parent = builder.trigger_token.parent()?;
@@ -69,10 +68,8 @@ fn check_can_add_completion(builder: &CompletionBuilder) -> Option<()> {
         }
 
         // 即时是主动触发, 也不允许在函数定义的参数列表中添加
-        if trigger_text == "(" {
-            if LuaParamList::can_cast(parent.kind().into()) {
-                return None;
-            }
+        if trigger_text == "(" && LuaParamList::can_cast(parent.kind().into()) {
+            return None;
         }
     }
 
@@ -134,14 +131,14 @@ fn add_local_env(
                 .semantic_model
                 .get_db()
                 .get_decl_index()
-                .get_decl(&decl_id)?;
+                .get_decl(decl_id)?;
             (
                 decl.get_name().to_string(),
                 builder
                     .semantic_model
                     .get_db()
                     .get_type_index()
-                    .get_type_cache(&decl_id.clone().into())
+                    .get_type_cache(&(*decl_id).into())
                     .map(|cache| cache.as_type().clone())
                     .unwrap_or(LuaType::Unknown),
             )
@@ -177,7 +174,7 @@ fn add_local_env(
         // }
 
         duplicated_name.insert(name.clone());
-        add_decl_completion(builder, decl_id.clone(), &name, &typ);
+        add_decl_completion(builder, *decl_id, &name, &typ);
     }
 
     Some(())
@@ -198,7 +195,7 @@ pub fn add_global_env(
             .semantic_model
             .get_db()
             .get_decl_index()
-            .get_decl(&decl_id)?;
+            .get_decl(decl_id)?;
         let (name, typ) = {
             (
                 decl.get_name().to_string(),
@@ -206,7 +203,7 @@ pub fn add_global_env(
                     .semantic_model
                     .get_db()
                     .get_type_index()
-                    .get_type_cache(&decl_id.clone().into())
+                    .get_type_cache(&(*decl_id).into())
                     .map(|cache| cache.as_type().clone())
                     .unwrap_or(LuaType::Unknown),
             )
@@ -214,7 +211,7 @@ pub fn add_global_env(
         if duplicated_name.contains(&name) {
             continue;
         }
-        if !env_check_match_word(&trigger_text, name.as_str()) {
+        if !env_check_match_word(trigger_text, name.as_str()) {
             duplicated_name.insert(name.clone());
             continue;
         }
@@ -224,7 +221,7 @@ pub fn add_global_env(
         }
 
         duplicated_name.insert(name.clone());
-        add_decl_completion(builder, decl_id.clone(), &name, &typ);
+        add_decl_completion(builder, *decl_id, &name, &typ);
     }
 
     Some(())

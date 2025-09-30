@@ -51,18 +51,18 @@ pub fn update_function_signature_info(
     hover_builder: &mut HoverBuilder,
     overload_count: Option<usize>,
 ) {
-    if let Some(overload_count) = overload_count {
-        if overload_count > 0 {
-            if let Some(signature_overload) = &mut hover_builder.signature_overload {
-                for signature in signature_overload.iter_mut() {
-                    if let MarkedString::LanguageString(s) = signature {
-                        s.value = format!("{} (+{} overloads)", s.value, overload_count);
-                    }
+    if let Some(overload_count) = overload_count
+        && overload_count > 0
+    {
+        if let Some(signature_overload) = &mut hover_builder.signature_overload {
+            for signature in signature_overload.iter_mut() {
+                if let MarkedString::LanguageString(s) = signature {
+                    s.value = format!("{} (+{} overloads)", s.value, overload_count);
                 }
             }
-            if let MarkedString::LanguageString(s) = &mut hover_builder.type_description {
-                s.value = format!("{} (+{} overloads)", s.value, overload_count);
-            }
+        }
+        if let MarkedString::LanguageString(s) = &mut hover_builder.type_description {
+            s.value = format!("{} (+{} overloads)", s.value, overload_count);
         }
     }
 }
@@ -148,13 +148,8 @@ fn build_other_completion_item(
             result.push_str(&format!("\n```{}\n{}\n```\n", s.language, s.value));
         }
     }
-    if let Some(location_path) = hover_builder.location_path {
-        match location_path {
-            MarkedString::String(s) => {
-                result.push_str(&format!("\n{}\n", s));
-            }
-            _ => {}
-        }
+    if let Some(MarkedString::String(s)) = hover_builder.location_path {
+        result.push_str(&format!("\n{}\n", s));
     }
     for marked_string in hover_builder.annotation_description {
         match marked_string {

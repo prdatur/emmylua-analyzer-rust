@@ -2,11 +2,7 @@ use tera::Tera;
 
 use crate::markdown_generator::markdown_types::MkdocsIndex;
 
-pub fn generate_index(
-    tl: &Tera,
-    mkdocs: &mut MkdocsIndex,
-    output: &std::path::PathBuf,
-) -> Option<()> {
+pub fn generate_index(tl: &Tera, mkdocs: &mut MkdocsIndex, output: &std::path::Path) -> Option<()> {
     let mut context = tera::Context::new();
     mkdocs.types.sort_by(|a, b| a.name.cmp(&b.name));
     mkdocs.modules.sort_by(|a, b| a.name.cmp(&b.name));

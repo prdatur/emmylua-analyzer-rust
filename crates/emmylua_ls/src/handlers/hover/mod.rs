@@ -74,13 +74,13 @@ pub fn hover(analysis: &EmmyLuaAnalysis, file_id: FileId, position: Position) ->
     match token {
         keywords if is_keyword(keywords.clone()) => {
             let document = semantic_model.get_document();
-            return Some(Hover {
+            Some(Hover {
                 contents: HoverContents::Markup(MarkupContent {
                     kind: lsp_types::MarkupKind::Markdown,
                     value: hover_keyword(keywords.clone()),
                 }),
                 range: document.to_lsp_range(keywords.text_range()),
-            });
+            })
         }
         detail if detail.kind() == LuaTokenKind::TkDocDetail.into() => {
             let parent = detail.parent()?;

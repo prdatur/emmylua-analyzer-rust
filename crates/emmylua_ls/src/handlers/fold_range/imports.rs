@@ -46,7 +46,7 @@ pub fn build_imports_fold_range(
     Some(())
 }
 
-fn is_require_stat(stat: LuaStat, require_like_func: &Vec<String>) -> Option<bool> {
+fn is_require_stat(stat: LuaStat, require_like_func: &[String]) -> Option<bool> {
     match stat {
         LuaStat::LocalStat(local_stat) => {
             let exprs = local_stat.get_value_exprs();
@@ -76,7 +76,7 @@ fn is_require_stat(stat: LuaStat, require_like_func: &Vec<String>) -> Option<boo
     Some(false)
 }
 
-fn is_require_expr(expr: LuaExpr, require_like_func: &Vec<String>) -> Option<bool> {
+fn is_require_expr(expr: LuaExpr, require_like_func: &[String]) -> Option<bool> {
     if let LuaExpr::CallExpr(call_expr) = expr {
         let name = call_expr.get_prefix_expr()?;
         if let LuaExpr::NameExpr(name_expr) = name {

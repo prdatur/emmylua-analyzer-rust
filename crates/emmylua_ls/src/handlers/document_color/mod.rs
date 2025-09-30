@@ -62,7 +62,7 @@ pub async fn on_document_color_presentation(
         };
     let document = semantic_model.get_document();
 
-    let range = if let Some(range) = document.to_rowan_range(params.range.clone()) {
+    let range = if let Some(range) = document.to_rowan_range(params.range) {
         range
     } else {
         return vec![];

@@ -68,7 +68,7 @@ pub fn search_decl_references(
         let is_signature = typ.is_signature();
 
         for decl_ref in &decl_refs.cells {
-            let location = document.to_lsp_location(decl_ref.range.clone())?;
+            let location = document.to_lsp_location(decl_ref.range)?;
             result.push(location);
             if is_signature {
                 get_signature_decl_member_references(semantic_model, compilation, result, decl_ref);
@@ -106,7 +106,7 @@ pub fn search_member_references(
     let index_references = semantic_model
         .get_db()
         .get_reference_index()
-        .get_index_references(&key)?;
+        .get_index_references(key)?;
 
     let mut semantic_cache = HashMap::new();
 

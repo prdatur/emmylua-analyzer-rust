@@ -13,9 +13,9 @@ use super::CommandSpec;
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum DisableAction {
-    DisableLine,
-    DisableFile,
-    DisableProject,
+    Line,
+    File,
+    Project,
 }
 
 pub struct DisableCodeCommand;
@@ -24,14 +24,11 @@ impl CommandSpec for DisableCodeCommand {
     const COMMAND: &str = "emmy.disable.code";
 
     async fn handle(context: ServerContextSnapshot, args: Vec<Value>) -> Option<()> {
-        let action: DisableAction = serde_json::from_value(args.get(0)?.clone()).ok()?;
+        let action: DisableAction = serde_json::from_value(args.first()?.clone()).ok()?;
         let code: DiagnosticCode = serde_json::from_value(args.get(3)?.clone()).ok()?;
 
-        match action {
-            DisableAction::DisableProject => {
-                add_disable_project(context.workspace_manager(), code).await;
-            }
-            _ => {}
+        if let DisableAction::Project = action {
+            add_disable_project(context.workspace_manager(), code).await;
         }
 
         Some(())
@@ -64,7 +61,7 @@ async fn add_disable_project(
     code: DiagnosticCode,
 ) -> Option<()> {
     let workspace_manager = workspace_manager.read().await;
-    let main_workspace = workspace_manager.workspace_folders.get(0)?;
+    let main_workspace = workspace_manager.workspace_folders.first()?;
     let emmyrc_path = main_workspace.join(".emmyrc.json");
     let mut emmyrc = load_configs_raw(vec![emmyrc_path.clone()], None);
     drop(workspace_manager);

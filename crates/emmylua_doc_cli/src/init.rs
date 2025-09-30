@@ -3,11 +3,15 @@ use emmylua_code_analysis::{
 };
 use fern::Dispatch;
 use log::LevelFilter;
-use std::{path::PathBuf, str::FromStr, sync::Arc};
+use std::{
+    path::{Path, PathBuf},
+    str::FromStr,
+    sync::Arc,
+};
 
-fn root_from_configs(config_paths: &Vec<PathBuf>, fallback: &PathBuf) -> PathBuf {
+fn root_from_configs(config_paths: &[PathBuf], fallback: &Path) -> PathBuf {
     if config_paths.len() != 1 {
-        fallback.clone()
+        fallback.to_path_buf()
     } else {
         let config_path = &config_paths[0];
         // Need to convert to canonical path to ensure parent() is not an empty
@@ -20,7 +24,7 @@ fn root_from_configs(config_paths: &Vec<PathBuf>, fallback: &PathBuf) -> PathBuf
                     config_path,
                     err
                 );
-                fallback.clone()
+                fallback.to_path_buf()
             }
         }
     }

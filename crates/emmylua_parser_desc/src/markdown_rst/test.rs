@@ -456,9 +456,9 @@ mod tests {
 "#;
 
         test(
-            &code,
+            code,
             Box::new(MarkdownRstParser::new(None, None, None)),
-            &expected,
+            expected,
         )
         .or_fail()?;
         Ok(())
@@ -493,13 +493,13 @@ local t = 123
 "#;
 
         test(
-            &code,
+            code,
             Box::new(MarkdownRstParser::new(
                 None,
                 Some("lua:obj".to_string()),
                 None,
             )),
-            &expected,
+            expected,
         )
         .or_fail()?;
         Ok(())
@@ -512,13 +512,13 @@ local t = 123
         let expected = r#"--- See <Markup>`</Markup><Ref>ref</Ref><Markup>`</Markup>"#;
 
         test(
-            &code,
+            code,
             Box::new(MarkdownRstParser::new(
                 None,
                 Some("lua:obj".to_string()),
                 None,
             )),
-            &expected,
+            expected,
         )
         .or_fail()?;
         Ok(())
@@ -533,9 +533,9 @@ local t = 123
         "#;
 
         test(
-            &code,
+            code,
             Box::new(MarkdownRstParser::new(Some("lua".to_string()), None, None)),
-            &expected,
+            expected,
         )
         .or_fail()?;
         Ok(())
@@ -546,39 +546,39 @@ local t = 123
         let code = r#"--- See :lua:obj:`x` :lua:obj:`ref`"#;
         let expected = r#"--- See :lua:obj:`x` :lua:obj:`<Ref>ref</Ref>`"#;
         test(
-            &code,
+            code,
             Box::new(MarkdownRstParser::new(None, None, Some(31))),
-            &expected,
+            expected,
         )
         .or_fail()?;
         test(
-            &code,
+            code,
             Box::new(MarkdownRstParser::new(None, None, Some(32))),
-            &expected,
+            expected,
         )
         .or_fail()?;
         test(
-            &code,
+            code,
             Box::new(MarkdownRstParser::new(None, None, Some(34))),
-            &expected,
+            expected,
         )
         .or_fail()?;
 
         let code = r#"--- See :lua:obj:`x` :lua:obj:`"#;
         let expected = r#"--- See :lua:obj:`x` :lua:obj:`<Ref></Ref>"#;
         test(
-            &code,
+            code,
             Box::new(MarkdownRstParser::new(None, None, Some(31))),
-            &expected,
+            expected,
         )
         .or_fail()?;
 
         let code = r#"--- See :lua:obj:`x` :lua:obj:``..."#;
         let expected = r#"--- See :lua:obj:`x` :lua:obj:`<Ref>`</Ref>..."#;
         test(
-            &code,
+            code,
             Box::new(MarkdownRstParser::new(None, None, Some(31))),
-            &expected,
+            expected,
         )
         .or_fail()?;
         Ok(())
@@ -589,72 +589,72 @@ local t = 123
         let code = r#"--- See `ab`"#;
         let expected = r#"--- See `<Ref>ab</Ref>`"#;
         test(
-            &code,
+            code,
             Box::new(MarkdownRstParser::new(
                 None,
                 Some("lua:obj".to_string()),
                 Some(9),
             )),
-            &expected,
+            expected,
         )
         .or_fail()?;
         test(
-            &code,
+            code,
             Box::new(MarkdownRstParser::new(
                 None,
                 Some("lua:obj".to_string()),
                 Some(10),
             )),
-            &expected,
+            expected,
         )
         .or_fail()?;
         test(
-            &code,
+            code,
             Box::new(MarkdownRstParser::new(
                 None,
                 Some("lua:obj".to_string()),
                 Some(11),
             )),
-            &expected,
+            expected,
         )
         .or_fail()?;
 
         let code = r#"--- See `"#;
         let expected = r#"--- See `<Ref></Ref>"#;
         test(
-            &code,
+            code,
             Box::new(MarkdownRstParser::new(
                 None,
                 Some("lua:obj".to_string()),
                 Some(9),
             )),
-            &expected,
+            expected,
         )
         .or_fail()?;
 
         let code = r#"--- See `..."#;
         let expected = r#"--- See `<Ref>...</Ref>"#;
         test(
-            &code,
+            code,
             Box::new(MarkdownRstParser::new(
                 None,
                 Some("lua:obj".to_string()),
                 Some(9),
             )),
-            &expected,
+            expected,
         )
         .or_fail()?;
 
         let code = r#"--- See ``"#;
         let expected = r#"--- See `<Ref>`</Ref>"#;
         test(
-            &code,
+            code,
             Box::new(MarkdownRstParser::new(
                 None,
                 Some("lua:obj".to_string()),
                 Some(9),
             )),
-            &expected,
+            expected,
         )
         .or_fail()?;
         Ok(())

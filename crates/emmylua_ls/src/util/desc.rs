@@ -61,7 +61,7 @@ pub fn find_ref_at(
     None
 }
 
-pub fn resolve_ref_single<'a>(
+pub fn resolve_ref_single(
     db: &DbIndex,
     file_id: FileId,
     path: &[(LuaDescRefPathItem, TextRange)],
@@ -77,7 +77,7 @@ pub fn resolve_ref_single<'a>(
     results.into_iter().next()
 }
 
-pub fn resolve_ref<'a>(
+pub fn resolve_ref(
     db: &DbIndex,
     file_id: FileId,
     path: &[(LuaDescRefPathItem, TextRange)],
@@ -92,7 +92,7 @@ pub fn resolve_ref<'a>(
             typ: LuaType::Ref(scope.clone()),
             semantic_decl: Some(scope.into()),
         }];
-        if let Some(found_refs) = find_members(db, scopes, &path) {
+        if let Some(found_refs) = find_members(db, scopes, path) {
             result.extend(found_refs);
         }
     }
@@ -161,7 +161,7 @@ pub fn resolve_ref<'a>(
             typ: module.export_type.clone().unwrap_or(LuaType::Nil),
             semantic_decl: module.semantic_id.clone(),
         }];
-        if let Some(found_refs) = find_members(db, scopes, &path) {
+        if let Some(found_refs) = find_members(db, scopes, path) {
             result.extend(
                 found_refs
                     .into_iter()
@@ -171,24 +171,24 @@ pub fn resolve_ref<'a>(
     }
 
     // Find in globals.
-    if let Some((LuaDescRefPathItem::Name(name), _)) = path.first() {
-        if let Some(globals) = db.get_global_index().get_global_decl_ids(name) {
-            let scopes = globals
-                .into_iter()
-                .filter_map(|&global| {
-                    Some(SemanticInfo {
-                        typ: db
-                            .get_type_index()
-                            .get_type_cache(&global.into())?
-                            .as_type()
-                            .clone(),
-                        semantic_decl: Some(global.into()),
-                    })
+    if let Some((LuaDescRefPathItem::Name(name), _)) = path.first()
+        && let Some(globals) = db.get_global_index().get_global_decl_ids(name)
+    {
+        let scopes = globals
+            .iter()
+            .filter_map(|&global| {
+                Some(SemanticInfo {
+                    typ: db
+                        .get_type_index()
+                        .get_type_cache(&global.into())?
+                        .as_type()
+                        .clone(),
+                    semantic_decl: Some(global.into()),
                 })
-                .collect();
-            if let Some(found_refs) = find_members(db, scopes, &path[1..]) {
-                result.extend(found_refs);
-            }
+            })
+            .collect();
+        if let Some(found_refs) = find_members(db, scopes, &path[1..]) {
+            result.extend(found_refs);
         }
     }
 

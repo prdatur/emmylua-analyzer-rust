@@ -22,7 +22,7 @@ impl DisableLineAst {
             DisableLineAst::Stat(stat) => stat.get_left_comment(),
             DisableLineAst::Expr(expr) => {
                 if let Some(attached_comment) = find_expr_attached_comment(expr.syntax()) {
-                    return Some(LuaComment::cast(attached_comment)?);
+                    return LuaComment::cast(attached_comment);
                 }
                 None
             }
@@ -79,7 +79,7 @@ pub fn build_disable_next_line_changes(
         return None;
     }
 
-    let token = match root.syntax().token_at_offset(offset.into()) {
+    let token = match root.syntax().token_at_offset(offset) {
         TokenAtOffset::Single(token) => token,
         TokenAtOffset::Between(_, token) => token,
         _ => return None,
@@ -89,17 +89,17 @@ pub fn build_disable_next_line_changes(
     let mut ast = DisableLineAst::Stat(stat.clone());
     let expr = token.parent_ancestors().find_map(LuaExpr::cast);
     // 如果 expr 是 stat 的子节点, 则认为是 expr
-    if let Some(expr) = expr {
-        if stat.get_range().contains(expr.get_range().start()) {
-            let stat_line = semantic_model
-                .get_document()
-                .get_line(stat.get_position())?;
-            let expr_line = semantic_model
-                .get_document()
-                .get_line(expr.get_position())?;
-            if expr_line != stat_line {
-                ast = DisableLineAst::Expr(expr);
-            }
+    if let Some(expr) = expr
+        && stat.get_range().contains(expr.get_range().start())
+    {
+        let stat_line = semantic_model
+            .get_document()
+            .get_line(stat.get_position())?;
+        let expr_line = semantic_model
+            .get_document()
+            .get_line(expr.get_position())?;
+        if expr_line != stat_line {
+            ast = DisableLineAst::Expr(expr);
         }
     };
 
@@ -107,7 +107,7 @@ pub fn build_disable_next_line_changes(
 
     if let Some(comment) = ast.get_left_comment() {
         if let Some(diagnostic_tag) =
-            find_diagnostic_disable_tag(comment.clone(), DisableAction::DisableLine)
+            find_diagnostic_disable_tag(comment.clone(), DisableAction::Line)
         {
             let new_start = if let Some(actions_list) = diagnostic_tag.get_code_list() {
                 actions_list.get_range().end()
@@ -132,7 +132,7 @@ pub fn build_disable_next_line_changes(
         } else {
             text_edit = get_disable_next_line_text_edit(
                 &document,
-                &emmyrc,
+                emmyrc,
                 comment.syntax().clone(),
                 comment.get_position(),
                 code,
@@ -143,13 +143,14 @@ pub fn build_disable_next_line_changes(
     if text_edit.is_none() {
         text_edit = get_disable_next_line_text_edit(
             &document,
-            &emmyrc,
+            emmyrc,
             ast.syntax().clone(),
             ast.get_position(),
             code,
         );
     }
 
+    #[allow(clippy::mutable_key_type)]
     let mut changes = HashMap::new();
     let uri = document.get_uri();
     changes.insert(uri, vec![text_edit?]);
@@ -216,7 +217,7 @@ pub fn build_disable_file_changes(
     };
     let text_edit = if let LuaAst::LuaComment(comment) = first_child {
         if let Some(diagnostic_tag) =
-            find_diagnostic_disable_tag(comment.clone(), DisableAction::DisableFile)
+            find_diagnostic_disable_tag(comment.clone(), DisableAction::File)
         {
             let new_start = if let Some(actions_list) = diagnostic_tag.get_code_list() {
                 actions_list.get_range().end()
@@ -269,6 +270,7 @@ pub fn build_disable_file_changes(
         }
     };
 
+    #[allow(clippy::mutable_key_type)]
     let mut changes = HashMap::new();
     let uri = document.get_uri();
     changes.insert(uri, vec![text_edit]);
@@ -280,7 +282,7 @@ fn find_diagnostic_disable_tag(
     comment: LuaComment,
     action: DisableAction,
 ) -> Option<LuaDocTagDiagnostic> {
-    let diagnostic_tags = comment.get_doc_tags().into_iter().filter_map(|tag| {
+    let diagnostic_tags = comment.get_doc_tags().filter_map(|tag| {
         if let LuaDocTag::Diagnostic(diagnostic) = tag {
             Some(diagnostic)
         } else {
@@ -292,12 +294,12 @@ fn find_diagnostic_disable_tag(
         let action_token = diagnostic_tag.get_action_token()?;
         let action_token_text = action_token.get_name_text();
         match action {
-            DisableAction::DisableLine => {
+            DisableAction::Line => {
                 if action_token_text == "disable-next-line" {
                     return Some(diagnostic_tag);
                 }
             }
-            DisableAction::DisableFile | DisableAction::DisableProject => {
+            DisableAction::File | DisableAction::Project => {
                 if action_token_text == "disable" {
                     return Some(diagnostic_tag);
                 }

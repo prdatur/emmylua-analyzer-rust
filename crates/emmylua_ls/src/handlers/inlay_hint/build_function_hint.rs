@@ -45,12 +45,12 @@ pub fn build_closure_hint(
             if let Some(lua_param) = lua_params_map.get(signature_param_name) {
                 let lsp_range = document.to_lsp_range(lua_param.get_range())?;
                 // 构造 label
-                let mut label_parts = build_label_parts(semantic_model, &typ);
+                let mut label_parts = build_label_parts(semantic_model, typ);
                 // 为空时添加默认值
                 if label_parts.is_empty() {
                     let typ_desc = format!(
                         ": {}",
-                        hint_humanize_type(semantic_model, &typ, RenderLevel::Simple)
+                        hint_humanize_type(semantic_model, typ, RenderLevel::Simple)
                     );
                     label_parts.push(InlayHintLabelPart {
                         value: typ_desc,
@@ -129,21 +129,19 @@ pub fn build_label_parts(semantic_model: &SemanticModel, typ: &LuaType) -> Vec<I
 fn get_part(semantic_model: &SemanticModel, typ: &LuaType) -> Option<InlayHintLabelPart> {
     match typ {
         LuaType::Union(_) => None,
-        LuaType::Nil => {
-            return Some(InlayHintLabelPart {
-                value: "?".to_string(),
-                location: get_type_location(semantic_model, typ, 0),
-                ..Default::default()
-            });
-        }
+        LuaType::Nil => Some(InlayHintLabelPart {
+            value: "?".to_string(),
+            location: get_type_location(semantic_model, typ, 0),
+            ..Default::default()
+        }),
         _ => {
             let value = hint_humanize_type(semantic_model, typ, RenderLevel::Simple);
             let location = get_type_location(semantic_model, typ, 0);
-            return Some(InlayHintLabelPart {
+            Some(InlayHintLabelPart {
                 value,
                 location,
                 ..Default::default()
-            });
+            })
         }
     }
 }
@@ -158,10 +156,7 @@ fn get_type_location(
     }
     match typ {
         LuaType::Ref(id) | LuaType::Def(id) => {
-            let type_decl = semantic_model
-                .get_db()
-                .get_type_index()
-                .get_type_decl(&id)?;
+            let type_decl = semantic_model.get_db().get_type_index().get_type_decl(id)?;
             let location = type_decl.get_locations().first()?;
             let document = semantic_model.get_document_by_file_id(location.file_id)?;
             let lsp_range = document.to_lsp_range(location.range)?;

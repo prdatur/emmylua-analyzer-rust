@@ -53,7 +53,7 @@ pub async fn on_formatting_handler(
 
     let mut formatted_text = if let Some(external_config) = &emmyrc.format.external_tool {
         external_tool_format(
-            &external_config,
+            external_config,
             text,
             &normalized_path,
             None,
