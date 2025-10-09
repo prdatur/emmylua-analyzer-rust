@@ -1,12 +1,10 @@
-use std::sync::Arc;
-
 use emmylua_parser::{LuaAstNode, LuaIndexKey, LuaIndexMemberExpr};
 use rowan::TextRange;
 use smol_str::SmolStr;
 
 use crate::{
-    InFiled, InferFailReason, LuaInferCache, LuaInstanceType, LuaMemberId, LuaMemberOwner,
-    LuaOperatorOwner, TypeOps, TypeSubstitutor, check_type_compact,
+    InFiled, InferFailReason, InferGuardRef, LuaInferCache, LuaInstanceType, LuaMemberId,
+    LuaMemberOwner, LuaOperatorOwner, TypeOps, TypeSubstitutor, check_type_compact,
     db_index::{
         DbIndex, LuaGenericType, LuaIntersectionType, LuaMemberKey, LuaObjectType,
         LuaOperatorMetaMethod, LuaTupleType, LuaType, LuaTypeDeclId, LuaUnionType,
@@ -112,7 +110,7 @@ fn find_function_type_by_member_key(
     cache: &mut LuaInferCache,
     prefix_type: &LuaType,
     index_expr: LuaIndexMemberExpr,
-    infer_guard: &Arc<InferGuard>,
+    infer_guard: &InferGuardRef,
     deep_guard: &mut DeepLevel,
 ) -> FunctionTypeResult {
     match &prefix_type {
@@ -179,7 +177,7 @@ fn find_custom_type_function_member(
     cache: &mut LuaInferCache,
     prefix_type_id: LuaTypeDeclId,
     index_expr: LuaIndexMemberExpr,
-    infer_guard: &Arc<InferGuard>,
+    infer_guard: &InferGuardRef,
     deep_guard: &mut DeepLevel,
 ) -> FunctionTypeResult {
     infer_guard.check(&prefix_type_id)?;
@@ -323,7 +321,7 @@ fn find_union_function_member(
     cache: &mut LuaInferCache,
     union_type: &LuaUnionType,
     index_expr: LuaIndexMemberExpr,
-    infer_guard: &Arc<InferGuard>,
+    infer_guard: &InferGuardRef,
     deep_guard: &mut DeepLevel,
 ) -> FunctionTypeResult {
     let mut member_types = Vec::new();
@@ -352,7 +350,7 @@ fn index_generic_members_from_super_generics(
     type_decl_id: &LuaTypeDeclId,
     substitutor: &TypeSubstitutor,
     index_expr: LuaIndexMemberExpr,
-    infer_guard: &Arc<InferGuard>,
+    infer_guard: &InferGuardRef,
     deep_guard: &mut DeepLevel,
 ) -> Option<LuaType> {
     let type_index = db.get_type_index();
@@ -386,7 +384,7 @@ fn find_generic_member(
     cache: &mut LuaInferCache,
     generic_type: &LuaGenericType,
     index_expr: LuaIndexMemberExpr,
-    infer_guard: &Arc<InferGuard>,
+    infer_guard: &InferGuardRef,
     deep_guard: &mut DeepLevel,
 ) -> FunctionTypeResult {
     let base_type = generic_type.get_base_type();
@@ -425,7 +423,7 @@ fn find_instance_member_decl_type(
     cache: &mut LuaInferCache,
     inst: &LuaInstanceType,
     index_expr: LuaIndexMemberExpr,
-    infer_guard: &Arc<InferGuard>,
+    infer_guard: &InferGuardRef,
     deep_guard: &mut DeepLevel,
 ) -> FunctionTypeResult {
     let origin_type = inst.get_base();
@@ -444,7 +442,7 @@ fn find_function_type_by_operator(
     cache: &mut LuaInferCache,
     prefix_type: &LuaType,
     index_expr: LuaIndexMemberExpr,
-    infer_guard: &Arc<InferGuard>,
+    infer_guard: &InferGuardRef,
     deep_guard: &mut DeepLevel,
 ) -> FunctionTypeResult {
     match &prefix_type {
@@ -577,7 +575,7 @@ fn find_member_by_index_custom_type(
     cache: &mut LuaInferCache,
     prefix_type_id: &LuaTypeDeclId,
     index_expr: LuaIndexMemberExpr,
-    infer_guard: &Arc<InferGuard>,
+    infer_guard: &InferGuardRef,
     deep_guard: &mut DeepLevel,
 ) -> FunctionTypeResult {
     infer_guard.check(prefix_type_id)?;
@@ -691,7 +689,7 @@ fn find_member_by_index_union(
     cache: &mut LuaInferCache,
     union: &LuaUnionType,
     index_expr: LuaIndexMemberExpr,
-    infer_guard: &Arc<InferGuard>,
+    infer_guard: &InferGuardRef,
     deep_guard: &mut DeepLevel,
 ) -> FunctionTypeResult {
     let mut member_type = LuaType::Unknown;
@@ -727,7 +725,7 @@ fn find_member_by_index_intersection(
     cache: &mut LuaInferCache,
     intersection: &LuaIntersectionType,
     index_expr: LuaIndexMemberExpr,
-    infer_guard: &Arc<InferGuard>,
+    infer_guard: &InferGuardRef,
     deep_guard: &mut DeepLevel,
 ) -> FunctionTypeResult {
     for member in intersection.get_types() {
@@ -755,7 +753,7 @@ fn find_member_by_index_generic(
     cache: &mut LuaInferCache,
     generic: &LuaGenericType,
     index_expr: LuaIndexMemberExpr,
-    infer_guard: &Arc<InferGuard>,
+    infer_guard: &InferGuardRef,
     deep_guard: &mut DeepLevel,
 ) -> FunctionTypeResult {
     let base_type = generic.get_base_type();

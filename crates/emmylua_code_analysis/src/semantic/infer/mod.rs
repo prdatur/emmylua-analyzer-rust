@@ -284,7 +284,7 @@ pub fn infer_bind_value_type(
                 cache,
                 call_expr,
                 expr_type.clone(),
-                &mut InferGuard::new(),
+                &InferGuard::new(),
                 None,
             )
             .ok()?;

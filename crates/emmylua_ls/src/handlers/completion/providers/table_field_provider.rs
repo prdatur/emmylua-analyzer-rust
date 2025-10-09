@@ -260,7 +260,7 @@ fn add_field_value_completion(
 
         return builder.add_completion_item(item);
     } else {
-        dispatch_type(builder, real_type.clone(), &mut InferGuard::new())?;
+        dispatch_type(builder, real_type.clone(), &InferGuard::new())?;
     }
 
     None

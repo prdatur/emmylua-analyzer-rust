@@ -3,8 +3,8 @@ use std::sync::Arc;
 use smol_str::SmolStr;
 
 use crate::{
-    DbIndex, InferFailReason, InferGuard, LuaMemberKey, LuaMemberOwner, LuaObjectType,
-    LuaTupleType, LuaType, LuaTypeDeclId, TypeOps, check_type_compact,
+    DbIndex, InferFailReason, InferGuard, InferGuardRef, LuaMemberKey, LuaMemberOwner,
+    LuaObjectType, LuaTupleType, LuaType, LuaTypeDeclId, TypeOps, check_type_compact,
 };
 
 use super::{RawGetMemberTypeResult, get_buildin_type_map_type_id};
@@ -22,7 +22,7 @@ fn infer_raw_member_type_guard(
     db: &DbIndex,
     prefix_type: &LuaType,
     member_key: &LuaMemberKey,
-    infer_guard: &Arc<InferGuard>,
+    infer_guard: &InferGuardRef,
 ) -> RawGetMemberTypeResult {
     match prefix_type {
         LuaType::Table | LuaType::Any | LuaType::Unknown => Ok(LuaType::Any),
@@ -74,7 +74,7 @@ fn infer_custom_type_raw_member_type(
     db: &DbIndex,
     type_id: &LuaTypeDeclId,
     member_key: &LuaMemberKey,
-    infer_guard: &Arc<InferGuard>,
+    infer_guard: &InferGuardRef,
 ) -> RawGetMemberTypeResult {
     infer_guard.check(type_id)?;
     let type_index = db.get_type_index();

@@ -1,6 +1,8 @@
-use std::{cell::RefCell, collections::HashSet, sync::Arc};
+use std::{cell::RefCell, collections::HashSet, rc::Rc};
 
 use crate::{InferFailReason, LuaTypeDeclId};
+
+pub type InferGuardRef = Rc<InferGuard>;
 
 /// Guard to prevent infinite recursion
 /// Some type may reference itself, so we need to check if we have already inferred this type
@@ -12,12 +14,12 @@ pub struct InferGuard {
     /// Current level's visited types
     current: RefCell<HashSet<LuaTypeDeclId>>,
     /// Parent guard (shared reference)
-    parent: Option<Arc<InferGuard>>,
+    parent: Option<Rc<InferGuard>>,
 }
 
 impl InferGuard {
-    pub fn new() -> Arc<Self> {
-        Arc::new(Self {
+    pub fn new() -> Rc<Self> {
+        Rc::new(Self {
             current: RefCell::new(HashSet::default()),
             parent: None,
         })
@@ -25,14 +27,14 @@ impl InferGuard {
 
     /// Create a child guard that inherits from parent
     /// This allows branching while preventing infinite recursion across the entire call stack
-    pub fn fork(self: &Arc<Self>) -> Arc<Self> {
-        Arc::new(Self {
+    pub fn fork(self: &Rc<Self>) -> Rc<Self> {
+        Rc::new(Self {
             current: RefCell::new(HashSet::default()),
-            parent: Some(Arc::clone(self)),
+            parent: Some(Rc::clone(self)),
         })
     }
 
-    /// Create a child guard from a non-Arc guard
+    /// Create a child guard from a non-Rc guard
     /// This is a convenience method for when you have a stack-allocated guard
     pub fn fork_owned(&self) -> Self {
         Self {

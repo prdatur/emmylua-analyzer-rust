@@ -11,12 +11,15 @@ use super::{
     },
     InferFailReason, InferResult,
 };
-use crate::semantic::{
-    generic::instantiate_doc_function, infer::narrow::get_type_at_call_expr_inline_cast,
-};
 use crate::{
     CacheEntry, DbIndex, InFiled, LuaFunctionType, LuaGenericType, LuaInstanceType,
     LuaOperatorMetaMethod, LuaOperatorOwner, LuaSignatureId, LuaType, LuaTypeDeclId, LuaUnionType,
+};
+use crate::{
+    InferGuardRef,
+    semantic::{
+        generic::instantiate_doc_function, infer::narrow::get_type_at_call_expr_inline_cast,
+    },
 };
 use crate::{build_self_type, infer_self_type, semantic::infer_expr};
 use infer_require::infer_require_call;
@@ -32,7 +35,7 @@ pub fn infer_call_expr_func(
     cache: &mut LuaInferCache,
     call_expr: LuaCallExpr,
     call_expr_type: LuaType,
-    infer_guard: &Arc<InferGuard>,
+    infer_guard: &InferGuardRef,
     args_count: Option<usize>,
 ) -> InferCallFuncResult {
     let syntax_id = call_expr.get_syntax_id();
@@ -216,7 +219,7 @@ fn infer_type_doc_function(
     type_id: LuaTypeDeclId,
     call_expr: LuaCallExpr,
     call_expr_type: &LuaType,
-    infer_guard: &Arc<InferGuard>,
+    infer_guard: &InferGuardRef,
     args_count: Option<usize>,
 ) -> InferCallFuncResult {
     infer_guard.check(&type_id)?;
@@ -287,7 +290,7 @@ fn infer_generic_type_doc_function(
     cache: &mut LuaInferCache,
     generic: &LuaGenericType,
     call_expr: LuaCallExpr,
-    infer_guard: &Arc<InferGuard>,
+    infer_guard: &InferGuardRef,
     args_count: Option<usize>,
 ) -> InferCallFuncResult {
     let type_id = generic.get_base_type_id();
@@ -346,7 +349,7 @@ fn infer_generic_type_doc_function(
                 if let LuaType::DocFunction(f) = new_f {
                     overloads.push(f.clone());
                 }
-                // todo: support oveload?
+                // todo: support overload?
             }
             _ => {}
         }

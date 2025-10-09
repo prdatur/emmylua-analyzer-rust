@@ -3,9 +3,9 @@ use std::sync::Arc;
 use emmylua_parser::{LuaAstNode, LuaIndexMemberExpr, LuaTableExpr, LuaVarExpr};
 
 use crate::{
-    DbIndex, InferFailReason, InferGuard, LuaDocParamInfo, LuaDocReturnInfo, LuaFunctionType,
-    LuaInferCache, LuaSignature, LuaType, SignatureReturnStatus, TypeOps, get_real_type,
-    infer_call_expr_func, infer_expr, infer_table_should_be,
+    DbIndex, InferFailReason, InferGuard, InferGuardRef, LuaDocParamInfo, LuaDocReturnInfo,
+    LuaFunctionType, LuaInferCache, LuaSignature, LuaType, SignatureReturnStatus, TypeOps,
+    get_real_type, infer_call_expr_func, infer_expr, infer_table_should_be,
 };
 
 use super::{
@@ -28,7 +28,7 @@ pub fn try_resolve_call_closure_params(
         cache,
         call_expr.clone(),
         call_expr_type,
-        &mut InferGuard::new(),
+        &InferGuard::new(),
         None,
     )?;
 
@@ -117,7 +117,7 @@ pub fn try_resolve_closure_return(
         cache,
         call_expr.clone(),
         call_expr_type,
-        &mut InferGuard::new(),
+        &InferGuard::new(),
         None,
     )?;
 
@@ -280,7 +280,7 @@ fn resolve_closure_member_type(
     closure_params: &UnResolveParentClosureParams,
     member_type: &LuaType,
     self_type: Option<LuaType>,
-    infer_guard: &Arc<InferGuard>,
+    infer_guard: &InferGuardRef,
 ) -> ResolveResult {
     match &member_type {
         LuaType::DocFunction(doc_func) => {

@@ -1,9 +1,9 @@
-use std::{collections::HashSet, sync::Arc};
+use std::collections::HashSet;
 
 use crate::{
-    DbIndex, InFiled, LuaGenericType, LuaIntersectionType, LuaMemberKey, LuaMemberOwner,
-    LuaObjectType, LuaOperatorMetaMethod, LuaOperatorOwner, LuaSemanticDeclId, LuaType,
-    LuaTypeDeclId, LuaUnionType, TypeOps,
+    DbIndex, InFiled, InferGuardRef, LuaGenericType, LuaIntersectionType, LuaMemberKey,
+    LuaMemberOwner, LuaObjectType, LuaOperatorMetaMethod, LuaOperatorOwner, LuaSemanticDeclId,
+    LuaType, LuaTypeDeclId, LuaUnionType, TypeOps,
     semantic::{
         InferGuard,
         generic::{TypeSubstitutor, instantiate_type_generic},
@@ -20,7 +20,7 @@ pub fn find_index_operations(db: &DbIndex, prefix_type: &LuaType) -> FindMembers
 pub fn find_index_operations_guard(
     db: &DbIndex,
     prefix_type: &LuaType,
-    infer_guard: &Arc<InferGuard>,
+    infer_guard: &InferGuardRef,
 ) -> FindMembersResult {
     match &prefix_type {
         LuaType::TableConst(in_filed) => find_index_table(db, in_filed),
@@ -106,7 +106,7 @@ fn find_index_table(db: &DbIndex, table_range: &InFiled<TextRange>) -> FindMembe
 fn find_index_custom_type(
     db: &DbIndex,
     prefix_type_id: &LuaTypeDeclId,
-    infer_guard: &Arc<InferGuard>,
+    infer_guard: &InferGuardRef,
 ) -> FindMembersResult {
     infer_guard.check(prefix_type_id).ok()?;
     let type_index = db.get_type_index();
@@ -215,7 +215,7 @@ fn find_index_object(db: &DbIndex, object: &LuaObjectType) -> FindMembersResult 
 fn find_index_union(
     db: &DbIndex,
     union: &LuaUnionType,
-    infer_guard: &Arc<InferGuard>,
+    infer_guard: &InferGuardRef,
 ) -> FindMembersResult {
     let mut members = Vec::new();
 
@@ -235,7 +235,7 @@ fn find_index_union(
 fn find_index_intersection(
     db: &DbIndex,
     intersection: &LuaIntersectionType,
-    infer_guard: &Arc<InferGuard>,
+    infer_guard: &InferGuardRef,
 ) -> FindMembersResult {
     let mut all_members = Vec::new();
 
@@ -277,7 +277,7 @@ fn find_index_intersection(
 fn find_index_generic(
     db: &DbIndex,
     generic: &LuaGenericType,
-    infer_guard: &Arc<InferGuard>,
+    infer_guard: &InferGuardRef,
 ) -> FindMembersResult {
     let base_type = generic.get_base_type();
     let type_decl_id = if let LuaType::Ref(id) = base_type {

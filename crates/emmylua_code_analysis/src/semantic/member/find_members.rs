@@ -1,11 +1,11 @@
-use std::{collections::HashSet, sync::Arc};
+use std::collections::HashSet;
 
 use smol_str::SmolStr;
 
 use crate::{
-    DbIndex, FileId, LuaGenericType, LuaInstanceType, LuaIntersectionType, LuaMemberKey,
-    LuaMemberOwner, LuaObjectType, LuaSemanticDeclId, LuaTupleType, LuaType, LuaTypeDeclId,
-    LuaUnionType,
+    DbIndex, FileId, InferGuardRef, LuaGenericType, LuaInstanceType, LuaIntersectionType,
+    LuaMemberKey, LuaMemberOwner, LuaObjectType, LuaSemanticDeclId, LuaTupleType, LuaType,
+    LuaTypeDeclId, LuaUnionType,
     semantic::{
         InferGuard,
         generic::{TypeSubstitutor, instantiate_type_generic},
@@ -51,7 +51,7 @@ pub fn find_members_with_key(
 fn find_members_guard(
     db: &DbIndex,
     prefix_type: &LuaType,
-    infer_guard: &Arc<InferGuard>,
+    infer_guard: &InferGuardRef,
     filter: &FindMemberFilter,
 ) -> FindMembersResult {
     match &prefix_type {
@@ -169,7 +169,7 @@ fn find_normal_members(
 fn find_custom_type_members(
     db: &DbIndex,
     type_decl_id: &LuaTypeDeclId,
-    infer_guard: &Arc<InferGuard>,
+    infer_guard: &InferGuardRef,
     filter: &FindMemberFilter,
 ) -> FindMembersResult {
     infer_guard.check(type_decl_id).ok()?;
@@ -278,7 +278,7 @@ fn find_object_members(
 fn find_union_members(
     db: &DbIndex,
     union_type: &LuaUnionType,
-    infer_guard: &Arc<InferGuard>,
+    infer_guard: &InferGuardRef,
     filter: &FindMemberFilter,
 ) -> FindMembersResult {
     let mut members = Vec::new();
@@ -299,7 +299,7 @@ fn find_union_members(
 fn find_intersection_members(
     db: &DbIndex,
     intersection_type: &LuaIntersectionType,
-    infer_guard: &Arc<InferGuard>,
+    infer_guard: &InferGuardRef,
     filter: &FindMemberFilter,
 ) -> FindMembersResult {
     let mut members = Vec::new();
@@ -347,7 +347,7 @@ fn find_generic_members_from_super_generics(
     db: &DbIndex,
     type_decl_id: &LuaTypeDeclId,
     substitutor: &TypeSubstitutor,
-    infer_guard: &Arc<InferGuard>,
+    infer_guard: &InferGuardRef,
     filter: &FindMemberFilter,
 ) -> Vec<LuaMemberInfo> {
     let type_index = db.get_type_index();
@@ -385,7 +385,7 @@ fn find_generic_members_from_super_generics(
 fn find_generic_members(
     db: &DbIndex,
     generic_type: &LuaGenericType,
-    infer_guard: &Arc<InferGuard>,
+    infer_guard: &InferGuardRef,
     filter: &FindMemberFilter,
 ) -> FindMembersResult {
     let base_type = generic_type.get_base_type();
@@ -447,7 +447,7 @@ fn find_global_members(db: &DbIndex, filter: &FindMemberFilter) -> FindMembersRe
 fn find_instance_members(
     db: &DbIndex,
     inst: &LuaInstanceType,
-    infer_guard: &Arc<InferGuard>,
+    infer_guard: &InferGuardRef,
     filter: &FindMemberFilter,
 ) -> FindMembersResult {
     let mut members = Vec::new();

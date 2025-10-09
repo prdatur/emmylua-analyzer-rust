@@ -164,7 +164,7 @@ fn get_type_at_call_expr_by_type_guard(
             cache,
             call_expr,
             call_expr_type,
-            &mut InferGuard::new(),
+            &InferGuard::new(),
             None,
         )?;
 

@@ -49,7 +49,7 @@ use crate::{
 };
 use crate::{LuaFunctionType, LuaMemberId, LuaMemberKey, LuaTypeOwner};
 pub use generic::*;
-pub use guard::InferGuard;
+pub use guard::{InferGuard, InferGuardRef};
 pub use infer::InferFailReason;
 pub use infer::infer_param;
 pub(crate) use infer::{infer_call_expr_func, infer_expr};
@@ -168,7 +168,7 @@ impl<'a> SemanticModel<'a> {
             &mut self.infer_cache.borrow_mut(),
             call_expr,
             call_expr_type,
-            &mut InferGuard::new(),
+            &InferGuard::new(),
             arg_count,
         )
         .ok()

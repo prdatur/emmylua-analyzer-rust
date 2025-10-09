@@ -1,10 +1,8 @@
-use std::sync::Arc;
-
 use emmylua_code_analysis::{
-    DbIndex, GenericTplId, InferGuard, LuaAliasCallKind, LuaAliasCallType, LuaDeclLocation,
-    LuaFunctionType, LuaMember, LuaMemberKey, LuaMemberOwner, LuaMultiLineUnion, LuaSemanticDeclId,
-    LuaStringTplType, LuaType, LuaTypeCache, LuaTypeDeclId, LuaUnionType, RenderLevel,
-    SemanticDeclLevel, get_real_type,
+    DbIndex, GenericTplId, InferGuard, InferGuardRef, LuaAliasCallKind, LuaAliasCallType,
+    LuaDeclLocation, LuaFunctionType, LuaMember, LuaMemberKey, LuaMemberOwner, LuaMultiLineUnion,
+    LuaSemanticDeclId, LuaStringTplType, LuaType, LuaTypeCache, LuaTypeDeclId, LuaUnionType,
+    RenderLevel, SemanticDeclLevel, get_real_type,
 };
 use emmylua_parser::{
     LuaAssignStat, LuaAst, LuaAstNode, LuaAstToken, LuaCallArgList, LuaCallExpr, LuaClosureExpr,
@@ -89,7 +87,7 @@ fn get_token_should_type(builder: &mut CompletionBuilder) -> Option<Vec<LuaType>
 pub fn dispatch_type(
     builder: &mut CompletionBuilder,
     typ: LuaType,
-    infer_guard: &Arc<InferGuard>,
+    infer_guard: &InferGuardRef,
 ) -> Option<()> {
     match typ {
         LuaType::Ref(type_ref_id) => {
@@ -125,7 +123,7 @@ pub fn dispatch_type(
 fn add_type_ref_completion(
     builder: &mut CompletionBuilder,
     type_ref_id: LuaTypeDeclId,
-    infer_guard: &Arc<InferGuard>,
+    infer_guard: &InferGuardRef,
 ) -> Option<()> {
     infer_guard.check(&type_ref_id).ok()?;
 
@@ -185,7 +183,7 @@ fn add_type_ref_completion(
 fn add_union_member_completion(
     builder: &mut CompletionBuilder,
     union_typ: &LuaUnionType,
-    infer_guard: &Arc<InferGuard>,
+    infer_guard: &InferGuardRef,
 ) -> Option<()> {
     for union_sub_typ in union_typ.into_vec() {
         let name = match union_sub_typ {
@@ -443,7 +441,7 @@ fn push_function_overloads_param(
 fn add_multi_line_union_member_completion(
     builder: &mut CompletionBuilder,
     union_typ: &LuaMultiLineUnion,
-    infer_guard: &Arc<InferGuard>,
+    infer_guard: &InferGuardRef,
 ) -> Option<()> {
     for (union_sub_typ, description) in union_typ.get_unions() {
         let name = match union_sub_typ {
@@ -741,7 +739,7 @@ fn add_str_tpl_ref_completion(
 fn add_const_tpl_ref_completion(
     builder: &mut CompletionBuilder,
     tpl_id: &GenericTplId,
-    infer_guard: &Arc<InferGuard>,
+    infer_guard: &InferGuardRef,
 ) -> Option<()> {
     // 泛型约束
     let extend_type = get_tpl_ref_extend_type(builder, tpl_id)?;
