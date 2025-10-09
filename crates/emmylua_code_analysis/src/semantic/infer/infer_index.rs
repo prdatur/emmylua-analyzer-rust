@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, sync::Arc};
 
 use emmylua_parser::{
     LuaAstNode, LuaExpr, LuaForStat, LuaIndexExpr, LuaIndexKey, LuaIndexMemberExpr, PathTrait,
@@ -46,7 +46,7 @@ pub fn infer_index_expr(
         cache,
         &prefix_type,
         index_member_expr.clone(),
-        &mut InferGuard::new(),
+        &InferGuard::new(),
     ) {
         Ok(member_type) => {
             if pass_flow {
@@ -69,7 +69,7 @@ pub fn infer_index_expr(
         cache,
         &prefix_type,
         index_member_expr,
-        &mut InferGuard::new(),
+        &InferGuard::new(),
     ) {
         Ok(member_type) => {
             if pass_flow {
@@ -145,7 +145,7 @@ pub fn infer_member_by_member_key(
     cache: &mut LuaInferCache,
     prefix_type: &LuaType,
     index_expr: LuaIndexMemberExpr,
-    infer_guard: &mut InferGuard,
+    infer_guard: &Arc<InferGuard>,
 ) -> InferResult {
     match &prefix_type {
         LuaType::Table | LuaType::Any | LuaType::Unknown => Ok(LuaType::Any),
@@ -167,11 +167,15 @@ pub fn infer_member_by_member_key(
         // LuaType::Module(_) => todo!(),
         LuaType::Tuple(tuple_type) => infer_tuple_member(db, cache, tuple_type, index_expr),
         LuaType::Object(object_type) => infer_object_member(db, cache, object_type, index_expr),
-        LuaType::Union(union_type) => infer_union_member(db, cache, union_type, index_expr),
-        LuaType::Intersection(intersection_type) => {
-            infer_intersection_member(db, cache, intersection_type, index_expr)
+        LuaType::Union(union_type) => {
+            infer_union_member(db, cache, union_type, index_expr, infer_guard)
         }
-        LuaType::Generic(generic_type) => infer_generic_member(db, cache, generic_type, index_expr),
+        LuaType::Intersection(intersection_type) => {
+            infer_intersection_member(db, cache, intersection_type, index_expr, infer_guard)
+        }
+        LuaType::Generic(generic_type) => {
+            infer_generic_member(db, cache, generic_type, index_expr, infer_guard)
+        }
         LuaType::Global => infer_global_field_member(db, cache, index_expr),
         LuaType::Instance(inst) => infer_instance_member(db, cache, inst, index_expr, infer_guard),
         LuaType::Namespace(ns) => infer_namespace_member(db, cache, ns, index_expr),
@@ -353,7 +357,7 @@ fn infer_custom_type_member(
     cache: &mut LuaInferCache,
     prefix_type_id: LuaTypeDeclId,
     index_expr: LuaIndexMemberExpr,
-    infer_guard: &mut InferGuard,
+    infer_guard: &Arc<InferGuard>,
 ) -> InferResult {
     infer_guard.check(&prefix_type_id)?;
     let type_index = db.get_type_index();
@@ -634,6 +638,7 @@ fn infer_union_member(
     cache: &mut LuaInferCache,
     union_type: &LuaUnionType,
     index_expr: LuaIndexMemberExpr,
+    infer_guard: &Arc<InferGuard>,
 ) -> InferResult {
     let mut member_types = Vec::new();
     for sub_type in union_type.into_vec() {
@@ -642,7 +647,7 @@ fn infer_union_member(
             cache,
             &sub_type,
             index_expr.clone(),
-            &mut InferGuard::new(),
+            &infer_guard.fork(),
         );
         if let Ok(typ) = result
             && !typ.is_nil()
@@ -659,15 +664,11 @@ fn infer_intersection_member(
     cache: &mut LuaInferCache,
     intersection_type: &LuaIntersectionType,
     index_expr: LuaIndexMemberExpr,
+    infer_guard: &Arc<InferGuard>,
 ) -> InferResult {
     for member in intersection_type.get_types() {
-        match infer_member_by_member_key(
-            db,
-            cache,
-            member,
-            index_expr.clone(),
-            &mut InferGuard::new(),
-        ) {
+        match infer_member_by_member_key(db, cache, member, index_expr.clone(), &infer_guard.fork())
+        {
             Ok(ty) => return Ok(ty),
             Err(InferFailReason::FieldNotFound) => continue,
             Err(reason) => return Err(reason),
@@ -683,6 +684,7 @@ fn infer_generic_members_from_super_generics(
     type_decl_id: &LuaTypeDeclId,
     substitutor: &TypeSubstitutor,
     index_expr: LuaIndexMemberExpr,
+    infer_guard: &Arc<InferGuard>,
 ) -> Option<LuaType> {
     let type_index = db.get_type_index();
 
@@ -700,7 +702,7 @@ fn infer_generic_members_from_super_generics(
                 cache,
                 &super_type,
                 index_expr.clone(),
-                &mut InferGuard::new(),
+                &infer_guard.fork(),
             )
             .ok()
         })
@@ -714,6 +716,7 @@ fn infer_generic_member(
     cache: &mut LuaInferCache,
     generic_type: &LuaGenericType,
     index_expr: LuaIndexMemberExpr,
+    infer_guard: &Arc<InferGuard>,
 ) -> InferResult {
     let base_type = generic_type.get_base_type();
 
@@ -731,14 +734,14 @@ fn infer_generic_member(
             base_type_decl_id,
             &substitutor,
             index_expr.clone(),
+            infer_guard,
         );
         if let Some(result) = result {
             return Ok(result);
         }
     }
 
-    let member_type =
-        infer_member_by_member_key(db, cache, &base_type, index_expr, &mut InferGuard::new())?;
+    let member_type = infer_member_by_member_key(db, cache, &base_type, index_expr, infer_guard)?;
 
     Ok(instantiate_type_generic(db, &member_type, &substitutor))
 }
@@ -748,7 +751,7 @@ fn infer_instance_member(
     cache: &mut LuaInferCache,
     inst: &LuaInstanceType,
     index_expr: LuaIndexMemberExpr,
-    infer_guard: &mut InferGuard,
+    infer_guard: &Arc<InferGuard>,
 ) -> InferResult {
     let range = inst.get_range();
 
@@ -771,7 +774,7 @@ pub fn infer_member_by_operator(
     cache: &mut LuaInferCache,
     prefix_type: &LuaType,
     index_expr: LuaIndexMemberExpr,
-    infer_guard: &mut InferGuard,
+    infer_guard: &Arc<InferGuard>,
 ) -> InferResult {
     match &prefix_type {
         LuaType::TableConst(in_filed) => {
@@ -788,11 +791,15 @@ pub fn infer_member_by_operator(
             infer_member_by_index_array(db, cache, array_type.get_base(), index_expr)
         }
         LuaType::Object(object) => infer_member_by_index_object(db, cache, object, index_expr),
-        LuaType::Union(union) => infer_member_by_index_union(db, cache, union, index_expr),
-        LuaType::Intersection(intersection) => {
-            infer_member_by_index_intersection(db, cache, intersection, index_expr)
+        LuaType::Union(union) => {
+            infer_member_by_index_union(db, cache, union, index_expr, infer_guard)
         }
-        LuaType::Generic(generic) => infer_member_by_index_generic(db, cache, generic, index_expr),
+        LuaType::Intersection(intersection) => {
+            infer_member_by_index_intersection(db, cache, intersection, index_expr, infer_guard)
+        }
+        LuaType::Generic(generic) => {
+            infer_member_by_index_generic(db, cache, generic, index_expr, infer_guard)
+        }
         LuaType::TableGeneric(table_generic) => {
             infer_member_by_index_table_generic(db, cache, table_generic, index_expr)
         }
@@ -885,7 +892,7 @@ fn infer_member_by_index_custom_type(
     cache: &mut LuaInferCache,
     prefix_type_id: &LuaTypeDeclId,
     index_expr: LuaIndexMemberExpr,
-    infer_guard: &mut InferGuard,
+    infer_guard: &Arc<InferGuard>,
 ) -> InferResult {
     infer_guard.check(prefix_type_id)?;
     let type_index = db.get_type_index();
@@ -989,16 +996,12 @@ fn infer_member_by_index_union(
     cache: &mut LuaInferCache,
     union: &LuaUnionType,
     index_expr: LuaIndexMemberExpr,
+    infer_guard: &Arc<InferGuard>,
 ) -> InferResult {
     let mut member_type = LuaType::Unknown;
     for member in union.into_vec() {
-        let result = infer_member_by_operator(
-            db,
-            cache,
-            &member,
-            index_expr.clone(),
-            &mut InferGuard::new(),
-        );
+        let result =
+            infer_member_by_operator(db, cache, &member, index_expr.clone(), &infer_guard.fork());
         match result {
             Ok(typ) => {
                 member_type = TypeOps::Union.apply(db, &member_type, &typ);
@@ -1022,15 +1025,10 @@ fn infer_member_by_index_intersection(
     cache: &mut LuaInferCache,
     intersection: &LuaIntersectionType,
     index_expr: LuaIndexMemberExpr,
+    infer_guard: &Arc<InferGuard>,
 ) -> InferResult {
     for member in intersection.get_types() {
-        match infer_member_by_operator(
-            db,
-            cache,
-            member,
-            index_expr.clone(),
-            &mut InferGuard::new(),
-        ) {
+        match infer_member_by_operator(db, cache, member, index_expr.clone(), &infer_guard.fork()) {
             Ok(ty) => return Ok(ty),
             Err(InferFailReason::FieldNotFound) => continue,
             Err(reason) => return Err(reason),
@@ -1045,6 +1043,7 @@ fn infer_member_by_index_generic(
     cache: &mut LuaInferCache,
     generic: &LuaGenericType,
     index_expr: LuaIndexMemberExpr,
+    infer_guard: &Arc<InferGuard>,
 ) -> InferResult {
     let base_type = generic.get_base_type();
     let type_decl_id = if let LuaType::Ref(id) = base_type {
@@ -1065,7 +1064,7 @@ fn infer_member_by_index_generic(
                 cache,
                 &instantiate_type_generic(db, &origin_type, &substitutor),
                 index_expr.clone(),
-                &mut InferGuard::new(),
+                &infer_guard.fork(),
             );
         }
         return Err(InferFailReason::None);
@@ -1108,7 +1107,7 @@ fn infer_member_by_index_generic(
                 cache,
                 &instantiate_type_generic(db, &super_type, &substitutor),
                 index_expr.clone(),
-                &mut InferGuard::new(),
+                &infer_guard.fork(),
             );
             match result {
                 Ok(member_type) => {
@@ -1225,7 +1224,7 @@ fn infer_tpl_ref_member(
     cache: &mut LuaInferCache,
     generic: &GenericTpl,
     index_expr: LuaIndexMemberExpr,
-    infer_guard: &mut InferGuard,
+    infer_guard: &Arc<InferGuard>,
 ) -> InferResult {
     let extend_type = get_tpl_ref_extend_type(
         db,

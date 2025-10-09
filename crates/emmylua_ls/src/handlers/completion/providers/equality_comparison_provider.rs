@@ -16,7 +16,7 @@ pub fn add_completion(builder: &mut CompletionBuilder) -> Option<()> {
     }
     let types = get_token_should_type(builder)?;
     for typ in &types {
-        dispatch_type(builder, typ.clone(), &mut InferGuard::new());
+        dispatch_type(builder, typ.clone(), &InferGuard::new());
     }
     if !types.is_empty() && !builder.is_invoked() {
         builder.stop_here();

@@ -543,16 +543,20 @@ fn maybe_field_literal_eq_narrow(
         .insert(syntax_id);
 
     let right_type = infer_expr(db, cache, LuaExpr::LiteralExpr(literal_expr))?;
-    let mut guard = InferGuard::new();
     let index = LuaIndexMemberExpr::IndexExpr(index_expr);
     let mut opt_result = None;
     let mut union_types = union_type.into_vec();
     for (i, sub_type) in union_types.iter().enumerate() {
-        let member_type =
-            match infer_member_by_member_key(db, cache, sub_type, index.clone(), &mut guard) {
-                Ok(member_type) => member_type,
-                Err(_) => continue, // If we cannot infer the member type, skip this type
-            };
+        let member_type = match infer_member_by_member_key(
+            db,
+            cache,
+            sub_type,
+            index.clone(),
+            &InferGuard::new(),
+        ) {
+            Ok(member_type) => member_type,
+            Err(_) => continue, // If we cannot infer the member type, skip this type
+        };
         if const_type_eq(&member_type, &right_type) {
             // If the right type matches the member type, we can narrow it
             opt_result = Some(i);

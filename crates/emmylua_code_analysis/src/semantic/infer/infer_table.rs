@@ -192,7 +192,7 @@ pub fn infer_table_field_value_should_be(
         cache,
         &parent_table_expr_type,
         index.clone(),
-        &mut InferGuard::new(),
+        &InferGuard::new(),
     ) {
         Ok(member_type) => return Ok(member_type),
         Err(InferFailReason::FieldNotFound) => InferFailReason::FieldNotFound,
@@ -204,7 +204,7 @@ pub fn infer_table_field_value_should_be(
         cache,
         &parent_table_expr_type,
         index,
-        &mut InferGuard::new(),
+        &InferGuard::new(),
     ) {
         Ok(member_type) => return Ok(member_type),
         Err(InferFailReason::FieldNotFound) => {}
@@ -235,7 +235,7 @@ fn infer_table_type_by_calleee(
         cache,
         call_expr.clone(),
         prefix_type,
-        &mut InferGuard::new(),
+        &InferGuard::new(),
         None,
     )?;
     let param_types = func_type.get_params();
@@ -324,7 +324,7 @@ fn infer_table_field_type_by_parent(
         cache,
         &parent_table_expr_type,
         index.clone(),
-        &mut InferGuard::new(),
+        &InferGuard::new(),
     ) {
         Ok(member_type) => return Ok(member_type),
         Err(InferFailReason::FieldNotFound) => InferFailReason::FieldNotFound,
@@ -336,7 +336,7 @@ fn infer_table_field_type_by_parent(
         cache,
         &parent_table_expr_type,
         index,
-        &mut InferGuard::new(),
+        &InferGuard::new(),
     ) {
         Ok(member_type) => return Ok(member_type),
         Err(InferFailReason::FieldNotFound) => {}

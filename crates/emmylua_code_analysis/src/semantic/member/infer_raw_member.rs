@@ -15,14 +15,14 @@ pub fn infer_raw_member_type(
     prefix_type: &LuaType,
     member_key: &LuaMemberKey,
 ) -> RawGetMemberTypeResult {
-    infer_raw_member_type_guard(db, prefix_type, member_key, &mut InferGuard::new())
+    infer_raw_member_type_guard(db, prefix_type, member_key, &InferGuard::new())
 }
 
 fn infer_raw_member_type_guard(
     db: &DbIndex,
     prefix_type: &LuaType,
     member_key: &LuaMemberKey,
-    infer_guard: &mut InferGuard,
+    infer_guard: &Arc<InferGuard>,
 ) -> RawGetMemberTypeResult {
     match prefix_type {
         LuaType::Table | LuaType::Any | LuaType::Unknown => Ok(LuaType::Any),
@@ -74,7 +74,7 @@ fn infer_custom_type_raw_member_type(
     db: &DbIndex,
     type_id: &LuaTypeDeclId,
     member_key: &LuaMemberKey,
-    infer_guard: &mut InferGuard,
+    infer_guard: &Arc<InferGuard>,
 ) -> RawGetMemberTypeResult {
     infer_guard.check(type_id)?;
     let type_index = db.get_type_index();
@@ -98,7 +98,8 @@ fn infer_custom_type_raw_member_type(
         && let Some(super_types) = type_index.get_super_types(type_id)
     {
         for super_type in super_types {
-            let result = infer_raw_member_type_guard(db, &super_type, member_key, infer_guard);
+            let result =
+                infer_raw_member_type_guard(db, &super_type, member_key, &infer_guard.fork());
 
             match result {
                 Ok(member_type) => {

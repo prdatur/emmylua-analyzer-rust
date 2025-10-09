@@ -271,7 +271,7 @@ pub fn try_resolve_closure_parent_params(
         closure_params,
         &member_type,
         self_type,
-        &mut InferGuard::new(),
+        &InferGuard::new(),
     )
 }
 
@@ -280,7 +280,7 @@ fn resolve_closure_member_type(
     closure_params: &UnResolveParentClosureParams,
     member_type: &LuaType,
     self_type: Option<LuaType>,
-    infer_guard: &mut InferGuard,
+    infer_guard: &Arc<InferGuard>,
 ) -> ResolveResult {
     match &member_type {
         LuaType::DocFunction(doc_func) => {

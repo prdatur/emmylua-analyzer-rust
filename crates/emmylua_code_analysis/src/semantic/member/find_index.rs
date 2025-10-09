@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, sync::Arc};
 
 use crate::{
     DbIndex, InFiled, LuaGenericType, LuaIntersectionType, LuaMemberKey, LuaMemberOwner,
@@ -14,13 +14,13 @@ use super::{FindMembersResult, LuaMemberInfo};
 use rowan::TextRange;
 
 pub fn find_index_operations(db: &DbIndex, prefix_type: &LuaType) -> FindMembersResult {
-    find_index_operations_guard(db, prefix_type, &mut InferGuard::new())
+    find_index_operations_guard(db, prefix_type, &InferGuard::new())
 }
 
 pub fn find_index_operations_guard(
     db: &DbIndex,
     prefix_type: &LuaType,
-    infer_guard: &mut InferGuard,
+    infer_guard: &Arc<InferGuard>,
 ) -> FindMembersResult {
     match &prefix_type {
         LuaType::TableConst(in_filed) => find_index_table(db, in_filed),
@@ -106,7 +106,7 @@ fn find_index_table(db: &DbIndex, table_range: &InFiled<TextRange>) -> FindMembe
 fn find_index_custom_type(
     db: &DbIndex,
     prefix_type_id: &LuaTypeDeclId,
-    infer_guard: &mut InferGuard,
+    infer_guard: &Arc<InferGuard>,
 ) -> FindMembersResult {
     infer_guard.check(prefix_type_id).ok()?;
     let type_index = db.get_type_index();
@@ -215,7 +215,7 @@ fn find_index_object(db: &DbIndex, object: &LuaObjectType) -> FindMembersResult 
 fn find_index_union(
     db: &DbIndex,
     union: &LuaUnionType,
-    infer_guard: &mut InferGuard,
+    infer_guard: &Arc<InferGuard>,
 ) -> FindMembersResult {
     let mut members = Vec::new();
 
@@ -235,7 +235,7 @@ fn find_index_union(
 fn find_index_intersection(
     db: &DbIndex,
     intersection: &LuaIntersectionType,
-    infer_guard: &mut InferGuard,
+    infer_guard: &Arc<InferGuard>,
 ) -> FindMembersResult {
     let mut all_members = Vec::new();
 
@@ -277,7 +277,7 @@ fn find_index_intersection(
 fn find_index_generic(
     db: &DbIndex,
     generic: &LuaGenericType,
-    infer_guard: &mut InferGuard,
+    infer_guard: &Arc<InferGuard>,
 ) -> FindMembersResult {
     let base_type = generic.get_base_type();
     let type_decl_id = if let LuaType::Ref(id) = base_type {

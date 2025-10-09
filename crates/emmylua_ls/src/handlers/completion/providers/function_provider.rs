@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use emmylua_code_analysis::{
     DbIndex, GenericTplId, InferGuard, LuaAliasCallKind, LuaAliasCallType, LuaDeclLocation,
     LuaFunctionType, LuaMember, LuaMemberKey, LuaMemberOwner, LuaMultiLineUnion, LuaSemanticDeclId,
@@ -28,7 +30,7 @@ pub fn add_completion(builder: &mut CompletionBuilder) -> Option<()> {
 
     let types = get_token_should_type(builder)?;
     for typ in types {
-        dispatch_type(builder, typ, &mut InferGuard::new());
+        dispatch_type(builder, typ, &InferGuard::new());
     }
     Some(())
 }
@@ -87,7 +89,7 @@ fn get_token_should_type(builder: &mut CompletionBuilder) -> Option<Vec<LuaType>
 pub fn dispatch_type(
     builder: &mut CompletionBuilder,
     typ: LuaType,
-    infer_guard: &mut InferGuard,
+    infer_guard: &Arc<InferGuard>,
 ) -> Option<()> {
     match typ {
         LuaType::Ref(type_ref_id) => {
@@ -123,7 +125,7 @@ pub fn dispatch_type(
 fn add_type_ref_completion(
     builder: &mut CompletionBuilder,
     type_ref_id: LuaTypeDeclId,
-    infer_guard: &mut InferGuard,
+    infer_guard: &Arc<InferGuard>,
 ) -> Option<()> {
     infer_guard.check(&type_ref_id).ok()?;
 
@@ -183,14 +185,14 @@ fn add_type_ref_completion(
 fn add_union_member_completion(
     builder: &mut CompletionBuilder,
     union_typ: &LuaUnionType,
-    infer_guard: &mut InferGuard,
+    infer_guard: &Arc<InferGuard>,
 ) -> Option<()> {
     for union_sub_typ in union_typ.into_vec() {
         let name = match union_sub_typ {
             LuaType::DocStringConst(s) => to_enum_label(builder, s.as_str()),
             LuaType::DocIntegerConst(i) => i.to_string(),
             _ => {
-                dispatch_type(builder, union_sub_typ.clone(), infer_guard);
+                dispatch_type(builder, union_sub_typ.clone(), &infer_guard.fork());
                 continue;
             }
         };
@@ -441,14 +443,14 @@ fn push_function_overloads_param(
 fn add_multi_line_union_member_completion(
     builder: &mut CompletionBuilder,
     union_typ: &LuaMultiLineUnion,
-    infer_guard: &mut InferGuard,
+    infer_guard: &Arc<InferGuard>,
 ) -> Option<()> {
     for (union_sub_typ, description) in union_typ.get_unions() {
         let name = match union_sub_typ {
             LuaType::DocStringConst(s) => to_enum_label(builder, s),
             LuaType::DocIntegerConst(i) => i.to_string(),
             _ => {
-                dispatch_type(builder, union_sub_typ.clone(), infer_guard);
+                dispatch_type(builder, union_sub_typ.clone(), &infer_guard.fork());
                 continue;
             }
         };
@@ -739,7 +741,7 @@ fn add_str_tpl_ref_completion(
 fn add_const_tpl_ref_completion(
     builder: &mut CompletionBuilder,
     tpl_id: &GenericTplId,
-    infer_guard: &mut InferGuard,
+    infer_guard: &Arc<InferGuard>,
 ) -> Option<()> {
     // 泛型约束
     let extend_type = get_tpl_ref_extend_type(builder, tpl_id)?;

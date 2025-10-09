@@ -1,6 +1,7 @@
 mod cache;
 mod decl;
 mod generic;
+mod guard;
 mod infer;
 mod member;
 mod overload_resolve;
@@ -11,7 +12,7 @@ mod visibility;
 
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::{collections::HashSet, sync::Arc};
+use std::sync::Arc;
 
 pub use cache::{CacheEntry, CacheOptions, LuaAnalysisPhase, LuaInferCache};
 pub use decl::{enum_variable_is_param, parse_require_module_info};
@@ -48,6 +49,7 @@ use crate::{
 };
 use crate::{LuaFunctionType, LuaMemberId, LuaMemberKey, LuaTypeOwner};
 pub use generic::*;
+pub use guard::InferGuard;
 pub use infer::InferFailReason;
 pub use infer::infer_param;
 pub(crate) use infer::{infer_call_expr_func, infer_expr};
@@ -312,34 +314,5 @@ impl<'a> SemanticModel<'a> {
     pub fn get_index_decl_type(&self, index_expr: LuaIndexExpr) -> Option<LuaType> {
         let cache = &mut self.infer_cache.borrow_mut();
         infer_index_expr(self.db, cache, index_expr, false).ok()
-    }
-}
-
-/// Guard to prevent infinite recursion
-/// Some type may reference itself, so we need to check if we have already inferred this type
-#[derive(Debug)]
-pub struct InferGuard {
-    guard: HashSet<LuaTypeDeclId>,
-}
-
-impl Default for InferGuard {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl InferGuard {
-    pub fn new() -> Self {
-        Self {
-            guard: HashSet::default(),
-        }
-    }
-
-    pub fn check(&mut self, type_id: &LuaTypeDeclId) -> Result<(), InferFailReason> {
-        if self.guard.contains(type_id) {
-            return Err(InferFailReason::RecursiveInfer);
-        }
-        self.guard.insert(type_id.clone());
-        Ok(())
     }
 }

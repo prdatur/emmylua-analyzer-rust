@@ -32,7 +32,7 @@ pub fn infer_call_expr_func(
     cache: &mut LuaInferCache,
     call_expr: LuaCallExpr,
     call_expr_type: LuaType,
-    infer_guard: &mut InferGuard,
+    infer_guard: &Arc<InferGuard>,
     args_count: Option<usize>,
 ) -> InferCallFuncResult {
     let syntax_id = call_expr.get_syntax_id();
@@ -216,7 +216,7 @@ fn infer_type_doc_function(
     type_id: LuaTypeDeclId,
     call_expr: LuaCallExpr,
     call_expr_type: &LuaType,
-    infer_guard: &mut InferGuard,
+    infer_guard: &Arc<InferGuard>,
     args_count: Option<usize>,
 ) -> InferCallFuncResult {
     infer_guard.check(&type_id)?;
@@ -287,7 +287,7 @@ fn infer_generic_type_doc_function(
     cache: &mut LuaInferCache,
     generic: &LuaGenericType,
     call_expr: LuaCallExpr,
-    infer_guard: &mut InferGuard,
+    infer_guard: &Arc<InferGuard>,
     args_count: Option<usize>,
 ) -> InferCallFuncResult {
     let type_id = generic.get_base_type_id();
@@ -610,7 +610,7 @@ pub fn infer_call_expr(
         cache,
         call_expr.clone(),
         prefix_type,
-        &mut InferGuard::new(),
+        &InferGuard::new(),
         None,
     )?
     .get_ret()
