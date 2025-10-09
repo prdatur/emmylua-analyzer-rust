@@ -99,16 +99,11 @@ fn check_deprecated(
     if let Some(attribute_uses) = property.attribute_uses() {
         for attribute_use in attribute_uses.iter() {
             if attribute_use.id.get_name() == "deprecated" {
-                let depreacated_message = match attribute_use.args.first() {
+                let deprecated_message = match attribute_use.args.first() {
                     Some(LuaType::DocStringConst(message)) => message.as_ref().to_string(),
                     _ => "deprecated".to_string(),
                 };
-                context.add_diagnostic(
-                    DiagnosticCode::Deprecated,
-                    range,
-                    depreacated_message,
-                    None,
-                );
+                context.add_diagnostic(DiagnosticCode::Deprecated, range, deprecated_message, None);
             }
         }
     }
