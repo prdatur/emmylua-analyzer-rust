@@ -1,3 +1,6 @@
+mod instantiate_func_generic;
+mod instantiate_special_generic;
+
 use std::{collections::HashMap, ops::Deref};
 
 use crate::{
@@ -8,10 +11,9 @@ use crate::{
     },
 };
 
-use super::{
-    instantiate_special_generic::instantiate_alias_call,
-    type_substitutor::{SubstitutorValue, TypeSubstitutor},
-};
+use super::type_substitutor::{SubstitutorValue, TypeSubstitutor};
+pub use instantiate_func_generic::{build_self_type, infer_self_type, instantiate_func_generic};
+pub use instantiate_special_generic::instantiate_alias_call;
 
 pub fn instantiate_type_generic(
     db: &DbIndex,

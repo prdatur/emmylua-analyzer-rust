@@ -108,6 +108,27 @@ fn check_generic_type_compact_generic(
     let source_base_id = source_generic.get_base_type_id();
     let compact_base_id = compact_generic.get_base_type_id();
     if !is_sub_type_of(context.db, &compact_base_id, &source_base_id) {
+        let compact_decl = context
+            .db
+            .get_type_index()
+            .get_type_decl(&compact_base_id)
+            .ok_or(TypeCheckFailReason::TypeNotMatch)?;
+        if compact_decl.is_alias() {
+            let substitutor = TypeSubstitutor::from_alias(
+                compact_generic.get_params().clone(),
+                compact_base_id.clone(),
+            );
+            if let Some(origin_type) = compact_decl.get_alias_origin(context.db, Some(&substitutor))
+            {
+                return check_generic_type_compact(
+                    context,
+                    source_generic,
+                    &origin_type,
+                    check_guard.next_level()?,
+                );
+            }
+        }
+
         return Err(TypeCheckFailReason::TypeNotMatch);
     }
 

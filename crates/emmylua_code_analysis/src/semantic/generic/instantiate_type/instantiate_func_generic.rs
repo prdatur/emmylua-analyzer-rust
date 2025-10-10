@@ -9,6 +9,7 @@ use crate::{
     semantic::{
         LuaInferCache,
         generic::{
+            instantiate_type::instantiate_doc_function,
             tpl_context::TplContext,
             tpl_pattern::{
                 multi_param_tpl_pattern_match_multi_return, tpl_pattern_match,
@@ -20,7 +21,7 @@ use crate::{
     },
 };
 
-use super::{TypeSubstitutor, instantiate_type_generic::instantiate_doc_function};
+use super::TypeSubstitutor;
 
 pub fn instantiate_func_generic(
     db: &DbIndex,
