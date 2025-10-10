@@ -1,7 +1,9 @@
 use crate::{
-    instantiate_type_generic, semantic::generic::tpl_pattern::{
-        tpl_pattern_match, variadic_tpl_pattern_match, TplPatternMatchResult
-    }, InferFailReason, InferGuard, InferGuardRef, LuaGenericType, LuaType, TplContext, TypeSubstitutor
+    InferFailReason, InferGuard, InferGuardRef, LuaGenericType, LuaType, TplContext,
+    TypeSubstitutor, instantiate_type_generic,
+    semantic::generic::tpl_pattern::{
+        TplPatternMatchResult, tpl_pattern_match, variadic_tpl_pattern_match,
+    },
 };
 
 pub fn generic_tpl_pattern_match(
@@ -64,8 +66,10 @@ fn generic_tpl_pattern_match_inner(
             {
                 for mut super_type in super_types {
                     if super_type.contain_tpl() {
-                        let substitutor = TypeSubstitutor::from_type_array(target_generic.get_params().clone());
-                        super_type = instantiate_type_generic(context.db, &super_type, &substitutor);
+                        let substitutor =
+                            TypeSubstitutor::from_type_array(target_generic.get_params().clone());
+                        super_type =
+                            instantiate_type_generic(context.db, &super_type, &substitutor);
                     }
 
                     generic_tpl_pattern_match_inner(
