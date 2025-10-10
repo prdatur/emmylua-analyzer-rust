@@ -1,12 +1,7 @@
 use crate::{
-    InferFailReason, InferGuard, InferGuardRef, LuaGenericType, LuaType, TplContext,
-    TypeSubstitutor,
-    semantic::{
-        generic::tpl_pattern::{
-            TplPatternMatchResult, tpl_pattern_match, variadic_tpl_pattern_match,
-        },
-        type_check::is_sub_type_of,
-    },
+    instantiate_type_generic, semantic::generic::tpl_pattern::{
+        tpl_pattern_match, variadic_tpl_pattern_match, TplPatternMatchResult
+    }, InferFailReason, InferGuard, InferGuardRef, LuaGenericType, LuaType, TplContext, TypeSubstitutor
 };
 
 pub fn generic_tpl_pattern_match(
@@ -27,45 +22,58 @@ fn generic_tpl_pattern_match_inner(
         LuaType::Generic(target_generic) => {
             let base = source_generic.get_base_type_id_ref();
             let target_base = target_generic.get_base_type_id_ref();
-
-            if !is_sub_type_of(context.db, target_base, base) {
-                let target_decl = context
-                    .db
-                    .get_type_index()
-                    .get_type_decl(target_base)
-                    .ok_or(InferFailReason::None)?;
-                if target_decl.is_alias() {
-                    let substitutor = TypeSubstitutor::from_alias(
-                        target_generic.get_params().clone(),
-                        target_base.clone(),
+            let target_decl = context
+                .db
+                .get_type_index()
+                .get_type_decl(target_base)
+                .ok_or(InferFailReason::None)?;
+            if target_decl.is_alias() {
+                let substitutor = TypeSubstitutor::from_alias(
+                    target_generic.get_params().clone(),
+                    target_base.clone(),
+                );
+                if let Some(origin_type) =
+                    target_decl.get_alias_origin(context.db, Some(&substitutor))
+                {
+                    return generic_tpl_pattern_match_inner(
+                        context,
+                        source_generic,
+                        &origin_type,
+                        infer_guard,
                     );
-                    if let Some(origin_type) =
-                        target_decl.get_alias_origin(context.db, Some(&substitutor))
-                    {
-                        return generic_tpl_pattern_match_inner(
-                            context,
-                            source_generic,
-                            &origin_type,
-                            infer_guard,
-                        );
-                    }
                 }
-
-                return Err(InferFailReason::None);
             }
 
-            let params = source_generic.get_params();
-            let target_params = target_generic.get_params();
-            let min_len = params.len().min(target_params.len());
-            for i in 0..min_len {
-                match (&params[i], &target_params[i]) {
-                    (LuaType::Variadic(variadict), _) => {
-                        variadic_tpl_pattern_match(context, variadict, &target_params[i..])?;
-                        break;
+            if base == target_base {
+                let params = source_generic.get_params();
+                let target_params = target_generic.get_params();
+                let min_len = params.len().min(target_params.len());
+                for i in 0..min_len {
+                    match (&params[i], &target_params[i]) {
+                        (LuaType::Variadic(variadict), _) => {
+                            variadic_tpl_pattern_match(context, variadict, &target_params[i..])?;
+                            break;
+                        }
+                        _ => {
+                            tpl_pattern_match(context, &params[i], &target_params[i])?;
+                        }
                     }
-                    _ => {
-                        tpl_pattern_match(context, &params[i], &target_params[i])?;
+                }
+            } else if let Some(super_types) =
+                context.db.get_type_index().get_super_types(target_base)
+            {
+                for mut super_type in super_types {
+                    if super_type.contain_tpl() {
+                        let substitutor = TypeSubstitutor::from_type_array(target_generic.get_params().clone());
+                        super_type = instantiate_type_generic(context.db, &super_type, &substitutor);
                     }
+
+                    generic_tpl_pattern_match_inner(
+                        context,
+                        source_generic,
+                        &super_type,
+                        &infer_guard.fork(),
+                    )?;
                 }
             }
         }
