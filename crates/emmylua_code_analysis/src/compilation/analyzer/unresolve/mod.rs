@@ -7,7 +7,7 @@ use std::collections::HashMap;
 
 use crate::{
     FileId, InferFailReason, LuaMemberFeature, LuaSemanticDeclId,
-    compilation::analyzer::{AnalysisPipeline, unresolve::resolve::try_resolve_class_ctor},
+    compilation::analyzer::{AnalysisPipeline, unresolve::resolve::try_resolve_constructor},
     db_index::{DbIndex, LuaDeclId, LuaMemberId, LuaSignatureId},
     profile::Profile,
 };
@@ -201,8 +201,8 @@ fn try_resolve(
                     UnResolve::TableField(un_resolve_table_field) => {
                         try_resolve_table_field(db, cache, un_resolve_table_field)
                     }
-                    UnResolve::ClassCtor(un_resolve_class_ctor) => {
-                        try_resolve_class_ctor(db, cache, un_resolve_class_ctor)
+                    UnResolve::ClassCtor(un_resolve_constructor) => {
+                        try_resolve_constructor(db, cache, un_resolve_constructor)
                     }
                 };
 
@@ -263,7 +263,7 @@ pub enum UnResolve {
     ClosureParentParams(Box<UnResolveParentClosureParams>),
     ModuleRef(Box<UnResolveModuleRef>),
     TableField(Box<UnResolveTableField>),
-    ClassCtor(Box<UnResolveClassCtor>),
+    ClassCtor(Box<UnResolveConstructor>),
 }
 
 #[allow(dead_code)]
@@ -286,7 +286,7 @@ impl UnResolve {
             }
             UnResolve::TableField(un_resolve_table_field) => Some(un_resolve_table_field.file_id),
             UnResolve::ModuleRef(_) => None,
-            UnResolve::ClassCtor(un_resolve_class_ctor) => Some(un_resolve_class_ctor.file_id),
+            UnResolve::ClassCtor(un_resolve_constructor) => Some(un_resolve_constructor.file_id),
         }
     }
 }
@@ -435,15 +435,15 @@ impl From<UnResolveTableField> for UnResolve {
 }
 
 #[derive(Debug)]
-pub struct UnResolveClassCtor {
+pub struct UnResolveConstructor {
     pub file_id: FileId,
     pub call_expr: LuaCallExpr,
     pub signature_id: LuaSignatureId,
     pub param_idx: usize,
 }
 
-impl From<UnResolveClassCtor> for UnResolve {
-    fn from(un_resolve_class_ctor: UnResolveClassCtor) -> Self {
-        UnResolve::ClassCtor(Box::new(un_resolve_class_ctor))
+impl From<UnResolveConstructor> for UnResolve {
+    fn from(un_resolve_constructor: UnResolveConstructor) -> Self {
+        UnResolve::ClassCtor(Box::new(un_resolve_constructor))
     }
 }

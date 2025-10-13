@@ -162,4 +162,4 @@
 --- - `name` - The name of the constructor
 --- - `strip_self` - Whether the `self` parameter can be omitted when calling the constructor, defaults to `true`
 --- - `return_self` - Whether the constructor is forced to return `self`, defaults to `true`
----@attribute class_ctor(name: string, strip_self: boolean?, return_self: boolean?)
+---@attribute constructor(name: string, strip_self: boolean?, return_self: boolean?)

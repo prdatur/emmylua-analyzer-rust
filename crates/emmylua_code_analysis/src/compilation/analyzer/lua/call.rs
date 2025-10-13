@@ -2,7 +2,7 @@ use emmylua_parser::LuaCallExpr;
 
 use crate::{
     InferFailReason, LuaType,
-    compilation::analyzer::{lua::LuaAnalyzer, unresolve::UnResolveClassCtor},
+    compilation::analyzer::{lua::LuaAnalyzer, unresolve::UnResolveConstructor},
 };
 
 pub fn analyze_call(analyzer: &mut LuaAnalyzer, call_expr: LuaCallExpr) -> Option<()> {
@@ -15,8 +15,8 @@ pub fn analyze_call(analyzer: &mut LuaAnalyzer, call_expr: LuaCallExpr) -> Optio
         for (idx, param_info) in signature.param_docs.iter() {
             if let Some(ref attrs) = param_info.attributes {
                 for attr in attrs.iter() {
-                    if attr.id.get_name() == "class_ctor" {
-                        let unresolve = UnResolveClassCtor {
+                    if attr.id.get_name() == "constructor" {
+                        let unresolve = UnResolveConstructor {
                             file_id: analyzer.file_id,
                             call_expr: call_expr.clone(),
                             signature_id,

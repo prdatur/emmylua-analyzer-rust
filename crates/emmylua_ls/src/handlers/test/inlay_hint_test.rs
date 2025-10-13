@@ -140,7 +140,7 @@ mod tests {
         ws.def(
             r#"
             ---@generic T
-            ---@param [class_ctor("__init")] name `T`
+            ---@param [constructor("__init")] name `T`
             ---@return T
             function meta(name)
             end

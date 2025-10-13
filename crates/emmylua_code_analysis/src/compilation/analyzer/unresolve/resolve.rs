@@ -11,7 +11,7 @@ use crate::{
     compilation::analyzer::{
         common::{add_member, bind_type},
         lua::{analyze_return_point, infer_for_range_iter_expr_func},
-        unresolve::UnResolveClassCtor,
+        unresolve::UnResolveConstructor,
     },
     db_index::{DbIndex, LuaMemberOwner, LuaType},
     find_members_with_key,
@@ -252,36 +252,35 @@ pub fn try_resolve_module_ref(
     Ok(())
 }
 
-#[allow(unused)]
-pub fn try_resolve_class_ctor(
+pub fn try_resolve_constructor(
     db: &mut DbIndex,
     cache: &mut LuaInferCache,
-    unresolve_class_ctor: &mut UnResolveClassCtor,
+    unresolve_constructor: &mut UnResolveConstructor,
 ) -> ResolveResult {
     let signature = db
         .get_signature_index()
-        .get(&unresolve_class_ctor.signature_id)
+        .get(&unresolve_constructor.signature_id)
         .ok_or(InferFailReason::None)?;
     let param_info = signature
-        .get_param_info_by_id(unresolve_class_ctor.param_idx)
+        .get_param_info_by_id(unresolve_constructor.param_idx)
         .ok_or(InferFailReason::None)?;
-    let class_ctor_use = param_info
+    let constructor_use = param_info
         .attributes
         .iter()
         .flatten()
-        .find(|attr| attr.id.get_name() == "class_ctor")
+        .find(|attr| attr.id.get_name() == "constructor")
         .ok_or(InferFailReason::None)?;
     let LuaType::DocStringConst(target_signature_name) =
-        class_ctor_use.args.first().ok_or(InferFailReason::None)?
+        constructor_use.args.first().ok_or(InferFailReason::None)?
     else {
         return Err(InferFailReason::None);
     };
-    let target_type_decl_id = get_class_ctor_target_type(
+    let target_type_decl_id = get_constructor_target_type(
         db,
         cache,
         &param_info.type_ref,
-        unresolve_class_ctor.call_expr.clone(),
-        unresolve_class_ctor.param_idx,
+        unresolve_constructor.call_expr.clone(),
+        unresolve_constructor.param_idx,
     )
     .ok_or(InferFailReason::None)?;
     let target_type = LuaType::Ref(target_type_decl_id);
@@ -290,14 +289,14 @@ pub fn try_resolve_class_ctor(
         find_members_with_key(db, &target_type, member_key, false).ok_or(InferFailReason::None)?;
     let ctor_signature_member = members.first().ok_or(InferFailReason::None)?;
     let strip_self = {
-        if let Some(LuaType::DocBooleanConst(strip_self)) = class_ctor_use.args.get(1) {
+        if let Some(LuaType::DocBooleanConst(strip_self)) = constructor_use.args.get(1) {
             *strip_self
         } else {
             true
         }
     };
     let return_self = {
-        if let Some(LuaType::DocBooleanConst(return_self)) = class_ctor_use.args.get(2) {
+        if let Some(LuaType::DocBooleanConst(return_self)) = constructor_use.args.get(2) {
             *return_self
         } else {
             true
@@ -358,7 +357,7 @@ fn set_signature_to_default_call(
     Some(())
 }
 
-fn get_class_ctor_target_type(
+fn get_constructor_target_type(
     db: &DbIndex,
     cache: &mut LuaInferCache,
     param_type: &LuaType,

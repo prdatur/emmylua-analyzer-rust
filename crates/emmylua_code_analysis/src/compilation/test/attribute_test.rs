@@ -66,7 +66,7 @@ mod test {
     }
 
     #[test]
-    fn test_class_ctor() {
+    fn test_constructor() {
         let mut ws = VirtualWorkspace::new();
 
         ws.def_files(vec![
@@ -79,10 +79,10 @@ mod test {
             (
                 "meta.lua",
                 r#"
-            ---@attribute class_ctor(name: string, strip_self: boolean?, return_self: boolean?)
+            ---@attribute constructor(name: string, strip_self: boolean?, return_self: boolean?)
 
             ---@generic T
-            ---@param [class_ctor("__init")] name `T`
+            ---@param [constructor("__init")] name `T`
             ---@return T
             function meta(name)
             end
@@ -92,10 +92,10 @@ mod test {
 
         // ws.def(
         //     r#"
-        //     ---@attribute class_ctor(name: string, strip_self: boolean?, return_self: boolean?)
+        //     ---@attribute constructor(name: string, strip_self: boolean?, return_self: boolean?)
 
         //     ---@generic T
-        //     ---@param [class_ctor("__init")] name `T`
+        //     ---@param [constructor("__init")] name `T`
         //     ---@return T
         //     function meta(name)
         //     end
