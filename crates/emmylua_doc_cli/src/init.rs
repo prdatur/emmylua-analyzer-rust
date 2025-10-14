@@ -112,7 +112,12 @@ pub fn load_workspace(
     analysis.update_config(Arc::new(emmyrc));
     analysis.init_std_lib(None);
 
-    let file_infos = collect_files(&workspace_folders, &analysis.emmyrc, exclude_pattern, include_pattern);
+    let file_infos = collect_files(
+        &workspace_folders,
+        &analysis.emmyrc,
+        exclude_pattern,
+        include_pattern,
+    );
     let files = file_infos
         .into_iter()
         .filter_map(|file| {
@@ -145,7 +150,8 @@ pub fn collect_files(
     include_pattern: Option<Vec<String>>,
 ) -> Vec<LuaFileInfo> {
     let mut files = Vec::new();
-    let (match_pattern, exclude, exclude_dir) = calculate_include_and_exclude(emmyrc, exclude_pattern, include_pattern);
+    let (match_pattern, exclude, exclude_dir) =
+        calculate_include_and_exclude(emmyrc, exclude_pattern, include_pattern);
 
     let encoding = &emmyrc.workspace.encoding;
 
@@ -169,7 +175,11 @@ pub fn collect_files(
 /// File patterns for workspace scanning: (include_patterns, exclude_patterns, exclude_dirs)
 type FilePatterns = (Vec<String>, Vec<String>, Vec<PathBuf>);
 
-pub fn calculate_include_and_exclude(emmyrc: &Emmyrc, exclude_pattern: Option<Vec<String>>, include_pattern: Option<Vec<String>>) -> FilePatterns {
+pub fn calculate_include_and_exclude(
+    emmyrc: &Emmyrc,
+    exclude_pattern: Option<Vec<String>>,
+    include_pattern: Option<Vec<String>>,
+) -> FilePatterns {
     let mut include = Vec::new();
     let mut exclude = Vec::new();
     let mut exclude_dirs = Vec::new();
