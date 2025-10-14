@@ -329,7 +329,14 @@ impl ProviderVirtualWorkspace {
         let mut items = result
             .iter()
             .map(|l| VirtualLocation {
-                file: l.uri.get_file_path().unwrap().to_string_lossy().to_string(),
+                file: l
+                    .uri
+                    .get_file_path()
+                    .unwrap()
+                    .file_name()
+                    .unwrap()
+                    .to_string_lossy()
+                    .to_string(),
                 line: l.range.start.line,
             })
             .collect::<Vec<_>>();
@@ -421,6 +428,8 @@ impl ProviderVirtualWorkspace {
                         Some(part) => part.location.as_ref().map(|loc| {
                             loc.uri
                                 .get_file_path()
+                                .unwrap()
+                                .file_name()
                                 .unwrap()
                                 .to_string_lossy()
                                 .to_string()
@@ -566,7 +575,12 @@ impl ProviderVirtualWorkspace {
             .into_iter()
             .map(|(uri, edits)| {
                 Ok((
-                    uri.get_file_path().unwrap().to_string_lossy().to_string(),
+                    uri.get_file_path()
+                        .unwrap()
+                        .file_name()
+                        .unwrap()
+                        .to_string_lossy()
+                        .to_string(),
                     edits,
                 ))
             })
