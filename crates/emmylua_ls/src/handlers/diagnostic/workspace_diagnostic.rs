@@ -17,8 +17,13 @@ pub async fn on_pull_workspace_diagnostic(
         return WorkspaceDiagnosticReport { items: vec![] };
     }
     let version = workspace_manager.get_workspace_version();
+    let client_id = workspace_manager.client_config.client_id;
     workspace_manager.update_workspace_version(WorkspaceDiagnosticLevel::None, false);
     drop(workspace_manager);
+
+    if client_id.is_vscode() && context.lsp_features().supports_refresh_diagnostic() {
+        context.client().refresh_workspace_diagnostics();
+    }
 
     // let emmyrc = context.analysis().read().await.get_emmyrc();
     let file_diagnostics = match status {

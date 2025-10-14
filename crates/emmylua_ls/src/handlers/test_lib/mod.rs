@@ -329,7 +329,7 @@ impl ProviderVirtualWorkspace {
         let mut items = result
             .iter()
             .map(|l| VirtualLocation {
-                file: l.uri.path().segments().next_back().unwrap().to_string(),
+                file: l.uri.get_file_path().unwrap().to_string_lossy().to_string(),
                 line: l.range.start.line,
             })
             .collect::<Vec<_>>();
@@ -418,10 +418,13 @@ impl ProviderVirtualWorkspace {
                 pos: item.position.character,
                 ref_file: match &item.label {
                     InlayHintLabel::LabelParts(parts) => match parts.first() {
-                        Some(part) => part
-                            .location
-                            .as_ref()
-                            .map(|loc| loc.uri.path().segments().next_back().unwrap().to_string()),
+                        Some(part) => part.location.as_ref().map(|loc| {
+                            loc.uri
+                                .get_file_path()
+                                .unwrap()
+                                .to_string_lossy()
+                                .to_string()
+                        }),
                         None => None,
                     },
                     InlayHintLabel::String(_) => None,
@@ -563,7 +566,7 @@ impl ProviderVirtualWorkspace {
             .into_iter()
             .map(|(uri, edits)| {
                 Ok((
-                    uri.path().segments().next_back().or_fail()?.to_string(),
+                    uri.get_file_path().unwrap().to_string_lossy().to_string(),
                     edits,
                 ))
             })

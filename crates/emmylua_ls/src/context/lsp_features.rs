@@ -46,7 +46,7 @@ impl LspFeatures {
 
     pub fn supports_refresh_diagnostic(&self) -> bool {
         if let Some(workspace) = &self.client_capabilities.workspace {
-            if let Some(diagnostic) = &workspace.diagnostic {
+            if let Some(diagnostic) = &workspace.diagnostics {
                 if let Some(supports) = diagnostic.refresh_support {
                     return supports;
                 }
