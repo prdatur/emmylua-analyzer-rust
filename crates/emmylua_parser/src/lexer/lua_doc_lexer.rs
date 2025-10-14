@@ -144,16 +144,16 @@ impl LuaDocLexer<'_> {
                 reader.eat_while(is_doc_whitespace);
                 LuaTokenKind::TkWhitespace
             }
-            '[' => {
-                reader.bump();
-                self.state = LuaDocLexerState::AttributeUse;
-                LuaTokenKind::TkDocAttributeUse
-            }
             ch if is_name_start(ch) => {
                 reader.bump();
                 reader.eat_while(is_name_continue);
                 let text = reader.current_text();
                 to_tag(text)
+            }
+            '[' => {
+                reader.bump();
+                self.state = LuaDocLexerState::AttributeUse;
+                LuaTokenKind::TkDocAttributeUse
             }
             _ => {
                 reader.eat_while(|_| true);

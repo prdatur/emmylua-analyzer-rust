@@ -306,7 +306,7 @@ fn build_node_semantic_token(
                     SemanticTokenModifier::DECLARATION,
                 );
             }
-            if let Some(attribs) = doc_class.get_attrib() {
+            if let Some(attribs) = doc_class.get_type_flag() {
                 for token in attribs.tokens::<LuaGeneralToken>() {
                     builder.push(token.syntax(), SemanticTokenType::DECORATOR);
                 }
@@ -330,7 +330,7 @@ fn build_node_semantic_token(
                 SemanticTokenType::ENUM,
                 SemanticTokenModifier::DECLARATION,
             );
-            if let Some(attribs) = doc_enum.get_attrib() {
+            if let Some(attribs) = doc_enum.get_type_flag() {
                 for token in attribs.tokens::<LuaGeneralToken>() {
                     builder.push(token.syntax(), SemanticTokenType::DECORATOR);
                 }

@@ -19,7 +19,7 @@ pub enum LuaDeclTypeKind {
 }
 
 flags! {
-    pub enum LuaTypeAttribute: u8 {
+    pub enum LuaTypeFlag: u8 {
         None,
         Key,
         Partial,
@@ -43,7 +43,7 @@ impl LuaTypeDecl {
         range: TextRange,
         name: String,
         kind: LuaDeclTypeKind,
-        attrib: FlagSet<LuaTypeAttribute>,
+        flag: FlagSet<LuaTypeFlag>,
         id: LuaTypeDeclId,
     ) -> Self {
         Self {
@@ -51,7 +51,7 @@ impl LuaTypeDecl {
             locations: vec![LuaDeclLocation {
                 file_id,
                 range,
-                attrib,
+                flag,
             }],
             id,
             extra: match kind {
@@ -94,19 +94,19 @@ impl LuaTypeDecl {
     pub fn is_exact(&self) -> bool {
         self.locations
             .iter()
-            .any(|l| l.attrib.contains(LuaTypeAttribute::Exact))
+            .any(|l| l.flag.contains(LuaTypeFlag::Exact))
     }
 
     pub fn is_partial(&self) -> bool {
         self.locations
             .iter()
-            .any(|l| l.attrib.contains(LuaTypeAttribute::Partial))
+            .any(|l| l.flag.contains(LuaTypeFlag::Partial))
     }
 
     pub fn is_enum_key(&self) -> bool {
         self.locations
             .iter()
-            .any(|l| l.attrib.contains(LuaTypeAttribute::Key))
+            .any(|l| l.flag.contains(LuaTypeFlag::Key))
     }
 
     pub fn get_id(&self) -> LuaTypeDeclId {
@@ -321,7 +321,7 @@ impl<'de> Deserialize<'de> for LuaTypeDeclId {
 pub struct LuaDeclLocation {
     pub file_id: FileId,
     pub range: TextRange,
-    pub attrib: FlagSet<LuaTypeAttribute>,
+    pub flag: FlagSet<LuaTypeFlag>,
 }
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]

@@ -264,7 +264,7 @@ impl LuaDocTagClass {
         self.child()
     }
 
-    pub fn get_attrib(&self) -> Option<LuaDocTypeFlag> {
+    pub fn get_type_flag(&self) -> Option<LuaDocTypeFlag> {
         self.child()
     }
 }
@@ -313,7 +313,7 @@ impl LuaDocTagEnum {
         self.child()
     }
 
-    pub fn get_attrib(&self) -> Option<LuaDocTypeFlag> {
+    pub fn get_type_flag(&self) -> Option<LuaDocTypeFlag> {
         self.child()
     }
 }
@@ -706,7 +706,7 @@ impl LuaDocTagField {
         self.token()
     }
 
-    pub fn get_attrib(&self) -> Option<LuaDocTypeFlag> {
+    pub fn get_type_flag(&self) -> Option<LuaDocTypeFlag> {
         self.child()
     }
 }
