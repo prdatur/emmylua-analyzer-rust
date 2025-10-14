@@ -12,8 +12,8 @@ use emmylua_code_analysis::{
 };
 use emmylua_parser::{
     LuaAst, LuaAstNode, LuaAstToken, LuaCallArgList, LuaCallExpr, LuaComment, LuaDocFieldKey,
-    LuaDocObjectFieldKey, LuaExpr, LuaGeneralToken, LuaKind, LuaLiteralToken, LuaNameToken,
-    LuaSyntaxKind, LuaSyntaxNode, LuaSyntaxToken, LuaTokenKind, LuaVarExpr,
+    LuaDocObjectFieldKey, LuaDocType, LuaExpr, LuaGeneralToken, LuaKind, LuaLiteralToken,
+    LuaNameToken, LuaSyntaxKind, LuaSyntaxNode, LuaSyntaxToken, LuaTokenKind, LuaVarExpr,
 };
 use emmylua_parser_desc::{CodeBlockHighlightKind, DescItem, DescItemKind};
 use lsp_types::{SemanticToken, SemanticTokenModifier, SemanticTokenType};
@@ -202,7 +202,8 @@ fn build_tokens_semantic_token(
         | LuaTokenKind::TkTagSource
         | LuaTokenKind::TkTagReturnCast
         | LuaTokenKind::TkTagExport
-        | LuaTokenKind::TkLanguage => {
+        | LuaTokenKind::TkLanguage
+        | LuaTokenKind::TkTagAttribute => {
             builder.push_with_modifier(
                 token,
                 SemanticTokenType::KEYWORD,
@@ -784,12 +785,42 @@ fn build_node_semantic_token(
             }
         }
         LuaAst::LuaDocTagAttributeUse(tag_use) => {
-            // 给 `@[]` 染色, @已经染色过了
+            // 给 `@[` 染色
             if let Some(token) = tag_use.token_by_kind(LuaTokenKind::TkDocAttributeUse) {
                 builder.push(token.syntax(), SemanticTokenType::KEYWORD);
             }
+            // `]`染色
             if let Some(token) = tag_use.syntax().last_token() {
                 builder.push(&token, SemanticTokenType::KEYWORD);
+            }
+            // 名称染色
+            for attribute_use in tag_use.get_attribute_uses() {
+                if let Some(token) = attribute_use.get_type()?.get_name_token() {
+                    builder.push_with_modifiers(
+                        token.syntax(),
+                        SemanticTokenType::DECORATOR,
+                        &[
+                            SemanticTokenModifier::DECLARATION,
+                            SemanticTokenModifier::DEFAULT_LIBRARY,
+                        ],
+                    );
+                }
+            }
+        }
+        LuaAst::LuaDocTagAttribute(tag_attribute) => {
+            if let Some(name) = tag_attribute.get_name_token() {
+                builder.push_with_modifier(
+                    name.syntax(),
+                    SemanticTokenType::TYPE,
+                    SemanticTokenModifier::DECLARATION,
+                );
+            }
+            if let Some(LuaDocType::Attribute(attribute)) = tag_attribute.get_type() {
+                for param in attribute.get_params() {
+                    if let Some(name) = param.get_name_token() {
+                        builder.push(name.syntax(), SemanticTokenType::PARAMETER);
+                    }
+                }
             }
         }
         _ => {}

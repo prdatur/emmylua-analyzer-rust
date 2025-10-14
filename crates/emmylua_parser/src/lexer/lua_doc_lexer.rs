@@ -619,10 +619,6 @@ impl LuaDocLexer<'_> {
                 reader.bump();
                 LuaTokenKind::TkComma
             }
-            '=' => {
-                reader.bump();
-                LuaTokenKind::TkAssign
-            }
             ']' => {
                 reader.bump();
                 LuaTokenKind::TkRightBracket

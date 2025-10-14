@@ -29,30 +29,30 @@ pub fn module_name_convert(
     module_name
 }
 
-pub fn key_name_convert(
+pub fn flie_name_convert(
     key: &str,
     typ: &LuaType,
     file_conversion: EmmyrcFilenameConvention,
 ) -> String {
-    let mut key_name = key.to_string();
+    let mut flie_name = key.to_string();
     match file_conversion {
         EmmyrcFilenameConvention::SnakeCase => {
-            key_name = to_snake_case(&key_name);
+            flie_name = to_snake_case(&flie_name);
         }
         EmmyrcFilenameConvention::CamelCase => {
-            key_name = to_camel_case(&key_name);
+            flie_name = to_camel_case(&flie_name);
         }
         EmmyrcFilenameConvention::PascalCase => {
-            key_name = to_pascal_case(&key_name);
+            flie_name = to_pascal_case(&flie_name);
         }
         EmmyrcFilenameConvention::Keep => {}
         EmmyrcFilenameConvention::KeepClass => {
             if let LuaType::Def(id) = typ {
-                key_name = id.get_simple_name().to_string();
+                flie_name = id.get_simple_name().to_string();
             }
         }
     }
-    key_name
+    flie_name
 }
 
 fn to_snake_case(s: &str) -> String {
