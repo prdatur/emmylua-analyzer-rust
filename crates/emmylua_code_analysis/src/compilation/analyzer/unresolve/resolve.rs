@@ -270,9 +270,12 @@ pub fn try_resolve_constructor(
         .flatten()
         .find(|attr| attr.id.get_name() == "constructor")
         .ok_or(InferFailReason::None)?;
-    let LuaType::DocStringConst(target_signature_name) =
-        constructor_use.args.first().ok_or(InferFailReason::None)?
-    else {
+    let target_signature_type = constructor_use
+        .args
+        .first()
+        .and_then(|(_, typ)| typ.as_ref())
+        .ok_or(InferFailReason::None)?;
+    let LuaType::DocStringConst(target_signature_name) = target_signature_type else {
         return Err(InferFailReason::None);
     };
     let target_type_decl_id = get_constructor_target_type(
@@ -288,20 +291,24 @@ pub fn try_resolve_constructor(
     let members =
         find_members_with_key(db, &target_type, member_key, false).ok_or(InferFailReason::None)?;
     let ctor_signature_member = members.first().ok_or(InferFailReason::None)?;
-    let strip_self = {
-        if let Some(LuaType::DocBooleanConst(strip_self)) = constructor_use.args.get(1) {
-            *strip_self
-        } else {
-            true
-        }
-    };
-    let return_self = {
-        if let Some(LuaType::DocBooleanConst(return_self)) = constructor_use.args.get(2) {
-            *return_self
-        } else {
-            true
-        }
-    };
+    let strip_self = constructor_use
+        .args
+        .get(1)
+        .and_then(|(_, typ)| typ.as_ref())
+        .and_then(|typ| match typ {
+            LuaType::DocBooleanConst(value) => Some(*value),
+            _ => None,
+        })
+        .unwrap_or(true);
+    let return_self = constructor_use
+        .args
+        .get(2)
+        .and_then(|(_, typ)| typ.as_ref())
+        .and_then(|typ| match typ {
+            LuaType::DocBooleanConst(value) => Some(*value),
+            _ => None,
+        })
+        .unwrap_or(true);
     set_signature_to_default_call(db, cache, ctor_signature_member, strip_self, return_self)
         .ok_or(InferFailReason::None)?;
 

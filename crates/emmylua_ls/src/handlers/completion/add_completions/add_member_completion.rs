@@ -363,9 +363,10 @@ pub fn get_index_alias_name(
         .find_attribute_use(LuaTypeDeclId::new("index_alias"))?
         .args
         .first()
-        .map(|param| match param {
-            LuaType::DocStringConst(s) => s.as_ref(),
-            _ => "",
+        .and_then(|(_, typ)| typ.as_ref())
+        .and_then(|param| match param {
+            LuaType::DocStringConst(s) => Some(s.as_ref()),
+            _ => None,
         })?
         .to_string();
     Some(alias_label)

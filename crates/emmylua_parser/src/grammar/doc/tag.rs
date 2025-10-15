@@ -771,7 +771,7 @@ fn parse_attribute_arg_list(p: &mut LuaDocParser) -> DocParseResult {
 fn parse_attribute_arg(p: &mut LuaDocParser) -> DocParseResult {
     let m = p.mark(LuaSyntaxKind::LiteralExpr);
 
-    // TODO: 添加具名参数支持(name = value)
+    // TODO: 添加具名参数支持(name: value)
     match p.current_token() {
         LuaTokenKind::TkInt
         | LuaTokenKind::TkFloat

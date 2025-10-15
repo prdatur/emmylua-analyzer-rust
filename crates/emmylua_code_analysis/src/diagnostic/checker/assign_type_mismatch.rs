@@ -8,8 +8,8 @@ use rowan::{NodeOrToken, TextRange};
 
 use crate::{
     DiagnosticCode, LuaDeclExtra, LuaDeclId, LuaMemberKey, LuaSemanticDeclId, LuaType,
-    SemanticDeclLevel, SemanticModel, TypeCheckFailReason, TypeCheckResult, VariadicType,
-    infer_index_expr,
+    LuaTypeDeclId, SemanticDeclLevel, SemanticModel, TypeCheckFailReason, TypeCheckResult,
+    VariadicType, infer_index_expr,
 };
 
 use super::{Checker, DiagnosticContext, humanize_lint_type};
@@ -204,6 +204,7 @@ fn check_local_stat(
     Some(())
 }
 
+/// 检查整个表, 返回`true`表示诊断出异常.
 pub fn check_table_expr(
     context: &mut DiagnosticContext,
     semantic_model: &SemanticModel,
@@ -218,16 +219,16 @@ pub fn check_table_expr(
             .get_property_index()
             .get_property(&semantic_decl)
         {
-            if let Some(attribute_uses) = property.attribute_uses() {
-                for attribute_use in attribute_uses.iter() {
-                    if attribute_use.id.get_name() == "skip_diagnostic" {
-                        if let Some(LuaType::DocStringConst(code)) = attribute_use.args.first() {
-                            if code.as_ref() == "table_field" {
-                                return Some(false);
-                            }
-                        };
+            if let Some(skip_diagnostic) =
+                property.find_attribute_use(LuaTypeDeclId::new("skip_diagnostic"))
+            {
+                if let Some(LuaType::DocStringConst(code)) =
+                    skip_diagnostic.get_param_by_name("code")
+                {
+                    if code.as_ref() == "table_field" {
+                        return Some(false);
                     }
-                }
+                };
             }
         }
     }

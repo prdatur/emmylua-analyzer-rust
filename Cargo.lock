@@ -651,6 +651,7 @@ dependencies = [
  "fern",
  "glob",
  "googletest",
+ "internment",
  "itertools 0.14.0",
  "log",
  "lsp-server",

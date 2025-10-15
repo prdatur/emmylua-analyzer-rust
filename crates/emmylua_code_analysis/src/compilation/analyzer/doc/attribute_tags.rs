@@ -43,15 +43,47 @@ pub fn infer_attribute_uses(
     let attribute_uses = tag_use.get_attribute_uses();
     let mut result = Vec::new();
     for attribute_use in attribute_uses {
-        let mut params = Vec::new();
-        if let Some(attribute_call_arg_list) = attribute_use.get_arg_list() {
-            for arg in attribute_call_arg_list.get_args() {
-                let arg_type = infer_attribute_arg_type(arg);
-                params.push(arg_type);
-            }
-        }
         let attribute_type = infer_type(analyzer, LuaDocType::Name(attribute_use.get_type()?));
         if let LuaType::Ref(type_id) = attribute_type {
+            let arg_types: Vec<LuaType> = attribute_use
+                .get_arg_list()
+                .map(|arg_list| arg_list.get_args().map(infer_attribute_arg_type).collect())
+                .unwrap_or_default();
+            let param_names = analyzer
+                .db
+                .get_type_index()
+                .get_type_decl(&type_id)
+                .and_then(|decl| decl.get_attribute_type())
+                .and_then(|typ| match typ {
+                    LuaType::DocAttribute(attr_type) => Some(
+                        attr_type
+                            .get_params()
+                            .iter()
+                            .map(|(name, _)| name.clone())
+                            .collect::<Vec<_>>(),
+                    ),
+                    _ => None,
+                })
+                .unwrap_or_default();
+
+            let mut params = Vec::new();
+            for (idx, arg_type) in arg_types.into_iter().enumerate() {
+                let param_name = param_names
+                    .get(idx)
+                    .cloned()
+                    .or_else(|| {
+                        param_names.last().and_then(|last| {
+                            if last == "..." {
+                                Some(last.clone())
+                            } else {
+                                None
+                            }
+                        })
+                    })
+                    .unwrap_or_default();
+                params.push((param_name, Some(arg_type)));
+            }
+
             result.push(LuaAttributeUse::new(type_id, params));
         }
     }

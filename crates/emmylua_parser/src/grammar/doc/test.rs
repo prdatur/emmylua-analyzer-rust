@@ -2943,9 +2943,9 @@ Syntax(Chunk)@0..105
         ---@param [attribute] a number
         ---@return [attribute] number, [attribute] string
         "#;
-        print_ast(code);
+        // print_ast(code);
         // print_ast(r#"
-        // ---@class A<[attribute] T, [attribute] R>
+        // ---@[field_accessor(nil)]
         // "#);
         let result = r#"
 Syntax(Chunk)@0..155

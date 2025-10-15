@@ -175,11 +175,18 @@ impl LuaPropertyId {
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct LuaAttributeUse {
     pub id: LuaTypeDeclId,
-    pub args: Vec<LuaType>,
+    pub args: Vec<(String, Option<LuaType>)>,
 }
 
 impl LuaAttributeUse {
-    pub fn new(name: LuaTypeDeclId, args: Vec<LuaType>) -> Self {
-        Self { id: name, args }
+    pub fn new(id: LuaTypeDeclId, args: Vec<(String, Option<LuaType>)>) -> Self {
+        Self { id, args }
+    }
+
+    pub fn get_param_by_name(&self, name: &str) -> Option<&LuaType> {
+        self.args
+            .iter()
+            .find(|(n, _)| n == name)
+            .and_then(|(_, typ)| typ.as_ref())
     }
 }
