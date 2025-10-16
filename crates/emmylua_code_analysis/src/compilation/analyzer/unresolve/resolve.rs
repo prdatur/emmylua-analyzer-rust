@@ -257,58 +257,92 @@ pub fn try_resolve_constructor(
     cache: &mut LuaInferCache,
     unresolve_constructor: &mut UnResolveConstructor,
 ) -> ResolveResult {
-    let signature = db
-        .get_signature_index()
-        .get(&unresolve_constructor.signature_id)
-        .ok_or(InferFailReason::None)?;
-    let param_info = signature
-        .get_param_info_by_id(unresolve_constructor.param_idx)
-        .ok_or(InferFailReason::None)?;
-    let constructor_use = param_info
-        .attributes
-        .iter()
-        .flatten()
-        .find(|attr| attr.id.get_name() == "constructor")
-        .ok_or(InferFailReason::None)?;
-    let target_signature_type = constructor_use
-        .args
-        .first()
-        .and_then(|(_, typ)| typ.as_ref())
-        .ok_or(InferFailReason::None)?;
-    let LuaType::DocStringConst(target_signature_name) = target_signature_type else {
-        return Err(InferFailReason::None);
-    };
-    let target_type_decl_id = get_constructor_target_type(
+    let (param_type, target_signature_name, root_class, strip_self, return_self) = {
+        let signature = db
+            .get_signature_index()
+            .get(&unresolve_constructor.signature_id)
+            .ok_or(InferFailReason::None)?;
+        let param_info = signature
+            .get_param_info_by_id(unresolve_constructor.param_idx)
+            .ok_or(InferFailReason::None)?;
+        let constructor_use = param_info
+            .get_attribute_by_name("constructor")
+            .ok_or(InferFailReason::None)?;
+
+        // 作为构造函数的方法名
+        let target_signature_name = constructor_use
+            .get_param_by_name("name")
+            .and_then(|typ| match typ {
+                LuaType::DocStringConst(value) => Some(value.deref().clone()),
+                _ => None,
+            })
+            .ok_or(InferFailReason::None)?;
+        // 作为构造函数的根类
+        let root_class =
+            constructor_use
+                .get_param_by_name("root_class")
+                .and_then(|typ| match typ {
+                    LuaType::DocStringConst(value) => Some(value.deref().clone()),
+                    _ => None,
+                });
+        // 是否可以省略self参数
+        let strip_self = constructor_use
+            .get_param_by_name("strip_self")
+            .and_then(|typ| match typ {
+                LuaType::DocBooleanConst(value) => Some(*value),
+                _ => None,
+            })
+            .unwrap_or(true);
+        // 是否返回self
+        let return_self = constructor_use
+            .get_param_by_name("return_self")
+            .and_then(|typ| match typ {
+                LuaType::DocBooleanConst(value) => Some(*value),
+                _ => None,
+            })
+            .unwrap_or(true);
+
+        Ok::<_, InferFailReason>((
+            param_info.type_ref.clone(),
+            target_signature_name,
+            root_class,
+            strip_self,
+            return_self,
+        ))
+    }?;
+
+    // 需要添加构造函数的目标类型
+    let target_id = get_constructor_target_type(
         db,
         cache,
-        &param_info.type_ref,
+        &param_type,
         unresolve_constructor.call_expr.clone(),
         unresolve_constructor.param_idx,
     )
     .ok_or(InferFailReason::None)?;
-    let target_type = LuaType::Ref(target_type_decl_id);
-    let member_key = LuaMemberKey::Name(target_signature_name.deref().clone());
+
+    // 添加根类
+    if let Some(root_class) = root_class {
+        let root_type_id = LuaTypeDeclId::new(&root_class);
+        if let Some(type_decl) = db.get_type_index().get_type_decl(&root_type_id) {
+            if type_decl.is_class() {
+                let root_type = LuaType::Ref(root_type_id.clone());
+                db.get_type_index_mut().add_super_type(
+                    target_id.clone(),
+                    unresolve_constructor.file_id,
+                    root_type,
+                );
+            }
+        }
+    }
+
+    // 添加构造函数
+    let target_type = LuaType::Ref(target_id);
+    let member_key = LuaMemberKey::Name(target_signature_name);
     let members =
         find_members_with_key(db, &target_type, member_key, false).ok_or(InferFailReason::None)?;
     let ctor_signature_member = members.first().ok_or(InferFailReason::None)?;
-    let strip_self = constructor_use
-        .args
-        .get(1)
-        .and_then(|(_, typ)| typ.as_ref())
-        .and_then(|typ| match typ {
-            LuaType::DocBooleanConst(value) => Some(*value),
-            _ => None,
-        })
-        .unwrap_or(true);
-    let return_self = constructor_use
-        .args
-        .get(2)
-        .and_then(|(_, typ)| typ.as_ref())
-        .and_then(|typ| match typ {
-            LuaType::DocBooleanConst(value) => Some(*value),
-            _ => None,
-        })
-        .unwrap_or(true);
+
     set_signature_to_default_call(db, cache, ctor_signature_member, strip_self, return_self)
         .ok_or(InferFailReason::None)?;
 

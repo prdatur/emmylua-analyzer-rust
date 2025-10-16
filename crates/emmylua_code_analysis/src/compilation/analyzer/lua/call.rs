@@ -13,21 +13,17 @@ pub fn analyze_call(analyzer: &mut LuaAnalyzer, call_expr: LuaCallExpr) -> Optio
         };
         let signature = analyzer.db.get_signature_index().get(&signature_id)?;
         for (idx, param_info) in signature.param_docs.iter() {
-            if let Some(ref attrs) = param_info.attributes {
-                for attr in attrs.iter() {
-                    if attr.id.get_name() == "constructor" {
-                        let unresolve = UnResolveConstructor {
-                            file_id: analyzer.file_id,
-                            call_expr: call_expr.clone(),
-                            signature_id,
-                            param_idx: *idx,
-                        };
-                        analyzer
-                            .context
-                            .add_unresolve(unresolve.into(), InferFailReason::None);
-                        return Some(());
-                    }
-                }
+            if param_info.get_attribute_by_name("constructor").is_some() {
+                let unresolve = UnResolveConstructor {
+                    file_id: analyzer.file_id,
+                    call_expr: call_expr.clone(),
+                    signature_id,
+                    param_idx: *idx,
+                };
+                analyzer
+                    .context
+                    .add_unresolve(unresolve.into(), InferFailReason::None);
+                return Some(());
             }
         }
     }

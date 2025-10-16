@@ -136,7 +136,7 @@ mod tests {
 
     #[gtest]
     fn test_class_call_hint() -> Result<()> {
-        let mut ws = ProviderVirtualWorkspace::new();
+        let mut ws = ProviderVirtualWorkspace::new_with_init_std_lib();
         ws.def(
             r#"
             ---@generic T

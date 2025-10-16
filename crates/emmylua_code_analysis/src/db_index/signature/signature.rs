@@ -185,6 +185,15 @@ pub struct LuaDocParamInfo {
     pub attributes: Option<Vec<LuaAttributeUse>>,
 }
 
+impl LuaDocParamInfo {
+    pub fn get_attribute_by_name(&self, name: &str) -> Option<&LuaAttributeUse> {
+        self.attributes
+            .iter()
+            .flatten()
+            .find(|attr| attr.id.get_name() == name)
+    }
+}
+
 #[derive(Debug)]
 pub struct LuaDocReturnInfo {
     pub name: Option<String>,
