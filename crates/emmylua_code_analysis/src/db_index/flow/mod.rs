@@ -57,7 +57,14 @@ impl LuaFlowIndex {
         self.signature_cast_cache
             .entry(file_id)
             .or_default()
-            .insert(signature_id, LuaSignatureCast { name, cast, fallback_cast });
+            .insert(
+                signature_id,
+                LuaSignatureCast {
+                    name,
+                    cast,
+                    fallback_cast,
+                },
+            );
     }
 }
 
