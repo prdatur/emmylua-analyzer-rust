@@ -1458,10 +1458,6 @@ impl LuaAstNode for LuaDocTagReturnCast {
 impl LuaDocDescriptionOwner for LuaDocTagReturnCast {}
 
 impl LuaDocTagReturnCast {
-    pub fn get_op_type(&self) -> Option<LuaDocOpType> {
-        self.child()
-    }
-
     pub fn get_op_types(&self) -> LuaAstChildren<LuaDocOpType> {
         self.children()
     }

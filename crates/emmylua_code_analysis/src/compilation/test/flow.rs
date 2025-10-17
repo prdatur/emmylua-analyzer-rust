@@ -1369,7 +1369,7 @@ _2 = a[1]
             ---@class Monster: Creature
 
             ---@return boolean
-            ---@return_cast creature Player, Monster
+            ---@return_cast creature Player else Monster
             local function isPlayer(creature)
                 return true
             end
@@ -1407,7 +1407,7 @@ _2 = a[1]
             local m = {}
 
             ---@return boolean
-            ---@return_cast self Player, Monster
+            ---@return_cast self Player else Monster
             function m:isPlayer()
             end
 

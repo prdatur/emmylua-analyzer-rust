@@ -252,7 +252,7 @@ pub fn analyze_return_cast(analyzer: &mut DocAnalyzer, tag: LuaDocTagReturnCast)
         let name = name_token.get_name_text();
 
         let op_types: Vec<_> = tag.get_op_types().collect();
-        let cast_op_type = op_types.get(0)?;
+        let cast_op_type = op_types.first()?;
 
         // Bind the true condition type
         if let Some(node_type) = cast_op_type.get_type() {
