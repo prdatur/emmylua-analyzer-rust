@@ -1,7 +1,5 @@
 use emmylua_code_analysis::{InferGuard, LuaType, infer_table_field_value_should_be};
-use emmylua_parser::{
-    BinaryOperator, LuaAst, LuaAstNode, LuaBlock, LuaLiteralExpr,
-};
+use emmylua_parser::{BinaryOperator, LuaAst, LuaAstNode, LuaBlock, LuaLiteralExpr};
 
 use crate::handlers::completion::{
     completion_builder::CompletionBuilder, providers::function_provider::dispatch_type,
