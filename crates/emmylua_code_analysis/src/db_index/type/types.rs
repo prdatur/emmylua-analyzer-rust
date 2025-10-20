@@ -687,7 +687,10 @@ impl LuaFunctionType {
                         Some(owner_type) => {
                             // 一些类型不应该被视为 method
                             if let (LuaType::Ref(_) | LuaType::Def(_), _) = (owner_type, t)
-                                && (t.is_any() || t.is_table() || t.is_class_tpl())
+                                && (t.is_any()
+                                    || t.is_table()
+                                    || t.is_class_tpl()
+                                    || t.is_str_tpl_ref())
                             {
                                 return false;
                             }
