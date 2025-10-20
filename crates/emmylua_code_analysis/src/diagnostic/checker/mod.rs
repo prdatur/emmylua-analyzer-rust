@@ -18,7 +18,7 @@ mod duplicate_require;
 mod duplicate_type;
 mod enum_value_mismatch;
 mod generic;
-mod global_in_non_module;
+mod global_non_module;
 mod incomplete_signature_doc;
 mod local_const_reassign;
 mod missing_fields;
@@ -123,7 +123,7 @@ pub fn check_file(context: &mut DiagnosticContext, semantic_model: &SemanticMode
         semantic_model,
     );
     run_check::<readonly_check::ReadOnlyChecker>(context, semantic_model);
-    run_check::<global_in_non_module::GlobalInNonModuleChecker>(context, semantic_model);
+    run_check::<global_non_module::GlobalInNonModuleChecker>(context, semantic_model);
     Some(())
 }
 
