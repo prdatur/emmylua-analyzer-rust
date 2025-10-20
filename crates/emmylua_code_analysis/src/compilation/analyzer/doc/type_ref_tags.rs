@@ -11,10 +11,6 @@ use super::{
     preprocess_description,
     tags::{find_owner_closure, get_owner_id_or_report},
 };
-use crate::compilation::analyzer::doc::{
-    attribute_tags::infer_attribute_uses,
-    tags::{find_owner_closure_or_report, get_owner_id, report_orphan_tag},
-};
 use crate::{
     InFiled, InferFailReason, LuaOperatorMetaMethod, LuaTypeCache, LuaTypeOwner, OperatorFunction,
     SignatureReturnStatus, TypeOps,
@@ -22,6 +18,13 @@ use crate::{
     db_index::{
         LuaDeclId, LuaDocParamInfo, LuaDocReturnInfo, LuaMemberId, LuaOperator, LuaSemanticDeclId,
         LuaSignatureId, LuaType,
+    },
+};
+use crate::{
+    LuaAttributeUse,
+    compilation::analyzer::doc::{
+        attribute_tags::{find_attach_attribute, infer_attribute_uses},
+        tags::{find_owner_closure_or_report, get_owner_id, report_orphan_tag},
     },
 };
 
@@ -188,11 +191,15 @@ pub fn analyze_param(analyzer: &mut DocAnalyzer, tag: LuaDocTagParam) -> Option<
     if let Some(closure) = find_owner_closure(analyzer) {
         let id = LuaSignatureId::from_closure(analyzer.file_id, &closure);
         // 绑定`attribute`标记
-        let attributes = if let Some(attribute_use) = tag.get_tag_attribute_use() {
-            infer_attribute_uses(analyzer, attribute_use)
-        } else {
-            None
-        };
+        let attributes =
+            find_attach_attribute(LuaAst::LuaDocTagParam(tag)).and_then(|tag_attribute_uses| {
+                let result: Vec<LuaAttributeUse> = tag_attribute_uses
+                    .into_iter()
+                    .filter_map(|tag_use| infer_attribute_uses(analyzer, tag_use))
+                    .flatten()
+                    .collect();
+                (!result.is_empty()).then_some(result)
+            });
 
         let signature = analyzer.db.get_signature_index_mut().get_or_create(id);
         let param_info = LuaDocParamInfo {
@@ -235,20 +242,15 @@ pub fn analyze_return(analyzer: &mut DocAnalyzer, tag: LuaDocTagReturn) -> Optio
     if let Some(closure) = find_owner_closure_or_report(analyzer, &tag) {
         let signature_id = LuaSignatureId::from_closure(analyzer.file_id, &closure);
         let returns = tag.get_info_list();
-        for (doc_type, name_token, attribute_use_tag) in returns {
+        for (doc_type, name_token) in returns {
             let name = name_token.map(|name| name.get_name_text().to_string());
 
             let type_ref = infer_type(analyzer, doc_type);
-            let attributes = if let Some(attribute) = attribute_use_tag {
-                infer_attribute_uses(analyzer, attribute)
-            } else {
-                None
-            };
             let return_info = LuaDocReturnInfo {
                 name,
                 type_ref,
                 description: description.clone(),
-                attributes,
+                attributes: None,
             };
 
             let signature = analyzer

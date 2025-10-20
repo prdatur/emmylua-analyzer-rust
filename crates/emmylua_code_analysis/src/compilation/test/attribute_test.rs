@@ -16,10 +16,11 @@ mod test {
             (
                 "meta.lua",
                 r#"
-            ---@attribute constructor(name: string, strip_self: boolean?, return_self: boolean?)
+            ---@attribute constructor(name: string, root_class: string?, strip_self: boolean?, return_self: boolean?)
 
             ---@generic T
-            ---@param [constructor("__init")] name `T`
+            ---@[constructor("__init")]
+            ---@param name `T`
             ---@return T
             function meta(name)
             end

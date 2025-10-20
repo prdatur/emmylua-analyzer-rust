@@ -28,14 +28,14 @@ mod test {
     }
 
     #[test]
-    fn test_class_default_call() {
-        let mut ws = VirtualWorkspace::new();
+    fn test_class_default_constructor() {
+        let mut ws = VirtualWorkspace::new_with_init_std_lib();
         ws.def(
             r#"
-            ---@attribute constructor(name: string, strip_self: boolean?, return_self: boolean?)
 
             ---@generic T
-            ---@param [constructor("__init")] name `T`
+            ---@[constructor("__init")]
+            ---@param name `T`
             ---@return T
             function meta(name)
             end

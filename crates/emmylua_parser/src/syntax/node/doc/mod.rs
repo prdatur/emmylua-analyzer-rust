@@ -242,10 +242,6 @@ impl LuaDocGenericDecl {
     pub fn is_variadic(&self) -> bool {
         self.token_by_kind(LuaTokenKind::TkDots).is_some()
     }
-
-    pub fn get_tag_attribute_use(&self) -> Option<LuaDocTagAttributeUse> {
-        self.child()
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

@@ -142,10 +142,6 @@ fn parse_generic_decl_list(p: &mut LuaDocParser, allow_angle_brackets: bool) -> 
 // A ... : type
 fn parse_generic_param(p: &mut LuaDocParser) -> DocParseResult {
     let m = p.mark(LuaSyntaxKind::DocGenericParameter);
-    // 允许泛型附带特性
-    if p.current_token() == LuaTokenKind::TkLeftBracket {
-        parse_tag_attribute_use(p, false)?;
-    }
     expect_token(p, LuaTokenKind::TkName)?;
     if p.current_token() == LuaTokenKind::TkDots {
         p.bump();
@@ -311,9 +307,6 @@ fn parse_tag_param(p: &mut LuaDocParser) -> DocParseResult {
     p.set_state(LuaDocLexerState::Normal);
     let m = p.mark(LuaSyntaxKind::DocTagParam);
     p.bump();
-    if p.current_token() == LuaTokenKind::TkLeftBracket {
-        parse_tag_attribute_use(p, false)?;
-    }
     if matches!(
         p.current_token(),
         LuaTokenKind::TkName | LuaTokenKind::TkDots
@@ -341,14 +334,10 @@ fn parse_tag_param(p: &mut LuaDocParser) -> DocParseResult {
 // ---@return number
 // ---@return number, string
 // ---@return number <name> , this just compact luals
-// ---@return [attribute] number
 fn parse_tag_return(p: &mut LuaDocParser) -> DocParseResult {
     p.set_state(LuaDocLexerState::Normal);
     let m = p.mark(LuaSyntaxKind::DocTagReturn);
     p.bump();
-    if p.current_token() == LuaTokenKind::TkLeftBracket {
-        parse_tag_attribute_use(p, false)?;
-    }
 
     parse_type(p)?;
 
@@ -356,9 +345,6 @@ fn parse_tag_return(p: &mut LuaDocParser) -> DocParseResult {
 
     while p.current_token() == LuaTokenKind::TkComma {
         p.bump();
-        if p.current_token() == LuaTokenKind::TkLeftBracket {
-            parse_tag_attribute_use(p, false)?;
-        }
         parse_type(p)?;
         if_token_bump(p, LuaTokenKind::TkName);
     }
@@ -704,9 +690,9 @@ fn parse_type_attribute(p: &mut LuaDocParser) -> DocParseResult {
     Ok(m.complete(p))
 }
 
-// ---@[a(arg1, arg2, ...)]
-// ---@[a]
-// ---@[a, b, ...]
+// ---@[attribute(arg1, arg2, ...)]
+// ---@[attribute]
+// ---@[attribute1, attribute2, ...]
 // ---@generic [attribute] T
 pub fn parse_tag_attribute_use(p: &mut LuaDocParser, allow_description: bool) -> DocParseResult {
     let m = p.mark(LuaSyntaxKind::DocTagAttributeUse);
