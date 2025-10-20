@@ -219,13 +219,13 @@ pub fn check_table_expr(
             .get_property_index()
             .get_property(&semantic_decl)
         {
-            if let Some(skip_diagnostic) =
-                property.find_attribute_use(LuaTypeDeclId::new("skip_diagnostic"))
+            if let Some(lsp_perf_optim) =
+                property.find_attribute_use(LuaTypeDeclId::new("lsp_perf_optim"))
             {
                 if let Some(LuaType::DocStringConst(code)) =
-                    skip_diagnostic.get_param_by_name("code")
+                    lsp_perf_optim.get_param_by_name("code")
                 {
-                    if code.as_ref() == "table_field" {
+                    if code.as_ref() == "check_table_field" {
                         return Some(false);
                     }
                 };

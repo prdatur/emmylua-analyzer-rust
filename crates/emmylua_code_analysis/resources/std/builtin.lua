@@ -144,11 +144,11 @@
 --- Deprecated. Receives an optional message parameter.
 ---@attribute deprecated(message: string?)
 
---- Skip partial diagnostics, typically used to optimize diagnostic performance.
+--- Language Server Performance Optimization Items.
 ---
 --- Receives a parameter, the options are:
---- - `table_field` - Skip diagnostic for `table` fields. Usually attached to configuration tables that do not require actual diagnostic fields.
----@attribute skip_diagnostic(code: string)
+--- - `check_table_field` - Skip the assign check for table fields. It is recommended to use this option for all large configuration tables.
+---@attribute lsp_perf_optim(code: "check_table_field"|string)
 
 --- Index field alias, will be displayed in `hint` and `completion`.
 ---

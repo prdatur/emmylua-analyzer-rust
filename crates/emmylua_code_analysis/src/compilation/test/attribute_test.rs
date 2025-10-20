@@ -35,7 +35,7 @@ mod test {
         ws.check_code_for(
             DiagnosticCode::AssignTypeMismatch,
             r#"
-        ---@[skip_diagnostic("table_field")]
+        ---@[lsp_perf_optim("check_table_field")]
         local config = {}
         "#,
         );
