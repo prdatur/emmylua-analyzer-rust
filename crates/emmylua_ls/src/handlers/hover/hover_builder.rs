@@ -287,7 +287,7 @@ impl<'a> HoverBuilder<'a> {
             && let Some(call_expr) = token.parent()?.parent()
             && LuaCallExpr::can_cast(call_expr.kind().into())
         {
-            return Some(LuaCallExpr::cast(call_expr)?);
+            return LuaCallExpr::cast(call_expr);
         }
         None
     }

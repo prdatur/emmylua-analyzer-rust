@@ -139,7 +139,7 @@ fn build_decl_hover(
     let mut semantic_decls =
         find_decl_origin_owners(builder.compilation, builder.semantic_model, decl_id)
             .get_types(builder.semantic_model);
-    // replace_semantic_type(&mut semantic_decls, &typ);
+
     // 处理类型签名
     if is_function(&typ) {
         adjust_semantic_decls(
@@ -444,21 +444,18 @@ fn has_add_to_semantic_decls(
 
         let root = semantic_model.get_root().syntax();
         let current_node = member_id.get_syntax_id().to_node_from_root(root)?;
-        match member_id.get_syntax_id().get_kind() {
-            LuaSyntaxKind::TableFieldAssign => {
-                if LuaTableField::can_cast(current_node.kind().into()) {
-                    let table_field = LuaTableField::cast(current_node.clone())?;
-                    let parent = table_field.syntax().parent()?;
-                    let table_expr = LuaTableExpr::cast(parent)?;
-                    let table_type = semantic_model.infer_table_should_be(table_expr.clone())?;
-                    if matches!(table_type, LuaType::Ref(_) | LuaType::Generic(_)) {
-                        // 如果位于函数调用中, 则不添加
-                        let is_in_call = table_expr.ancestors::<LuaCallArgList>().next().is_some();
-                        return Some(!is_in_call);
-                    }
+        if member_id.get_syntax_id().get_kind() == LuaSyntaxKind::TableFieldAssign {
+            if LuaTableField::can_cast(current_node.kind().into()) {
+                let table_field = LuaTableField::cast(current_node.clone())?;
+                let parent = table_field.syntax().parent()?;
+                let table_expr = LuaTableExpr::cast(parent)?;
+                let table_type = semantic_model.infer_table_should_be(table_expr.clone())?;
+                if matches!(table_type, LuaType::Ref(_) | LuaType::Generic(_)) {
+                    // 如果位于函数调用中, 则不添加
+                    let is_in_call = table_expr.ancestors::<LuaCallArgList>().next().is_some();
+                    return Some(!is_in_call);
                 }
             }
-            _ => {}
         };
     }
 

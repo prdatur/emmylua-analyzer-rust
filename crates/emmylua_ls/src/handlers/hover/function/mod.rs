@@ -16,7 +16,6 @@ use crate::handlers::hover::{
     infer_prefix_global_name,
 };
 
-#[allow(unused)]
 pub fn build_function_hover(
     builder: &mut HoverBuilder,
     db: &DbIndex,
@@ -56,7 +55,6 @@ pub fn build_function_hover(
     Some(())
 }
 
-#[allow(unused)]
 fn build_function_call_hover(
     builder: &mut HoverBuilder,
     db: &DbIndex,
@@ -65,7 +63,7 @@ fn build_function_call_hover(
     function_name: &str,
     is_local: bool,
 ) -> Option<()> {
-    let Some(final_type) = infer_call_expr_func(
+    let final_type = infer_call_expr_func(
         db,
         &mut builder.semantic_model.get_cache().borrow_mut(),
         call_expr.clone(),
@@ -73,9 +71,7 @@ fn build_function_call_hover(
         &InferGuard::new(),
         None,
     )
-    .ok() else {
-        return None;
-    };
+    .ok()?;
 
     // 根据推断出来的类型确定哪个 semantic_decl 是匹配的
     let mut match_semantic_decl = &semantic_decls.last()?.0;
@@ -97,7 +93,7 @@ fn build_function_call_hover(
     };
 
     let is_field = function_member_is_field(db, semantic_decls);
-    let Some(contents) = process_function_type(
+    let contents = process_function_type(
         builder,
         db,
         &LuaType::DocFunction(final_type),
@@ -105,9 +101,7 @@ fn build_function_call_hover(
         function_name,
         is_local,
         is_field,
-    ) else {
-        return None;
-    };
+    )?;
     let description = get_function_description(builder, db, &match_semantic_decl);
     builder.set_type_description(contents.first()?.clone());
     builder.add_description_from_info(description);
@@ -332,12 +326,10 @@ fn hover_doc_function_type(
                             builder.semantic_model,
                             Some(&LuaType::Ref(type_decl_id.clone())),
                         );
-                    } else {
-                        if let Some(owner_name) =
-                            extract_owner_name_from_element(builder.semantic_model, element_id)
-                        {
-                            name.push_str(&owner_name);
-                        }
+                    } else if let Some(owner_name) =
+                        extract_owner_name_from_element(builder.semantic_model, element_id)
+                    {
+                        name.push_str(&owner_name);
                     }
                 }
                 _ => {}

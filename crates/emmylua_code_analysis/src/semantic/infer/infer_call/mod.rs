@@ -672,7 +672,7 @@ fn signature_is_generic(
     let prefix_type = infer_expr(db, cache, index_expr.get_prefix_expr()?).ok()?;
     match prefix_type {
         // 对于 Generic 直接认为是泛型
-        LuaType::Generic(_) => return Some(true),
+        LuaType::Generic(_) => Some(true),
         _ => Some(prefix_type.contain_tpl()),
     }
 }
