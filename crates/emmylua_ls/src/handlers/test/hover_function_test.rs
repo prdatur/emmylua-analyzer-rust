@@ -564,4 +564,24 @@ mod tests {
         ));
         Ok(())
     }
+
+    #[gtest]
+    fn test_fix_method_1() -> Result<()> {
+        let mut ws = ProviderVirtualWorkspace::new();
+        check!(ws.check_hover(
+            r#"
+            ---@class ClassControl
+            local ClassControl = {}
+
+            ---@generic T
+            ---@param name `T`|T
+            function ClassControl.ne<??>w(name)
+            end
+            "#,
+            VirtualHoverResult {
+                value: "```lua\nfunction ClassControl.new(name: T)\n```".to_string(),
+            },
+        ));
+        Ok(())
+    }
 }
