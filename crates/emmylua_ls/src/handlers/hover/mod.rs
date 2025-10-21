@@ -1,6 +1,6 @@
 mod build_hover;
 mod find_origin;
-mod function_humanize;
+mod function;
 mod hover_builder;
 mod hover_humanize;
 mod keyword_hover;
