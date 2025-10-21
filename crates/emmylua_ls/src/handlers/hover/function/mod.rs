@@ -361,7 +361,11 @@ fn hover_doc_function_type(
             if index == 0 && is_method && !func.is_colon_define() {
                 "".to_string()
             } else if let Some(ty) = &param.1 {
-                format!("{}: {}", name, humanize_type(db, ty, RenderLevel::Normal))
+                format!(
+                    "{}: {}",
+                    name,
+                    humanize_type(db, ty, builder.detail_render_level)
+                )
             } else {
                 name.to_string()
             }

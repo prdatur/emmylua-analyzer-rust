@@ -12,6 +12,7 @@ use smol_str::SmolStr;
 use crate::{
     AsyncState, DbIndex, FileId, InFiled, SemanticModel,
     db_index::{LuaMemberKey, LuaSignatureId, r#type::type_visit_trait::TypeVisitTrait},
+    first_param_may_not_self,
 };
 
 use super::{TypeOps, type_decl::LuaTypeDeclId};
@@ -686,11 +687,8 @@ impl LuaFunctionType {
                     match owner_type {
                         Some(owner_type) => {
                             // 一些类型不应该被视为 method
-                            if let (LuaType::Ref(_) | LuaType::Def(_), _) = (owner_type, t)
-                                && (t.is_any()
-                                    || t.is_table()
-                                    || t.is_class_tpl()
-                                    || t.is_str_tpl_ref())
+                            if matches!(owner_type, LuaType::Ref(_) | LuaType::Def(_))
+                                && first_param_may_not_self(t)
                             {
                                 return false;
                             }

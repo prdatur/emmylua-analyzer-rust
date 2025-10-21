@@ -11,7 +11,7 @@ use crate::{
     FileId,
     db_index::{LuaFunctionType, LuaType},
 };
-use crate::{SemanticModel, VariadicType};
+use crate::{SemanticModel, VariadicType, first_param_may_not_self};
 
 #[derive(Debug)]
 pub struct LuaSignature {
@@ -137,11 +137,8 @@ impl LuaSignature {
             match owner_type {
                 Some(owner_type) => {
                     // 一些类型不应该被视为 method
-                    if let (LuaType::Ref(_) | LuaType::Def(_), _) = (owner_type, param_type)
-                        && (param_type.is_any()
-                            || param_type.is_table()
-                            || param_type.is_class_tpl()
-                            || param_type.is_str_tpl_ref())
+                    if matches!(owner_type, LuaType::Ref(_) | LuaType::Def(_))
+                        && first_param_may_not_self(param_type)
                     {
                         return false;
                     }
