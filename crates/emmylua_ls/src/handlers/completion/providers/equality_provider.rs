@@ -1,5 +1,6 @@
 use emmylua_code_analysis::{
-    InferGuard, LuaDeclId, LuaType, infer_table_field_value_should_be, infer_table_should_be,
+    DbIndex, InferGuard, LuaDeclId, LuaType, get_real_type, infer_table_field_value_should_be,
+    infer_table_should_be,
 };
 use emmylua_parser::{
     BinaryOperator, LuaAst, LuaAstNode, LuaAstToken, LuaBlock, LuaLiteralExpr, LuaTokenKind,
@@ -83,7 +84,10 @@ fn get_token_should_type(builder: &mut CompletionBuilder) -> Option<Vec<LuaType>
                 .get_db()
                 .get_type_index()
                 .get_type_cache(&decl_id.into())?;
-            return Some(vec![decl_type.as_type().clone()]);
+            let typ = decl_type.as_type().clone();
+            if contain_function_types(builder.semantic_model.get_db(), &typ).is_none() {
+                return Some(vec![typ]);
+            }
         }
         LuaAst::LuaAssignStat(assign_stat) => {
             let (vars, _) = assign_stat.get_var_and_expr_list();
@@ -100,7 +104,10 @@ fn get_token_should_type(builder: &mut CompletionBuilder) -> Option<Vec<LuaType>
 
             let var = vars.first()?;
             let var_type = builder.semantic_model.infer_expr(var.to_expr());
-            if let Ok(typ) = var_type {
+            if let Ok(typ) = var_type
+            // this is to avoid repeating function types in completion
+                && contain_function_types(builder.semantic_model.get_db(), &typ).is_none()
+            {
                 return Some(vec![typ]);
             }
         }
@@ -129,4 +136,31 @@ fn get_token_should_type(builder: &mut CompletionBuilder) -> Option<Vec<LuaType>
     }
 
     None
+}
+
+pub fn contain_function_types(db: &DbIndex, typ: &LuaType) -> Option<()> {
+    match typ {
+        LuaType::Union(union_typ) => {
+            for member in union_typ.into_vec().iter() {
+                match member {
+                    _ if member.is_function() => {
+                        return Some(());
+                    }
+                    _ if member.is_custom_type() => {
+                        let real_type = get_real_type(db, member)?;
+                        if real_type.is_function() {
+                            return Some(());
+                        }
+                    }
+                    _ => {
+                        continue;
+                    }
+                }
+            }
+
+            None
+        }
+        _ if typ.is_function() => Some(()),
+        _ => None,
+    }
 }
