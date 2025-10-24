@@ -9,7 +9,7 @@ use emmylua_code_analysis::{
 
 use crate::handlers::hover::{
     HoverBuilder,
-    hover_humanize::{
+    humanize_types::{
         DescriptionInfo, extract_description_from_property_owner, extract_owner_name_from_element,
         extract_parent_type_from_element, hover_humanize_type,
     },
@@ -385,6 +385,7 @@ fn convert_function_return_to_docs(func: &LuaFunctionType) -> Vec<LuaDocReturnIn
                 name: None,
                 type_ref: base.clone(),
                 description: None,
+                attributes: None,
             }],
             VariadicType::Multi(types) => types
                 .iter()
@@ -392,6 +393,7 @@ fn convert_function_return_to_docs(func: &LuaFunctionType) -> Vec<LuaDocReturnIn
                     name: None,
                     type_ref: ty.clone(),
                     description: None,
+                    attributes: None,
                 })
                 .collect(),
         },
@@ -399,6 +401,7 @@ fn convert_function_return_to_docs(func: &LuaFunctionType) -> Vec<LuaDocReturnIn
             name: None,
             type_ref: func.get_ret().clone(),
             description: None,
+            attributes: None,
         }],
     }
 }

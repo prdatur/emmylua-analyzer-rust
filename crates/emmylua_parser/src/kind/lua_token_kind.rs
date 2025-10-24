@@ -135,6 +135,7 @@ pub enum LuaTokenKind {
     TkTagReturnCast, // return cast
     TkTagExport,     // export
     TkLanguage,      // language
+    TkTagAttribute,  // attribute
 
     TkDocOr,              // |
     TkDocAnd,             // &
@@ -158,6 +159,7 @@ pub enum LuaTokenKind {
     TkDocRegion,          // region
     TkDocEndRegion,       // endregion
     TkDocSeeContent,      // see content
+    TkDocAttributeUse,    // '@[', used for attribute usage
 }
 
 impl fmt::Display for LuaTokenKind {
