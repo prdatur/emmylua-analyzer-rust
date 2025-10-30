@@ -246,6 +246,19 @@ impl<'a> LuaLexer<'a> {
                 self.state = LexerState::String(quote);
                 self.lex_string(quote)
             }
+            '?' => {
+                self.reader.bump();
+                if self.reader.current_char() == '.' {
+                    self.reader.bump();
+                    return LuaTokenKind::TkDot;
+                }
+                if self.reader.current_char() == '[' {
+                    self.reader.bump();
+                    return LuaTokenKind::TkLeftBracket;
+                }
+                self.reader.bump();
+                LuaTokenKind::TkUnknown
+            }
             '.' => {
                 if self.reader.next_char().is_ascii_digit() {
                     return self.lex_number();

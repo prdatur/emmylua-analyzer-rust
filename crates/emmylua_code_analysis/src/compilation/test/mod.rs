@@ -28,3 +28,4 @@ mod syntax_error_test;
 mod tuple_test;
 mod type_check_test;
 mod unpack_test;
+mod optional_chaining_test;
