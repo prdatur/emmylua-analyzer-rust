@@ -252,6 +252,10 @@ impl<'a> LuaLexer<'a> {
                     self.reader.bump();
                     return LuaTokenKind::TkDot;
                 }
+                if self.reader.current_char() == ':' {
+                    self.reader.bump();
+                    return LuaTokenKind::TkColon;
+                }
                 if self.reader.current_char() == '[' {
                     self.reader.bump();
                     return LuaTokenKind::TkLeftBracket;
